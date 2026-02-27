@@ -22,6 +22,8 @@ from data.split import split_dataset
 from data.dataset import NCCTDataset
 from data.transforms import GPUAugmentor
 from models.unet import UNet
+from models.registration import RegistrationNet
+from models.discriminator import MultiscaleDiscriminator
 from models.losses import CombinedLoss
 from trainer import Trainer
 
@@ -172,12 +174,41 @@ def main():
 
     model = build_model(cfg)
     param_count = sum(p.numel() for p in model.parameters()) / 1e6
-    logger.info(f"Model parameters: {param_count:.2f}M")
+    logger.info(f"Generator (G) parameters: {param_count:.2f}M")
+
+    # Registration network (R)
+    reg_net = None
+    if cfg.registration.enabled:
+        reg_net = RegistrationNet(
+            in_channels=cfg.model.out_channels,
+            nb_features=tuple(cfg.registration.nb_features),
+            integration_steps=cfg.registration.integration_steps,
+            enabled=True,
+        )
+        rp = sum(p.numel() for p in reg_net.parameters()) / 1e6
+        logger.info(f"Registration (R) parameters: {rp:.2f}M")
+
+    # Discriminator (D)
+    discriminator = None
+    if cfg.discriminator.enabled:
+        disc_input_nc = cfg.model.in_channels + cfg.model.out_channels  # concat(ncct, cta)
+        discriminator = MultiscaleDiscriminator(
+            input_nc=disc_input_nc,
+            ndf=cfg.discriminator.ndf,
+            n_layers=cfg.discriminator.n_layers,
+            num_D=cfg.discriminator.num_D,
+            use_spectral_norm=cfg.discriminator.use_spectral_norm,
+            get_interm_feat=True,
+            enabled=True,
+        )
+        dp = sum(p.numel() for p in discriminator.parameters()) / 1e6
+        logger.info(f"Discriminator (D) parameters: {dp:.2f}M")
 
     criterion = CombinedLoss(
         l1_weight=cfg.train.l1_weight,
         ssim_weight=cfg.train.ssim_weight,
         use_3d_ssim=cfg.train.use_3d_ssim,
+        lung_weight=cfg.train.lung_weight,
     )
 
     # GPU augmentor
@@ -186,6 +217,8 @@ def main():
     # Train
     trainer = Trainer(
         model=model,
+        reg_net=reg_net,
+        discriminator=discriminator,
         criterion=criterion,
         train_loader=train_loader,
         val_loader=val_loader,

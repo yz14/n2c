@@ -20,13 +20,21 @@ def test_config():
     logger.info(f"Data config:  slices={cfg.data.num_slices}, size={cfg.data.image_size}")
     logger.info(f"Model config: channels={cfg.model.model_channels}, "
                 f"mult={cfg.model.channel_mult}")
-    logger.info(f"Train config: lr={cfg.train.lr}, use_3d_ssim={cfg.train.use_3d_ssim}")
+    logger.info(f"Train config: lr={cfg.train.lr}, use_3d_ssim={cfg.train.use_3d_ssim}, "
+                f"lung_weight={cfg.train.lung_weight}")
+    logger.info(f"Registration: enabled={cfg.registration.enabled}, "
+                f"features={cfg.registration.nb_features}")
+    logger.info(f"Discriminator: enabled={cfg.discriminator.enabled}, "
+                f"ndf={cfg.discriminator.ndf}, num_D={cfg.discriminator.num_D}")
 
     # Test save/load round-trip
     cfg.save("./test_config.yaml")
     cfg2 = Config.load("./test_config.yaml")
     assert cfg2.data.num_slices == cfg.data.num_slices
     assert cfg2.train.use_3d_ssim == cfg.train.use_3d_ssim
+    assert cfg2.registration.nb_features == cfg.registration.nb_features
+    assert cfg2.discriminator.ndf == cfg.discriminator.ndf
+    assert cfg2.train.lung_weight == cfg.train.lung_weight
     os.remove("./test_config.yaml")
     logger.info("Config test PASSED\n")
 
@@ -148,6 +156,136 @@ def test_loss():
     logger.info("Loss test PASSED\n")
 
 
+def test_weighted_loss():
+    logger.info("=== Testing Weighted Mask Loss ===")
+    from models.losses import CombinedLoss
+
+    criterion = CombinedLoss(use_3d_ssim=False, lung_weight=10.0)
+    pred = torch.randn(2, C, 64, 64)
+    target = torch.randn(2, C, 64, 64)
+
+    # Without mask
+    loss_no_mask = criterion(pred, target)
+    logger.info(f"No mask   - loss: {loss_no_mask['loss'].item():.4f}")
+
+    # With mask (partial lung region)
+    mask = torch.zeros(2, C, 64, 64)
+    mask[:, :, 16:48, 16:48] = 1.0  # lung region
+    loss_with_mask = criterion(pred, target, mask=mask)
+    logger.info(f"With mask - loss: {loss_with_mask['loss'].item():.4f}")
+
+    # Mask should change the loss value
+    assert loss_no_mask["loss"].item() != loss_with_mask["loss"].item(), \
+        "Mask should change the loss"
+    logger.info("Weighted loss test PASSED\n")
+
+
+def test_registration():
+    logger.info("=== Testing Registration Network ===")
+    from models.registration import RegistrationNet
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Enabled mode
+    reg = RegistrationNet(
+        in_channels=C, nb_features=(16, 32, 32, 32),
+        integration_steps=7, enabled=True,
+    ).to(device)
+    params = sum(p.numel() for p in reg.parameters()) / 1e6
+    logger.info(f"Registration params: {params:.2f}M")
+
+    source = torch.randn(2, C, 64, 64, device=device)
+    target = torch.randn(2, C, 64, 64, device=device)
+    out = reg(source, target)
+    logger.info(f"Warped: {out['warped'].shape}, Disp: {out['displacement'].shape}")
+    assert out["warped"].shape == source.shape
+    assert out["displacement"].shape == (2, 2, 64, 64)
+
+    # Disabled mode (identity)
+    reg_off = RegistrationNet(in_channels=C, enabled=False).to(device)
+    out_off = reg_off(source, target)
+    assert torch.equal(out_off["warped"], source), "Disabled reg should return source"
+    assert out_off["displacement"].abs().sum().item() == 0.0, "Disabled reg should have zero disp"
+    logger.info("Registration test PASSED\n")
+
+
+def test_discriminator():
+    logger.info("=== Testing Multi-Scale Discriminator ===")
+    from models.discriminator import MultiscaleDiscriminator
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    input_nc = C * 2  # concat(ncct, cta)
+
+    disc = MultiscaleDiscriminator(
+        input_nc=input_nc, ndf=64, n_layers=3, num_D=3,
+        use_spectral_norm=True, get_interm_feat=True,
+    ).to(device)
+    params = sum(p.numel() for p in disc.parameters()) / 1e6
+    logger.info(f"Discriminator params: {params:.2f}M")
+
+    x = torch.randn(2, input_nc, 64, 64, device=device)
+    results = disc(x)
+    logger.info(f"Num scales: {len(results)}")
+    for i, scale in enumerate(results):
+        logger.info(f"  Scale {i}: {len(scale)} layers, final={scale[-1].shape}")
+    assert len(results) == 3
+    logger.info("Discriminator test PASSED\n")
+
+
+def test_gan_losses():
+    logger.info("=== Testing GAN + Feature Matching Losses ===")
+    from models.losses import GANLoss, FeatureMatchingLoss
+    from models.discriminator import MultiscaleDiscriminator
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    input_nc = C * 2
+
+    disc = MultiscaleDiscriminator(
+        input_nc=input_nc, ndf=32, n_layers=2, num_D=2,
+        use_spectral_norm=True, get_interm_feat=True,
+    ).to(device)
+
+    real_input = torch.randn(2, input_nc, 64, 64, device=device)
+    fake_input = torch.randn(2, input_nc, 64, 64, device=device)
+
+    real_feats = disc(real_input)
+    fake_feats = disc(fake_input)
+
+    gan_loss_fn = GANLoss()
+    loss_real = gan_loss_fn(real_feats, target_is_real=True)
+    loss_fake = gan_loss_fn(fake_feats, target_is_real=False)
+    logger.info(f"GAN loss real: {loss_real.item():.4f}, fake: {loss_fake.item():.4f}")
+
+    fm_fn = FeatureMatchingLoss()
+    fm_loss = fm_fn(real_feats, fake_feats)
+    logger.info(f"Feature matching loss: {fm_loss.item():.4f}")
+    logger.info("GAN losses test PASSED\n")
+
+
+def test_grad_loss():
+    logger.info("=== Testing Grad (Smoothness) Loss ===")
+    from models.losses import GradLoss
+
+    grad_l2 = GradLoss(penalty="l2")
+    grad_l1 = GradLoss(penalty="l1")
+
+    # Smooth field should have low loss
+    smooth_disp = torch.zeros(2, 2, 64, 64)
+    loss_smooth = grad_l2(smooth_disp)
+    logger.info(f"Smooth field L2: {loss_smooth.item():.6f}")
+    assert loss_smooth.item() < 1e-8
+
+    # Random field should have higher loss
+    random_disp = torch.randn(2, 2, 64, 64)
+    loss_random = grad_l2(random_disp)
+    logger.info(f"Random field L2: {loss_random.item():.4f}")
+    assert loss_random.item() > 0.1
+
+    loss_l1 = grad_l1(random_disp)
+    logger.info(f"Random field L1: {loss_l1.item():.4f}")
+    logger.info("Grad loss test PASSED\n")
+
+
 def test_visualization():
     logger.info("=== Testing Visualization ===")
     from utils.visualization import save_sample_grid
@@ -171,7 +309,7 @@ def test_visualization():
 
 
 def test_forward_backward():
-    logger.info("=== Testing Forward+Backward with GPU Augmentor ===")
+    logger.info("=== Testing Forward+Backward (G only) ===")
     from models.unet import UNet
     from models.losses import CombinedLoss
     from data.transforms import GPUAugmentor
@@ -191,32 +329,114 @@ def test_forward_backward():
         residual_output=True,
     ).to(device)
 
-    criterion = CombinedLoss(use_3d_ssim=True).to(device)
+    criterion = CombinedLoss(use_3d_ssim=True, lung_weight=10.0).to(device)
     augmentor = GPUAugmentor(num_slices=C, aug_prob=1.0)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
-    # Simulate batch: (N, 3C, H, W) as from dataset
     ncct_3c = torch.randn(2, 3 * C, 128, 128, device=device)
     cta_3c = torch.randn(2, 3 * C, 128, 128, device=device)
     mask_3c = torch.zeros(2, 3 * C, 128, 128, device=device)
 
-    # GPU augmentation
     ncct, cta, mask = augmentor(ncct_3c, cta_3c, mask_3c, training=True)
     logger.info(f"After augmentor: ncct={ncct.shape}, cta={cta.shape}")
 
-    # Forward
     pred = model(ncct)
-    loss_dict = criterion(pred, cta)
+    loss_dict = criterion(pred, cta, mask)
     logger.info(f"Loss: {loss_dict['loss'].item():.4f}")
 
-    # Backward
     optimizer.zero_grad()
     loss_dict["loss"].backward()
     optimizer.step()
 
     grad_norm = sum(p.grad.norm().item() for p in model.parameters() if p.grad is not None)
     logger.info(f"Gradient norm: {grad_norm:.4f}")
-    logger.info("Forward+Backward test PASSED\n")
+    logger.info("Forward+Backward (G only) test PASSED\n")
+
+
+def test_full_pipeline_grd():
+    logger.info("=== Testing Full G+R+D Pipeline ===")
+    from models.unet import UNet
+    from models.registration import RegistrationNet
+    from models.discriminator import MultiscaleDiscriminator
+    from models.losses import CombinedLoss, GANLoss, FeatureMatchingLoss, GradLoss
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    H = 64
+
+    # Build G
+    G = UNet(
+        image_size=H, in_channels=C, model_channels=32, out_channels=C,
+        num_res_blocks=1, attention_resolutions=(4,), channel_mult=(1, 2, 4),
+        num_heads=2, residual_output=True,
+    ).to(device)
+
+    # Build R
+    R = RegistrationNet(
+        in_channels=C, nb_features=(8, 16, 16, 16),
+        integration_steps=5, enabled=True,
+    ).to(device)
+
+    # Build D
+    D = MultiscaleDiscriminator(
+        input_nc=C * 2, ndf=16, n_layers=2, num_D=2,
+        use_spectral_norm=True, get_interm_feat=True,
+    ).to(device)
+
+    # Losses
+    criterion = CombinedLoss(use_3d_ssim=False, lung_weight=10.0).to(device)
+    gan_loss_fn = GANLoss()
+    fm_fn = FeatureMatchingLoss()
+    grad_fn = GradLoss(penalty="l2")
+
+    # Optimizers
+    opt_G = torch.optim.Adam(list(G.parameters()) + list(R.parameters()), lr=1e-4)
+    opt_D = torch.optim.Adam(D.parameters(), lr=2e-4)
+
+    # Synthetic data
+    ncct = torch.randn(2, C, H, H, device=device)
+    cta = torch.randn(2, C, H, H, device=device)
+    mask = torch.zeros(2, C, H, H, device=device)
+    mask[:, :, 16:48, 16:48] = 1.0
+
+    # --- G + R forward ---
+    pred = G(ncct)
+    reg_out = R(pred, cta)
+    warped = reg_out["warped"]
+    disp = reg_out["displacement"]
+
+    recon_loss = criterion(warped, cta, mask)
+    smooth_loss = grad_fn(disp)
+
+    fake_in = torch.cat([ncct, pred], dim=1)
+    real_in = torch.cat([ncct, cta], dim=1)
+    fake_feats = D(fake_in)
+    with torch.no_grad():
+        real_feats = D(real_in)
+
+    gan_g = gan_loss_fn(fake_feats, target_is_real=True)
+    fm = fm_fn(real_feats, fake_feats)
+
+    g_total = recon_loss["loss"] + 1.0 * smooth_loss + 1.0 * gan_g + 10.0 * fm
+    opt_G.zero_grad()
+    g_total.backward()
+    opt_G.step()
+
+    logger.info(f"G total: {g_total.item():.4f}, recon: {recon_loss['loss'].item():.4f}, "
+                f"smooth: {smooth_loss.item():.4f}, gan_g: {gan_g.item():.4f}, fm: {fm.item():.4f}")
+
+    # --- D forward ---
+    fake_in_d = torch.cat([ncct, pred.detach()], dim=1)
+    real_in_d = torch.cat([ncct, cta], dim=1)
+    d_real = gan_loss_fn(D(real_in_d), target_is_real=True)
+    d_fake = gan_loss_fn(D(fake_in_d), target_is_real=False)
+    d_total = 0.5 * (d_real + d_fake)
+
+    opt_D.zero_grad()
+    d_total.backward()
+    opt_D.step()
+    logger.info(f"D total: {d_total.item():.4f}")
+
+    logger.info("Full G+R+D pipeline test PASSED\n")
 
 
 if __name__ == "__main__":
@@ -226,7 +446,13 @@ if __name__ == "__main__":
     test_gpu_augmentor(batch)
     test_model()
     test_loss()
+    test_weighted_loss()
+    test_registration()
+    test_discriminator()
+    test_gan_losses()
+    test_grad_loss()
     test_visualization()
     test_forward_backward()
+    test_full_pipeline_grd()
     logger.info("=" * 40)
     logger.info("ALL TESTS PASSED!")

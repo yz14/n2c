@@ -5,7 +5,7 @@ Centralized configuration management using dataclasses + YAML.
 import yaml
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 
 @dataclass
@@ -47,6 +47,28 @@ class ModelConfig:
 
 
 @dataclass
+class RegistrationConfig:
+    enabled: bool = False            # ON/OFF switch for staged training
+    nb_features: Tuple[int, ...] = (16, 32, 32, 32)  # encoder feature counts
+    integration_steps: int = 7       # scaling & squaring steps (0 = direct displacement)
+    smoothness_weight: float = 1.0   # weight for deformation smoothness loss
+    smoothness_penalty: str = "l2"   # 'l1' or 'l2' for GradLoss
+    lr: float = 1e-4                 # separate learning rate for registration net
+
+
+@dataclass
+class DiscriminatorConfig:
+    enabled: bool = False            # ON/OFF switch for staged training
+    ndf: int = 64                    # base filters
+    n_layers: int = 3                # conv layers per sub-discriminator
+    num_D: int = 3                   # number of discriminator scales
+    use_spectral_norm: bool = True   # apply spectral normalization
+    gan_weight: float = 1.0          # weight for GAN loss (generator side)
+    feat_match_weight: float = 10.0  # weight for feature matching loss
+    lr: float = 2e-4                 # separate (typically higher) LR for discriminator
+
+
+@dataclass
 class TrainConfig:
     batch_size: int = 8
     lr: float = 1e-4
@@ -58,6 +80,7 @@ class TrainConfig:
     l1_weight: float = 1.0
     ssim_weight: float = 1.0
     use_3d_ssim: bool = True     # use 3D SSIM loss (treats C as depth)
+    lung_weight: float = 10.0    # loss weight multiplier for lung regions
     ema_rate: float = 0.999
     lr_scheduler: str = "cosine" # "cosine" or "step" or "none"
     warmup_steps: int = 500
@@ -70,6 +93,8 @@ class TrainConfig:
 class Config:
     data: DataConfig = field(default_factory=DataConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
+    registration: RegistrationConfig = field(default_factory=RegistrationConfig)
+    discriminator: DiscriminatorConfig = field(default_factory=DiscriminatorConfig)
     train: TrainConfig = field(default_factory=TrainConfig)
 
     def save(self, path: str):
@@ -100,8 +125,17 @@ class Config:
             if k in model_raw and isinstance(model_raw[k], list):
                 model_raw[k] = tuple(model_raw[k])
         model_cfg = ModelConfig(**model_raw)
+        reg_raw = raw.get("registration", {})
+        for k in ("nb_features",):
+            if k in reg_raw and isinstance(reg_raw[k], list):
+                reg_raw[k] = tuple(reg_raw[k])
+        reg_cfg = RegistrationConfig(**reg_raw)
+        disc_cfg = DiscriminatorConfig(**raw.get("discriminator", {}))
         train_cfg = TrainConfig(**raw.get("train", {}))
-        return cls(data=data_cfg, model=model_cfg, train=train_cfg)
+        return cls(
+            data=data_cfg, model=model_cfg, registration=reg_cfg,
+            discriminator=disc_cfg, train=train_cfg,
+        )
 
     def sync_channels(self):
         """Ensure in_channels/out_channels match num_slices."""
