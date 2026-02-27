@@ -1,0 +1,5 @@
+2026-02-27 10:02:55 [INFO] __main__: Using existing split files
+2026-02-27 10:02:55 [INFO] __main__: Using device: cuda
+2026-02-27 10:02:55 [INFO] data.dataset: Loaded 17 files from splits\train.txt
+2026-02-27 10:02:55 [INFO] data.dataset: Loaded 2 files from splits\valid.txt
+2026-02-27 10:02:55 [INFO] __main__: Train batches: 2, Val batches: 1

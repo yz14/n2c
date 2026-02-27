@@ -1,0 +1,53 @@
+data:
+  data_dir: D:/codes/data/ncct_tiny
+  split_dir: ./splits
+  num_slices: 3
+  image_size: 256
+  hu_min: -1024.0
+  hu_max: 3071.0
+  num_workers: 4
+  aug_prob: 0.5
+  max_angle: 15.0
+  scale_range: 0.1
+  translate_frac: 0.05
+  noise_std: 0.02
+  brightness_range: 0.1
+  contrast_range: 0.1
+model:
+  in_channels: 3
+  out_channels: 3
+  model_channels: 64
+  channel_mult:
+  - 1
+  - 2
+  - 4
+  - 8
+  num_res_blocks: 2
+  attention_resolutions:
+  - 4
+  - 8
+  dropout: 0.0
+  use_checkpoint: false
+  num_heads: 4
+  num_head_channels: -1
+  use_scale_shift_norm: false
+  conv_resample: true
+  resblock_updown: false
+  use_fp16: false
+  residual_output: true
+train:
+  batch_size: 8
+  lr: 0.0001
+  weight_decay: 0.0
+  num_epochs: 200
+  save_interval: 10
+  log_interval: 50
+  val_interval: 1
+  l1_weight: 1.0
+  ssim_weight: 1.0
+  ema_rate: 0.999
+  lr_scheduler: cosine
+  warmup_steps: 500
+  output_dir: ./outputs
+  resume_checkpoint: ''
+  seed: 42
