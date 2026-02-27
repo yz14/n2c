@@ -2,27 +2,30 @@
 Training loop for NCCT→CTA image translation.
 
 Features:
+  - GPU-based 3D augmentation via GPUAugmentor
   - Train/validation loop with logging
   - EMA (Exponential Moving Average) of model weights
   - Learning rate scheduling (cosine with warmup)
   - Checkpoint saving and resuming
   - Metric tracking
+  - Visualization: saves grayscale grids of input/pred/gt after each validation
 """
 
-import copy
 import logging
-import time
+import math
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR, LambdaLR
+from torch.optim.lr_scheduler import LambdaLR, StepLR
 from tqdm import tqdm
 
 from models.nn_utils import update_ema
+from data.transforms import GPUAugmentor
+from utils.visualization import save_sample_grid
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +60,7 @@ def _warmup_cosine_schedule(warmup_steps: int, total_steps: int):
         if step < warmup_steps:
             return float(step) / max(1, warmup_steps)
         progress = float(step - warmup_steps) / max(1, total_steps - warmup_steps)
-        return max(0.0, 0.5 * (1.0 + __import__("math").cos(3.141592653589793 * progress)))
+        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * progress)))
     return lr_lambda
 
 
@@ -65,8 +68,8 @@ class Trainer:
     """
     Training manager for the UNet model.
 
-    Handles the full training lifecycle: data loading, optimization,
-    validation, checkpointing, and logging.
+    Handles the full training lifecycle including GPU-based augmentation,
+    optimization, validation, visualization, checkpointing, and logging.
     """
 
     def __init__(
@@ -75,6 +78,7 @@ class Trainer:
         criterion: nn.Module,
         train_loader: DataLoader,
         val_loader: Optional[DataLoader],
+        augmentor: GPUAugmentor,
         config,
         device: torch.device,
     ):
@@ -82,6 +86,7 @@ class Trainer:
         self.criterion = criterion.to(device)
         self.train_loader = train_loader
         self.val_loader = val_loader
+        self.augmentor = augmentor
         self.config = config
         self.device = device
 
@@ -114,6 +119,11 @@ class Trainer:
         # Output directory
         self.output_dir = Path(config.train.output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.vis_dir = self.output_dir / "visualizations"
+        self.vis_dir.mkdir(parents=True, exist_ok=True)
+
+        # Buffers for visualization (collect first 8 samples per epoch)
+        self._train_vis_samples: List[Dict[str, torch.Tensor]] = []
 
         # Resume if specified
         if config.train.resume_checkpoint:
@@ -135,7 +145,7 @@ class Trainer:
 
             # Validation
             if self.val_loader and (epoch + 1) % cfg.val_interval == 0:
-                val_metrics = self._validate(epoch)
+                val_metrics, val_vis = self._validate(epoch)
                 logger.info(
                     f"Epoch {epoch+1}/{cfg.num_epochs} [Val]   {val_metrics}"
                 )
@@ -144,6 +154,9 @@ class Trainer:
                     self.best_val_loss = val_loss
                     self._save_checkpoint(epoch, is_best=True)
                     logger.info(f"  New best validation loss: {val_loss:.6f}")
+
+                # Save visualization grids
+                self._save_visualizations(epoch, val_vis)
 
             # Periodic checkpoint
             if (epoch + 1) % cfg.save_interval == 0:
@@ -162,11 +175,17 @@ class Trainer:
         self.model.train()
         tracker = MetricTracker()
         cfg = self.config.train
+        self._train_vis_samples = []
 
         pbar = tqdm(self.train_loader, desc=f"Epoch {epoch+1}", leave=False)
         for batch in pbar:
-            ncct = batch["ncct"].to(self.device)
-            cta = batch["cta"].to(self.device)
+            # Move (3C, H, W) data to GPU
+            ncct_3c = batch["ncct"].to(self.device)
+            cta_3c = batch["cta"].to(self.device)
+            mask_3c = batch["ncct_lung"].to(self.device)
+
+            # GPU augmentation: (N, 3C, H, W) → (N, C, H, W)
+            ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=True)
 
             # Forward
             pred = self.model(ncct)
@@ -178,11 +197,21 @@ class Trainer:
             self.optimizer.step()
 
             # LR scheduler (step-level for cosine warmup)
-            if self.scheduler and self.config.train.lr_scheduler == "cosine":
+            if self.scheduler and cfg.lr_scheduler == "cosine":
                 self.scheduler.step()
 
             # EMA update
             update_ema(self.ema_params, self.model.parameters(), rate=self.ema_rate)
+
+            # Collect visualization samples (up to 8)
+            if len(self._train_vis_samples) < 8:
+                n_need = 8 - len(self._train_vis_samples)
+                n_take = min(n_need, ncct.shape[0])
+                self._train_vis_samples.append({
+                    "ncct": ncct[:n_take].detach(),
+                    "pred": pred[:n_take].detach(),
+                    "cta": cta[:n_take].detach(),
+                })
 
             # Logging
             self.global_step += 1
@@ -199,14 +228,19 @@ class Trainer:
         return tracker
 
     @torch.no_grad()
-    def _validate(self, epoch: int) -> MetricTracker:
-        """Run validation."""
+    def _validate(self, epoch: int):
+        """Run validation and collect visualization samples."""
         self.model.eval()
         tracker = MetricTracker()
+        val_vis_samples: List[Dict[str, torch.Tensor]] = []
 
         for batch in tqdm(self.val_loader, desc="Validating", leave=False):
-            ncct = batch["ncct"].to(self.device)
-            cta = batch["cta"].to(self.device)
+            ncct_3c = batch["ncct"].to(self.device)
+            cta_3c = batch["cta"].to(self.device)
+            mask_3c = batch["ncct_lung"].to(self.device)
+
+            # No augmentation for validation, only extract middle slices
+            ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
 
             pred = self.model(ncct)
             loss_dict = self.criterion(pred, cta)
@@ -217,7 +251,37 @@ class Trainer:
                 "ssim": loss_dict["ssim"].item(),
             })
 
-        return tracker
+            # Collect visualization samples (up to 8)
+            if len(val_vis_samples) < 8:
+                n_need = 8 - sum(s["ncct"].shape[0] for s in val_vis_samples)
+                if n_need > 0:
+                    n_take = min(n_need, ncct.shape[0])
+                    val_vis_samples.append({
+                        "ncct": ncct[:n_take].detach(),
+                        "pred": pred[:n_take].detach(),
+                        "cta": cta[:n_take].detach(),
+                    })
+
+        return tracker, val_vis_samples
+
+    def _save_visualizations(
+        self, epoch: int, val_vis: List[Dict[str, torch.Tensor]]
+    ):
+        """Save train and validation visualization grids."""
+        epoch_tag = f"epoch{epoch+1:04d}"
+
+        # Concatenate collected samples
+        for tag, samples in [("train", self._train_vis_samples), ("val", val_vis)]:
+            if not samples:
+                continue
+            inputs = torch.cat([s["ncct"] for s in samples], dim=0)[:8]
+            preds = torch.cat([s["pred"] for s in samples], dim=0)[:8]
+            targets = torch.cat([s["cta"] for s in samples], dim=0)[:8]
+
+            path = self.vis_dir / f"{tag}_{epoch_tag}.png"
+            save_sample_grid(inputs, preds, targets, str(path), num_samples=8)
+
+        logger.info(f"  Saved visualization grids for epoch {epoch+1}")
 
     def _save_checkpoint(self, epoch: int, is_best: bool = False,
                          filename: Optional[str] = None):

@@ -5,10 +5,8 @@ Pipeline:
   1. Load NPZ with mmap_mode='r' (lazy per-key, mmap for uncompressed NPZ)
   2. Random slice position d in D dimension
   3. Extract [d, d+3C) slices → (3C, H, W)
-  4. Apply spatial augmentation (same transform to ncct, cta, mask)
-  5. Apply pixel augmentation (ncct only)
-  6. Extract middle C slices → (C, H, W)
-  7. Resize to (C, H_out, W_out)
+  4. Resize to (3C, H_out, W_out)
+  5. Return (3C, H, W) tensors — augmentation is handled later on GPU
 
 Note: np.load with mmap_mode='r' enables memory-mapped reading for
 uncompressed .npz files. Only the sliced region is loaded into memory,
@@ -21,14 +19,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 from pathlib import Path
-from typing import Optional, Dict
-
-from .transforms import (
-    sample_spatial_params,
-    apply_spatial_augmentation,
-    sample_pixel_params,
-    apply_pixel_augmentation,
-)
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +43,13 @@ class NCCTDataset(Dataset):
     """
     2.5D dataset for NCCT-to-CTA image translation.
 
+    Returns (3C, H, W) tensors for augmentation on GPU.
+    Middle C slices are extracted after GPU augmentation in the trainer.
+
     Each sample returns:
-        ncct:      (C, H, W) normalized input
-        cta:       (C, H, W) normalized target
-        ncct_lung: (C, H, W) binary lung mask
+        ncct:      (3C, H, W) normalized input
+        cta:       (3C, H, W) normalized target
+        ncct_lung: (3C, H, W) binary lung mask
         filename:  source NPZ filename
     """
 
@@ -67,30 +61,12 @@ class NCCTDataset(Dataset):
         image_size: int = 256,
         hu_min: float = -1024.0,
         hu_max: float = 3071.0,
-        augment: bool = False,
-        aug_prob: float = 0.5,
-        max_angle: float = 15.0,
-        scale_range: float = 0.1,
-        translate_frac: float = 0.05,
-        noise_std: float = 0.02,
-        brightness_range: float = 0.1,
-        contrast_range: float = 0.1,
     ):
         self.data_dir = Path(data_dir)
         self.num_slices = num_slices
         self.image_size = image_size
         self.hu_min = hu_min
         self.hu_max = hu_max
-        self.augment = augment
-        self.aug_prob = aug_prob
-        # Spatial augmentation params
-        self.max_angle = max_angle
-        self.scale_range = scale_range
-        self.translate_frac = translate_frac
-        # Pixel augmentation params
-        self.noise_std = noise_std
-        self.brightness_range = brightness_range
-        self.contrast_range = contrast_range
 
         # Load file list
         with open(split_file, "r") as f:
@@ -107,7 +83,6 @@ class NCCTDataset(Dataset):
         """Get or cache the D dimension of a volume."""
         key = str(filepath)
         if key not in self._depth_cache:
-            # Use mmap to just read shape without loading data
             with np.load(filepath, mmap_mode="r") as npz:
                 self._depth_cache[key] = npz["ncct"].shape[0]
         return self._depth_cache[key]
@@ -116,7 +91,7 @@ class NCCTDataset(Dataset):
         filename = self.filenames[idx]
         filepath = self.data_dir / filename
         C = self.num_slices
-        context_slices = 3 * C  # total slices to extract for augmentation context
+        context_slices = 3 * C  # total slices for 3-block context
 
         # --- Step 1: Load with mmap and extract slices ---
         npz = np.load(filepath, mmap_mode="r")
@@ -124,7 +99,6 @@ class NCCTDataset(Dataset):
         depth = npz["ncct"].shape[0]
         max_start = depth - context_slices
         if max_start <= 0:
-            # Volume too thin, use all slices and pad if needed
             d = 0
             context_slices = min(context_slices, depth)
         else:
@@ -138,45 +112,19 @@ class NCCTDataset(Dataset):
         # Normalize HU to [-1, 1]
         ncct_chunk = normalize_hu(ncct_chunk, self.hu_min, self.hu_max)
         cta_chunk = normalize_hu(cta_chunk, self.hu_min, self.hu_max)
-        # mask stays as [0, 1]
 
-        # Convert to tensors: (3C, H, W)
+        # Convert to tensors: (3C, H, W) or (actual_slices, H, W)
         ncct_t = torch.from_numpy(ncct_chunk)
         cta_t = torch.from_numpy(cta_chunk)
         mask_t = torch.from_numpy(mask_chunk)
 
-        # --- Step 2: Spatial augmentation (on 3C slices) ---
-        if self.augment and np.random.random() < self.aug_prob:
-            spatial_params = sample_spatial_params(
-                max_angle=self.max_angle,
-                scale_range=self.scale_range,
-                translate_frac=self.translate_frac,
-            )
-            ncct_t, cta_t, mask_t = apply_spatial_augmentation(
-                ncct_t, cta_t, mask_t, spatial_params
-            )
+        # --- Step 2: Pad thin volumes to exactly 3C if needed ---
+        if ncct_t.shape[0] < 3 * C:
+            ncct_t = self._pad_to_n(ncct_t, 3 * C)
+            cta_t = self._pad_to_n(cta_t, 3 * C)
+            mask_t = self._pad_to_n(mask_t, 3 * C)
 
-        # --- Step 3: Pixel augmentation (ncct only) ---
-        if self.augment and np.random.random() < self.aug_prob:
-            pixel_params = sample_pixel_params(
-                brightness_range=self.brightness_range,
-                contrast_range=self.contrast_range,
-                noise_std=self.noise_std,
-            )
-            ncct_t = apply_pixel_augmentation(ncct_t, pixel_params)
-
-        # --- Step 4: Extract middle C slices ---
-        actual_slices = ncct_t.shape[0]
-        if actual_slices >= context_slices:
-            start = C  # middle C starts at index C (after first C context slices)
-            ncct_t = ncct_t[start:start + C]
-            cta_t = cta_t[start:start + C]
-            mask_t = mask_t[start:start + C]
-        else:
-            # Handle thin volumes: take what we can and pad
-            ncct_t, cta_t, mask_t = self._pad_to_c(ncct_t, cta_t, mask_t, C)
-
-        # --- Step 5: Resize to (C, H_out, W_out) ---
+        # --- Step 3: Resize to (3C, H_out, W_out) ---
         target_size = self.image_size
         if ncct_t.shape[-2] != target_size or ncct_t.shape[-1] != target_size:
             ncct_t = self._resize(ncct_t, target_size, mode="bilinear")
@@ -184,16 +132,16 @@ class NCCTDataset(Dataset):
             mask_t = self._resize(mask_t, target_size, mode="nearest")
 
         return {
-            "ncct": ncct_t,        # (C, H, W)
-            "cta": cta_t,          # (C, H, W)
-            "ncct_lung": mask_t,   # (C, H, W)
+            "ncct": ncct_t,        # (3C, H, W)
+            "cta": cta_t,          # (3C, H, W)
+            "ncct_lung": mask_t,   # (3C, H, W)
             "filename": filename,
         }
 
     @staticmethod
     def _resize(tensor: torch.Tensor, size: int, mode: str = "bilinear") -> torch.Tensor:
-        """Resize (C, H, W) tensor to (C, size, size)."""
-        x = tensor.unsqueeze(0)  # (1, C, H, W)
+        """Resize (D, H, W) tensor to (D, size, size)."""
+        x = tensor.unsqueeze(0)  # (1, D, H, W)
         if mode == "nearest":
             x = F.interpolate(x, size=(size, size), mode="nearest")
         else:
@@ -201,32 +149,15 @@ class NCCTDataset(Dataset):
         return x.squeeze(0)
 
     @staticmethod
-    def _pad_to_c(
-        ncct: torch.Tensor,
-        cta: torch.Tensor,
-        mask: torch.Tensor,
-        C: int,
-    ):
-        """Pad thin volumes to exactly C slices by repeating edge slices."""
-        actual = ncct.shape[0]
-        if actual >= C:
-            # Center crop
-            start = (actual - C) // 2
-            return ncct[start:start+C], cta[start:start+C], mask[start:start+C]
-        # Pad by repeating edge
-        pad_total = C - actual
+    def _pad_to_n(tensor: torch.Tensor, n: int) -> torch.Tensor:
+        """Pad tensor from (actual, H, W) to (n, H, W) by repeating edge slices."""
+        actual = tensor.shape[0]
+        if actual >= n:
+            return tensor[:n]
+        pad_total = n - actual
         pad_top = pad_total // 2
         pad_bot = pad_total - pad_top
-        ncct = torch.cat(
-            [ncct[:1].repeat(pad_top, 1, 1), ncct, ncct[-1:].repeat(pad_bot, 1, 1)],
-            dim=0
+        return torch.cat(
+            [tensor[:1].repeat(pad_top, 1, 1), tensor, tensor[-1:].repeat(pad_bot, 1, 1)],
+            dim=0,
         )
-        cta = torch.cat(
-            [cta[:1].repeat(pad_top, 1, 1), cta, cta[-1:].repeat(pad_bot, 1, 1)],
-            dim=0
-        )
-        mask = torch.cat(
-            [mask[:1].repeat(pad_top, 1, 1), mask, mask[-1:].repeat(pad_bot, 1, 1)],
-            dim=0
-        )
-        return ncct, cta, mask

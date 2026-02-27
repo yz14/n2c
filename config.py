@@ -57,6 +57,7 @@ class TrainConfig:
     val_interval: int = 1        # validate every N epochs
     l1_weight: float = 1.0
     ssim_weight: float = 1.0
+    use_3d_ssim: bool = True     # use 3D SSIM loss (treats C as depth)
     ema_rate: float = 0.999
     lr_scheduler: str = "cosine" # "cosine" or "step" or "none"
     warmup_steps: int = 500

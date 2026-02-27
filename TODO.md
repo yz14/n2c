@@ -36,7 +36,7 @@
 # TODO  
 医学图像平扫转增强：  
 
-1. 数据增强做的有点问题，不应该用2D数据增强，应该用3D的数据增强，把3CxHxW当作一个3D数据，因为这是从3D里面截取的。也就是在# --- Step 2: Spatial augmentation (on 3C slices) ---这里开始，把数据当作D=3C的DxHxW的3D数据，直到return {
+1. 数据增强用3D数据增强合理一些，把3CxHxW当作一个3D数据，因为这是从3D里面截取的。也就是在# --- Step 2: Spatial augmentation (on 3C slices) ---这里开始，把数据当作D=3C的DxHxW的3D数据，直到return {
             "ncct": ncct_t,        # (C, H, W)
             "cta": cta_t,          # (C, H, W)
             "ncct_lung": mask_t,   # (C, H, W)
@@ -45,7 +45,8 @@
 2. 训练很慢，感觉数据读取和数据增强占了很多的时间，有没有办法让数据增强在GPU上运行，也就是转为torch的tensor后，都在GPU上处理数据。也就是在# --- Step 2: Spatial augmentation (on 3C slices) ---这里开始都用GPU处理数据。  
 3. 为了看到主观的效果，需要在每次validation后保存8个训练样本和8个验证样本的输入和预测结果，做成两张4x4的png图。注意，因为这是医学图像，所以保存的是某个通道的灰度图，而不是把所有通道当成RGB保存。  
 4. 需要增加推理代码，使得模型训练完成后在测试集上进行推理，由于这是2.5D的方案，输入模型的是CxHxW，预测也是CxHxW，保存则只保留从C/3到2C/3这中间的预测结果，然后依次拼接，直至整个3D预测完成，拼接成完整的3D的结果。注意推理某个样本时，为了保证输入和输出的3D现状一致，对输入的D维的开头和结尾可能需要pad才能实现输出3D形状一致。  
-5. 这是我把代码挪到服务器上运行的输出，是否正常 python train.py
+5. 损失里面的ssim是否用3D合理一些，因为后面C可能会增加到12，而不是现在的3，而且原本也是打算做3D输入训练，但是考虑到显存只能做成2.5D。  
+6. 这是我把代码挪到服务器上运行的输出，是否正常 python train.py
 2026-02-26 20:57:47 [INFO] __main__: Using existing split files
 2026-02-26 20:57:47 [INFO] __main__: Using device: cuda
 2026-02-26 20:57:47 [INFO] data.dataset: Loaded 1161 files from splits/train.txt

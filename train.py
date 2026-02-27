@@ -20,6 +20,7 @@ from torch.utils.data import DataLoader
 from config import Config
 from data.split import split_dataset
 from data.dataset import NCCTDataset
+from data.transforms import GPUAugmentor
 from models.unet import UNet
 from models.losses import CombinedLoss
 from trainer import Trainer
@@ -82,14 +83,6 @@ def build_dataloaders(cfg: Config, train_file: str, valid_file: str):
         image_size=data_cfg.image_size,
         hu_min=data_cfg.hu_min,
         hu_max=data_cfg.hu_max,
-        augment=True,
-        aug_prob=data_cfg.aug_prob,
-        max_angle=data_cfg.max_angle,
-        scale_range=data_cfg.scale_range,
-        translate_frac=data_cfg.translate_frac,
-        noise_std=data_cfg.noise_std,
-        brightness_range=data_cfg.brightness_range,
-        contrast_range=data_cfg.contrast_range,
     )
 
     val_dataset = NCCTDataset(
@@ -99,7 +92,6 @@ def build_dataloaders(cfg: Config, train_file: str, valid_file: str):
         image_size=data_cfg.image_size,
         hu_min=data_cfg.hu_min,
         hu_max=data_cfg.hu_max,
-        augment=False,
     )
 
     train_loader = DataLoader(
@@ -185,7 +177,11 @@ def main():
     criterion = CombinedLoss(
         l1_weight=cfg.train.l1_weight,
         ssim_weight=cfg.train.ssim_weight,
+        use_3d_ssim=cfg.train.use_3d_ssim,
     )
+
+    # GPU augmentor
+    augmentor = GPUAugmentor.from_config(cfg.data)
 
     # Train
     trainer = Trainer(
@@ -193,6 +189,7 @@ def main():
         criterion=criterion,
         train_loader=train_loader,
         val_loader=val_loader,
+        augmentor=augmentor,
         config=cfg,
         device=device,
     )
