@@ -263,6 +263,9 @@ class Trainer:
         logger.info(f"  LR (G):        {cfg.lr}")
         logger.info(f"  Output dir:    {self.output_dir}")
 
+        # Diagnostic: log data statistics from first batch
+        self._log_data_diagnostics()
+
         for epoch in range(self.start_epoch, cfg.num_epochs):
             train_metrics = self._train_epoch(epoch)
             logger.info(
@@ -283,6 +286,9 @@ class Trainer:
 
                 self._save_visualizations(epoch, val_vis)
 
+                # Per-epoch diagnostics (debug output stats)
+                self._log_epoch_diagnostics(epoch)
+
             if (epoch + 1) % cfg.save_interval == 0:
                 self._save_checkpoint(epoch, is_best=False)
 
@@ -294,6 +300,113 @@ class Trainer:
 
         self._save_checkpoint(cfg.num_epochs - 1, is_best=False, filename="checkpoint_final.pt")
         logger.info("Training complete.")
+
+    # ------------------------------------------------------------------
+    # Diagnostics
+    # ------------------------------------------------------------------
+
+    @torch.no_grad()
+    def _log_data_diagnostics(self):
+        """Log data statistics from one batch to diagnose HU range issues."""
+        logger.info("=" * 60)
+        logger.info("[Diagnostics] Scanning first batch for data statistics...")
+        try:
+            batch = next(iter(self.train_loader))
+            ncct_3c = batch["ncct"].to(self.device)
+            cta_3c = batch["cta"].to(self.device)
+            mask_3c = batch["ncct_lung"].to(self.device)
+
+            # Raw normalized stats (should be in [-1, 1])
+            logger.info(f"  [Raw 3C] ncct: min={ncct_3c.min():.4f}, max={ncct_3c.max():.4f}, "
+                        f"mean={ncct_3c.mean():.4f}, std={ncct_3c.std():.4f}")
+            logger.info(f"  [Raw 3C] cta:  min={cta_3c.min():.4f}, max={cta_3c.max():.4f}, "
+                        f"mean={cta_3c.mean():.4f}, std={cta_3c.std():.4f}")
+            logger.info(f"  [Raw 3C] mask: min={mask_3c.min():.4f}, max={mask_3c.max():.4f}, "
+                        f"sum={mask_3c.sum():.0f}, frac={mask_3c.mean():.4f}")
+
+            # Check how much data is clipped at boundaries
+            ncct_at_min = (ncct_3c <= -0.99).float().mean().item()
+            ncct_at_max = (ncct_3c >= 0.99).float().mean().item()
+            cta_at_min = (cta_3c <= -0.99).float().mean().item()
+            cta_at_max = (cta_3c >= 0.99).float().mean().item()
+            logger.info(f"  [Clipping] ncct at min(-1): {ncct_at_min*100:.1f}%, at max(+1): {ncct_at_max*100:.1f}%")
+            logger.info(f"  [Clipping] cta  at min(-1): {cta_at_min*100:.1f}%, at max(+1): {cta_at_max*100:.1f}%")
+
+            if cta_at_max > 0.05:
+                logger.warning(f"  ⚠ {cta_at_max*100:.1f}% of CTA voxels are clipped at max! "
+                               f"HU range may be too narrow — contrast enhancement signal is lost.")
+            if ncct_at_min > 0.20:
+                logger.warning(f"  ⚠ {ncct_at_min*100:.1f}% of NCCT voxels are clipped at min! "
+                               f"HU range may be too narrow — lung detail is lost.")
+
+            # Difference between NCCT and CTA (should be large if HU range is correct)
+            diff = (cta_3c - ncct_3c).abs()
+            logger.info(f"  [NCCT-CTA diff] mean={diff.mean():.4f}, max={diff.max():.4f}, "
+                        f"std={diff.std():.4f}")
+            if diff.mean() < 0.02:
+                logger.warning(f"  ⚠ NCCT and CTA are nearly identical (mean diff={diff.mean():.4f})! "
+                               f"The model has very little signal to learn. Check HU range.")
+
+            # After augmentation (extract middle slices)
+            ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
+            logger.info(f"  [Middle C] ncct shape={list(ncct.shape)}, "
+                        f"cta shape={list(cta.shape)}, mask shape={list(mask.shape)}")
+
+            # Run G to check output range
+            self.model.eval()
+            pred = self.model(ncct)
+            residual = pred - ncct
+            logger.info(f"  [G output] pred: min={pred.min():.4f}, max={pred.max():.4f}, "
+                        f"mean={pred.mean():.4f}")
+            logger.info(f"  [G residual] min={residual.min():.4f}, max={residual.max():.4f}, "
+                        f"mean_abs={residual.abs().mean():.4f}")
+            if residual.abs().mean() < 0.01:
+                logger.warning(f"  ⚠ G residual is near zero ({residual.abs().mean():.4f}). "
+                               f"Model is learning identity mapping (output ≈ input).")
+            self.model.train()
+
+            # HU range info
+            hu_min = self.config.data.hu_min
+            hu_max = self.config.data.hu_max
+            logger.info(f"  [Config] HU range: [{hu_min}, {hu_max}] (width={hu_max - hu_min} HU)")
+            if hu_max - hu_min < 1000:
+                logger.warning(f"  ⚠ HU range width is only {hu_max - hu_min} HU. "
+                               f"For NCCT→CTA with lung, recommend at least [-1024, 600] (1624 HU).")
+        except Exception as e:
+            logger.warning(f"  [Diagnostics] Failed: {e}")
+        logger.info("=" * 60)
+
+    @torch.no_grad()
+    def _log_epoch_diagnostics(self, epoch: int):
+        """Log model output statistics at end of epoch for debugging."""
+        try:
+            batch = next(iter(self.val_loader or self.train_loader))
+            ncct_3c = batch["ncct"].to(self.device)
+            cta_3c = batch["cta"].to(self.device)
+            mask_3c = batch["ncct_lung"].to(self.device)
+            ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
+
+            self.model.eval()
+            pred = self.model(ncct)
+            residual = pred - ncct
+
+            # Per-pixel error in normalized space
+            l1_error = (pred - cta).abs().mean().item()
+            # Residual magnitude
+            res_mag = residual.abs().mean().item()
+
+            logger.info(f"  [Debug E{epoch+1}] pred range=[{pred.min():.3f}, {pred.max():.3f}], "
+                        f"residual_mag={res_mag:.4f}, l1_vs_cta={l1_error:.4f}")
+
+            # Check if lung region has higher error (expected)
+            if mask is not None and mask.sum() > 0:
+                lung_err = ((pred - cta).abs() * (mask > 0.5).float()).sum() / max(1, (mask > 0.5).sum())
+                bg_err = ((pred - cta).abs() * (mask <= 0.5).float()).sum() / max(1, (mask <= 0.5).sum())
+                logger.info(f"  [Debug E{epoch+1}] lung_l1={lung_err:.4f}, bg_l1={bg_err:.4f}")
+
+            self.model.train()
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # Train epoch

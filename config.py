@@ -95,7 +95,7 @@ class TrainConfig:
     pretrained_R: str = ""       # path to pretrained registration net weights
     pretrained_D: str = ""       # path to pretrained discriminator weights
     # Training tricks
-    grad_clip_norm: float = 1.0  # max gradient norm for clipping (0 = disabled)
+    grad_clip_norm: float = 5.0  # max gradient norm for clipping (0 = disabled)
     grad_accumulation_steps: int = 1  # gradient accumulation steps (1 = no accumulation)
 
 

@@ -1,10 +1,18 @@
+# Recommended config for NCCT→CTA training
+# Key changes from the problematic config:
+#   1. HU range: [-1024, 600] captures lung (-950~-500) + contrast vessels (200~600)
+#   2. Gradient clipping: relaxed from 1.0 to 5.0
+#   3. 2D SSIM: more stable than 3D SSIM with only 3 depth slices
+#   4. Discriminator OFF for Phase 1 (train G first to convergence)
+#   5. No pretrained_G (fresh training with correct HU range)
+
 data:
   data_dir: /data0/yzhen/data/lung_pe_v1/npz_v1
   split_dir: ./splits
   num_slices: 3
   image_size: 256
-  hu_min: -550.0
-  hu_max: 250.0
+  hu_min: -1024.0
+  hu_max: 600.0
   num_workers: 24
   aug_prob: 0.5
   max_angle: 15.0
@@ -47,7 +55,7 @@ registration:
   smoothness_penalty: l2
   lr: 0.0001
 discriminator:
-  enabled: true
+  enabled: false
   ndf: 64
   n_layers: 3
   num_D: 3
@@ -76,7 +84,7 @@ train:
   output_dir: ./outputs
   resume_checkpoint: ''
   seed: 42
-  pretrained_G: /data0/yzhen/a_test_model/v5/outputs0/checkpoint_best.pt
+  pretrained_G: ''
   pretrained_R: ''
   pretrained_D: ''
   grad_clip_norm: 5.0

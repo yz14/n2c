@@ -47,7 +47,7 @@ registration:
   smoothness_penalty: l2
   lr: 0.0001
 discriminator:
-  enabled: true
+  enabled: false
   ndf: 64
   n_layers: 3
   num_D: 3
@@ -76,7 +76,7 @@ train:
   output_dir: ./outputs
   resume_checkpoint: ''
   seed: 42
-  pretrained_G: /data0/yzhen/a_test_model/v5/outputs0/checkpoint_best.pt
+  pretrained_G: ''
   pretrained_R: ''
   pretrained_D: ''
   grad_clip_norm: 5.0

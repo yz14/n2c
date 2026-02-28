@@ -64,6 +64,18 @@ def _normalize_to_uint8(tensor: torch.Tensor) -> torch.Tensor:
     return (t * 255).clamp(0, 255).to(torch.uint8)
 
 
+def _normalize_to_uint8_shared(
+    tensor: torch.Tensor, vmin: float, vmax: float
+) -> torch.Tensor:
+    """Normalize a tensor using shared min/max to [0, 255] uint8."""
+    t = tensor.float()
+    if vmax - vmin > 1e-8:
+        t = (t - vmin) / (vmax - vmin)
+    else:
+        t = t - vmin
+    return (t * 255).clamp(0, 255).to(torch.uint8)
+
+
 def _make_grid(
     images: List[torch.Tensor],
     nrow: int,
@@ -113,6 +125,7 @@ def save_sample_grid(
     Save a grayscale grid image showing input, prediction, and ground truth.
 
     Layout: num_samples rows × 3 columns (input | prediction | ground truth).
+    Uses SHARED normalization across input/pred/gt so value differences are visible.
     Saves a single grayscale channel (middle channel by default).
 
     Args:
@@ -128,11 +141,20 @@ def save_sample_grid(
     if slice_idx is None:
         slice_idx = C // 2
 
+    # Compute shared min/max across all images for consistent normalization
+    all_slices = torch.cat([
+        inputs[:N, slice_idx],
+        preds[:N, slice_idx],
+        targets[:N, slice_idx],
+    ])
+    vmin = all_slices.min().item()
+    vmax = all_slices.max().item()
+
     images = []
     for i in range(N):
-        inp_slice = _normalize_to_uint8(inputs[i, slice_idx])    # (H, W)
-        pred_slice = _normalize_to_uint8(preds[i, slice_idx])     # (H, W)
-        gt_slice = _normalize_to_uint8(targets[i, slice_idx])     # (H, W)
+        inp_slice = _normalize_to_uint8_shared(inputs[i, slice_idx], vmin, vmax)
+        pred_slice = _normalize_to_uint8_shared(preds[i, slice_idx], vmin, vmax)
+        gt_slice = _normalize_to_uint8_shared(targets[i, slice_idx], vmin, vmax)
         images.extend([inp_slice, pred_slice, gt_slice])
 
     grid = _make_grid(images, nrow=3, padding=2, pad_value=128)

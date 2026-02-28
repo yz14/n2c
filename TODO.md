@@ -34,8 +34,7 @@
 
 
 # TODO  
-将代码上传服务器，用真实数据训练，从D:\codes\work-projects\ncct2cpta\train.py
-
+我将代码上传服务器，用真实数据训练，当主观结果到了差不多的样子，我增加了判别器。但是我感觉判别器的加入对效果几乎没有任何提升。我从D:\codes\work-projects\ncct2cpta\train.py这里开始训练，训练G的配置D:\codes\work-projects\ncct2cpta\outputs\config0.yaml和日志D:\codes\work-projects\ncct2cpta\outputs\train0.log。训练G和D的配置D:\codes\work-projects\ncct2cpta\outputs\config.yaml和日志D:\codes\work-projects\ncct2cpta\outputs\train0.log。训练G时，NCCT中的肺血管看起来变得更加亮了，但是整体生成的图像都比较模糊，于是我加入了判别器，看起来没有使得图像变得清晰。我用-550和250是因为我只需要关注肺部的主要血管即可，所以这个范围足够了。请你细致的分析整个训练过程，训练代码等等，是否哪里有错误？模型有错误吗？训练过程有错误吗？还是哪里有问题？如果可以明确定位问题，则请指出，并更正。如果不确定，请加入debug，并告诉后续需要做哪些试验来获取信息，从而定位问题所在。需要高质量完成。  
 
 
 
