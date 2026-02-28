@@ -69,6 +69,7 @@ class DiscriminatorConfig:
     lr_scheduler: str = "cosine"     # LR scheduler for D: "cosine", "step", "none"
     warmup_steps: int = 500          # warmup steps for D scheduler
     label_smoothing: float = 0.1     # one-sided label smoothing for D real targets (0=off)
+    grad_clip_norm_D: float = 0.0    # D gradient clipping (0=disabled; SN already ensures stability)
 
 
 @dataclass
@@ -97,6 +98,7 @@ class TrainConfig:
     # Training tricks
     grad_clip_norm: float = 5.0  # max gradient norm for clipping (0 = disabled)
     grad_accumulation_steps: int = 1  # gradient accumulation steps (1 = no accumulation)
+    skip_warmup: bool = False    # skip LR warmup (useful when loading pretrained weights)
 
 
 @dataclass

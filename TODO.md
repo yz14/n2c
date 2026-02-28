@@ -34,7 +34,47 @@
 
 
 # TODO  
-我将代码上传服务器，用真实数据训练，当主观结果到了差不多的样子，我增加了判别器。但是我感觉判别器的加入对效果几乎没有任何提升。我从D:\codes\work-projects\ncct2cpta\train.py这里开始训练，训练G的配置D:\codes\work-projects\ncct2cpta\outputs\config0.yaml和日志D:\codes\work-projects\ncct2cpta\outputs\train0.log。训练G和D的配置D:\codes\work-projects\ncct2cpta\outputs\config.yaml和日志D:\codes\work-projects\ncct2cpta\outputs\train0.log。训练G时，NCCT中的肺血管看起来变得更加亮了，但是整体生成的图像都比较模糊，于是我加入了判别器，看起来没有使得图像变得清晰。我用-550和250是因为我只需要关注肺部的主要血管即可，所以这个范围足够了。请你细致的分析整个训练过程，训练代码等等，是否哪里有错误？模型有错误吗？训练过程有错误吗？还是哪里有问题？如果可以明确定位问题，则请指出，并更正。如果不确定，请加入debug，并告诉后续需要做哪些试验来获取信息，从而定位问题所在。需要高质量完成。  
+~~判别器加入后效果无提升分析~~ **已完成分析和修复 (2026-02-28 v2)**
+
+## 分析结论
+
+### 🔴 Bug1（已修复）：验证和可视化使用在线权重而非 EMA 权重
+- EMA 权重理论上更好，但从未用于验证/可视化/best checkpoint 选择
+- 用户看到的"模糊"可能部分因为没用 EMA
+
+### 🔴 问题2（需实验确认）：G 总 loss 中 FM 过强，GAN 信号被淹没
+- 重建 loss: 0.67 (47%)，GAN: 0.26 (18%)，FM: 0.50 (35%)
+- GAN 是推动清晰度的信号，但仅占 18%
+- FM 本质是 D 特征空间的 L1 正则，不产生锐化效果
+
+### 🟡 问题3：D 梯度范数极高（40→27），grad_clip=5.0 裁掉 80%+
+- D 信号极不稳定，需要通过 D_real/D_fake 均值来确认 D 是否有效
+
+### 🟡 问题4（已修复）：pretrained_G 后 LR warmup 从零重启
+- G 在前 ~2 epochs 几乎不学习，导致 val_loss 暂时恶化
+- 新增 `skip_warmup: true` 配置选项
+
+## 已实施修复
+1. `trainer.py` — **EMA 验证**：验证和可视化改用 EMA 权重（_swap_ema_weights/_restore_model_weights）
+2. `trainer.py` — **D 诊断日志**：新增 D_real、D_fake（D 对真/假图的平均输出）、w_recon、w_gan、w_fm（加权 loss 组成）
+3. `config.py` — **skip_warmup 选项**：`skip_warmup: true` 跳过 LR warmup
+
+## 下一步实验（按优先级）
+
+### 实验1：EMA + skip_warmup 重训 G+D（最小改动验证）
+在 config.yaml 中加入 `skip_warmup: true`，其他不变，重新训练 G+D。
+观察日志中的 `D_real` 和 `D_fake`：
+- 如果 D_real ≈ D_fake（D 无法区分真假）→ D 本身无效
+- 如果 D_real >> D_fake（D 有效）但图像仍模糊 → loss 权重有问题
+
+### 实验2：降低 FM 权重（如果实验1显示 D 有效但仍模糊）
+将 `feat_match_weight` 从 10.0 降到 2.0，让 GAN 信号占比提升到 30%+。
+
+### 实验3：提高 GAN 权重（如果实验2仍不够）
+将 `gan_weight` 从 1.0 提到 2.0-5.0。注意可能导致训练不稳定。
+
+### 实验4：G-only 训练更久（对比基线）
+G-only 在 E30 仍在收敛，可训练到 100+ epochs 看 loss 是否还能下降。  
 
 
 

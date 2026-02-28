@@ -136,6 +136,7 @@ class Trainer:
 
         # --- Training tricks config ---
         self.grad_clip_norm = config.train.grad_clip_norm
+        self.grad_clip_norm_D = config.discriminator.grad_clip_norm_D if self.use_disc else 0.0
         self.grad_accumulation_steps = max(1, config.train.grad_accumulation_steps)
 
         # --- Load pretrained weights (before optimizer creation for correct param refs) ---
@@ -165,19 +166,23 @@ class Trainer:
         # Effective steps account for gradient accumulation
         steps_per_epoch = len(train_loader) // self.grad_accumulation_steps
         total_optim_steps = config.train.num_epochs * steps_per_epoch
+        g_warmup = 0 if config.train.skip_warmup else config.train.warmup_steps
         self.scheduler_G = self._build_scheduler(
             self.optimizer_G,
             config.train.lr_scheduler,
-            config.train.warmup_steps,
+            g_warmup,
             total_optim_steps,
         )
+        if config.train.skip_warmup:
+            logger.info("  Skip warmup: G LR starts at full value")
 
         # --- LR scheduler (for D) ---
         if self.use_disc:
+            d_warmup = 0 if config.train.skip_warmup else config.discriminator.warmup_steps
             self.scheduler_D = self._build_scheduler(
                 self.optimizer_D,
                 config.discriminator.lr_scheduler,
-                config.discriminator.warmup_steps,
+                d_warmup,
                 total_optim_steps,
             )
         else:
@@ -274,6 +279,8 @@ class Trainer:
 
             # Validation
             if self.val_loader and (epoch + 1) % cfg.val_interval == 0:
+                # Use EMA weights for validation and visualization
+                self._swap_ema_weights()
                 val_metrics, val_vis = self._validate(epoch)
                 logger.info(
                     f"Epoch {epoch+1}/{cfg.num_epochs} [Val]   {val_metrics}"
@@ -285,6 +292,7 @@ class Trainer:
                     logger.info(f"  New best validation loss: {val_loss:.6f}")
 
                 self._save_visualizations(epoch, val_vis)
+                self._restore_model_weights()
 
                 # Per-epoch diagnostics (debug output stats)
                 self._log_epoch_diagnostics(epoch)
@@ -300,6 +308,22 @@ class Trainer:
 
         self._save_checkpoint(cfg.num_epochs - 1, is_best=False, filename="checkpoint_final.pt")
         logger.info("Training complete.")
+
+    # ------------------------------------------------------------------
+    # EMA weight swap helpers
+    # ------------------------------------------------------------------
+
+    def _swap_ema_weights(self):
+        """Swap model weights with EMA weights for evaluation."""
+        self._saved_model_params = [p.data.clone() for p in self.model.parameters()]
+        for p, ema_p in zip(self.model.parameters(), self.ema_params):
+            p.data.copy_(ema_p)
+
+    def _restore_model_weights(self):
+        """Restore model weights after EMA evaluation."""
+        for p, saved_p in zip(self.model.parameters(), self._saved_model_params):
+            p.data.copy_(saved_p)
+        del self._saved_model_params
 
     # ------------------------------------------------------------------
     # Diagnostics
@@ -469,6 +493,8 @@ class Trainer:
             # GAN loss (generator side) — G wants D to classify fake as real
             gan_g_val = 0.0
             feat_match_val = 0.0
+            d_real_mean_val = 0.0
+            d_fake_mean_val = 0.0
             if self.use_disc:
                 fake_input = torch.cat([ncct, pred], dim=1)
                 real_input = torch.cat([ncct, cta], dim=1)
@@ -476,6 +502,13 @@ class Trainer:
                 fake_features = self.discriminator(fake_input)
                 with torch.no_grad():
                     real_features = self.discriminator(real_input)
+                    # Log D output statistics (mean of final layer per scale)
+                    d_real_mean_val = sum(
+                        s[-1].mean().item() for s in real_features
+                    ) / len(real_features)
+                    d_fake_mean_val = sum(
+                        s[-1].mean().item() for s in fake_features
+                    ) / len(fake_features)
 
                 gan_g = self.gan_loss_fn(fake_features, target_is_real=True)
                 feat_match = self.feat_match_fn(real_features, fake_features)
@@ -516,7 +549,8 @@ class Trainer:
                 grad_norm_g = self._clip_and_get_norm(self._g_param_list)
                 if self.use_disc:
                     grad_norm_d = self._clip_and_get_norm(
-                        list(self.discriminator.parameters())
+                        list(self.discriminator.parameters()),
+                        max_norm=self.grad_clip_norm_D,
                     )
 
                 # Optimizer step
@@ -561,6 +595,12 @@ class Trainer:
                 metrics["fm"] = feat_match_val
                 metrics["d_loss"] = d_loss_val
                 metrics["lr_D"] = self.optimizer_D.param_groups[0]["lr"]
+                metrics["D_real"] = d_real_mean_val
+                metrics["D_fake"] = d_fake_mean_val
+                # Weighted loss contributions (for diagnosing loss balance)
+                metrics["w_recon"] = loss_dict["loss"].item()
+                metrics["w_gan"] = self.gan_weight * gan_g_val
+                metrics["w_fm"] = self.feat_match_weight * feat_match_val
             # Gradient norms (logged at accumulation boundaries only)
             if is_accum_boundary:
                 metrics["gnorm_G"] = grad_norm_g
@@ -573,11 +613,19 @@ class Trainer:
 
         return tracker
 
-    def _clip_and_get_norm(self, params: list) -> float:
-        """Clip gradients and return the total gradient norm (before clipping)."""
-        if self.grad_clip_norm > 0:
+    def _clip_and_get_norm(self, params: list, max_norm: float = None) -> float:
+        """Clip gradients and return the total gradient norm (before clipping).
+
+        Args:
+            params:   list of parameters to clip
+            max_norm: clipping threshold override (None → use self.grad_clip_norm,
+                      0 → compute norm only without clipping)
+        """
+        if max_norm is None:
+            max_norm = self.grad_clip_norm
+        if max_norm > 0:
             grad_norm = torch.nn.utils.clip_grad_norm_(
-                params, self.grad_clip_norm
+                params, max_norm
             ).item()
         else:
             # Just compute norm without clipping

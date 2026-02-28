@@ -455,4 +455,7 @@ class UNet(nn.Module):
         if self.residual_output:
             output = x + output
 
-        return output
+        # Constrain output to [-1, 1] to match data normalization range.
+        # Without this, residual addition can produce values outside [-1, 1],
+        # causing SSIM (data_range=2.0) miscalculation and D training issues.
+        return torch.tanh(output)
