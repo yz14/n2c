@@ -142,6 +142,14 @@ def main():
     parser = argparse.ArgumentParser(description="Train NCCT→CTA model")
     parser.add_argument("--config", type=str, default=None, help="Path to YAML config")
     parser.add_argument("--split_only", action="store_true", help="Only run data splitting")
+    parser.add_argument("--pretrained_G", type=str, default=None,
+                        help="Path to pretrained generator weights (overrides config)")
+    parser.add_argument("--pretrained_R", type=str, default=None,
+                        help="Path to pretrained registration net weights (overrides config)")
+    parser.add_argument("--pretrained_D", type=str, default=None,
+                        help="Path to pretrained discriminator weights (overrides config)")
+    parser.add_argument("--resume", type=str, default=None,
+                        help="Path to checkpoint for resuming training (overrides config)")
     args = parser.parse_args()
 
     # Load config
@@ -150,6 +158,16 @@ def main():
     else:
         cfg = Config()
     cfg.sync_channels()
+
+    # CLI overrides for pretrained paths
+    if args.pretrained_G:
+        cfg.train.pretrained_G = args.pretrained_G
+    if args.pretrained_R:
+        cfg.train.pretrained_R = args.pretrained_R
+    if args.pretrained_D:
+        cfg.train.pretrained_D = args.pretrained_D
+    if args.resume:
+        cfg.train.resume_checkpoint = args.resume
 
     # Setup
     setup_logging(cfg.train.output_dir)

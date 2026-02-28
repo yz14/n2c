@@ -34,10 +34,30 @@
 
 
 # TODO  
-医学图像平扫转增强：  
+将代码上传服务器，用真实数据训练，从D:\codes\work-projects\ncct2cpta\train.py
 
-我计划用UNet ($G$) + VoxelMorph ($R$) + Multi-Scale PatchGAN with Spectral Norm ($D$)来完成这个任务，目前已经实现了G。  
-1. 在生成器UNet后面引入一个配准网络R，配准网络参考D:\codes\work-projects\ncct2ctpa\voxelmorph方案，请你清晰化，结构化，现代化实现和适配配准网络模块，如果有公认高质量的提升效果的技巧，请加入。配准网络将UNet生成的图像和目标图像进行配准，然后输出形变场进行配准，然后损失的计算是对配准后的图像和目标图像的损失。配准网络需要增加一个开关，即打开，则使用配准网络，关闭，则配准网络是identity。这样我可以分阶段训练不同的网络。  
-2. 在生成器UNet后面引入一个判别器D，判别器参考D:\codes\work-projects\ncct2ctpa\ref_models\pix2pixHD这个里面的Multi-Scale判别器，请你清晰化，结构化，现代化实现和适配判别器模块，如果有公认高质量的提升效果的技巧，请加入。注意输入输出的数值，生成器的输入和输出应该都是归一化到-1到1之间了。请分析判别器是否也需要加入谱归一化 (Spectral Normalization, SN)。判别器也需要加入一个开关，开，则使用判别器，关，则不使用判别器，只用生成器。  
-3. 损失函数增加损失权重，目前都是直接对输出和目标图像计算损失，肺部的mask没有使用上，可以对肺部有值的区域给10倍损失权重，给其它区域1倍损失权重，这样肺部的血管生成效果应该会好一些。  
-4. 你还有其它更好的建议吗，只需要给建议就行，不需要修改。  
+
+
+
+
+
+**未来可能计划，暂时不用实现**  
+Perceptual Loss (VGG/LPIPS): Add a perceptual loss using pre-trained VGG features. This is especially effective for generating realistic textures in medical images. Since the data is single-channel grayscale, you'd replicate to 3 channels before feeding into VGG. Weight ~0.1-1.0 relative to L1.  
+
+Progressive Training Strategy: Train in phases:
+Phase 1: G only with L1+SSIM (50 epochs)
+Phase 2: Enable R (50 epochs)
+Phase 3: Enable D (100+ epochs)
+This prevents GAN instability early on and lets G converge to a reasonable baseline first.  
+
+Mixed Precision (AMP): Use torch.cuda.amp for the generator forward/backward pass. The UNet is large (61M params) and AMP would roughly halve memory and speed up training 1.5-2x without quality loss.  
+
+Gradient Penalty (R1): Instead of or in addition to SN, consider R1 gradient penalty on the discriminator. This provides a more direct regularization and is used in StyleGAN-family models. Typical weight: 10.0.  
+
+Attention in Registration Net: The current registration UNet is very lightweight (0.07M). For cases with complex misalignments, adding a single self-attention layer at the bottleneck could help capture long-range spatial correspondences.  
+
+Multi-resolution Loss: Compute L1+SSIM at multiple resolutions (original + 2x/4x downsampled). This helps the generator learn both fine detail and global structure simultaneously.  
+
+Curriculum on Lung Weight: Start with lung_weight=1.0 and gradually increase to 10.0 over the first 20-30 epochs. A sudden 10x emphasis on lung regions might cause early instability.  
+
+Test-Time Augmentation (TTA): During inference, run the model with 2-4 augmented versions (flips, small rotations) of the input and average predictions. This typically improves SSIM/PSNR by 0.5-1.0 dB at the cost of proportional inference time.

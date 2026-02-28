@@ -58,7 +58,7 @@ class RegistrationConfig:
 
 @dataclass
 class DiscriminatorConfig:
-    enabled: bool = False            # ON/OFF switch for staged training
+    enabled: bool = True            # ON/OFF switch for staged training
     ndf: int = 64                    # base filters
     n_layers: int = 3                # conv layers per sub-discriminator
     num_D: int = 3                   # number of discriminator scales
@@ -66,11 +66,14 @@ class DiscriminatorConfig:
     gan_weight: float = 1.0          # weight for GAN loss (generator side)
     feat_match_weight: float = 10.0  # weight for feature matching loss
     lr: float = 2e-4                 # separate (typically higher) LR for discriminator
+    lr_scheduler: str = "cosine"     # LR scheduler for D: "cosine", "step", "none"
+    warmup_steps: int = 500          # warmup steps for D scheduler
+    label_smoothing: float = 0.1     # one-sided label smoothing for D real targets (0=off)
 
 
 @dataclass
 class TrainConfig:
-    batch_size: int = 8
+    batch_size: int = 2
     lr: float = 1e-4
     weight_decay: float = 0.0
     num_epochs: int = 200
@@ -87,6 +90,13 @@ class TrainConfig:
     output_dir: str = "./outputs"
     resume_checkpoint: str = ""
     seed: int = 42
+    # Pretrained model paths (load weights only, train from epoch 0)
+    pretrained_G: str = ""       # path to pretrained generator weights
+    pretrained_R: str = ""       # path to pretrained registration net weights
+    pretrained_D: str = ""       # path to pretrained discriminator weights
+    # Training tricks
+    grad_clip_norm: float = 1.0  # max gradient norm for clipping (0 = disabled)
+    grad_accumulation_steps: int = 1  # gradient accumulation steps (1 = no accumulation)
 
 
 @dataclass

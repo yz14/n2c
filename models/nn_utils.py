@@ -8,8 +8,101 @@ Provides building blocks for the UNet model:
   - checkpoint: gradient checkpointing wrapper
 """
 
+import logging
+from pathlib import Path
+from typing import Optional
+
 import torch
 import torch.nn as nn
+
+logger = logging.getLogger(__name__)
+
+
+def load_pretrained_weights(
+    model: nn.Module,
+    pretrained_path: str,
+    component_key: Optional[str] = None,
+    device: Optional[torch.device] = None,
+    strict: bool = False,
+) -> None:
+    """
+    Load pretrained weights into a model from a checkpoint or raw state dict file.
+
+    Supports two file formats:
+      1. Full training checkpoint (dict with 'model_state_dict', 'reg_net_state_dict', etc.)
+         → extracts the relevant component via `component_key`.
+      2. Raw state dict (dict of parameter tensors)
+         → loads directly.
+
+    Args:
+        model:          target nn.Module to load weights into
+        pretrained_path: path to .pt/.pth file
+        component_key:  key to extract from checkpoint dict (e.g., 'model_state_dict',
+                        'reg_net_state_dict', 'discriminator_state_dict').
+                        If None, tries common keys then falls back to raw state dict.
+        device:         map_location for torch.load
+        strict:         if False (default), ignore missing/unexpected keys
+    """
+    path = Path(pretrained_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Pretrained weights not found: {pretrained_path}")
+
+    logger.info(f"Loading pretrained weights from: {pretrained_path}")
+    state = torch.load(pretrained_path, map_location=device or "cpu")
+
+    # Extract state dict from checkpoint if needed
+    state_dict = _extract_state_dict(state, component_key)
+
+    # Load with detailed logging
+    missing, unexpected = model.load_state_dict(state_dict, strict=strict)
+
+    n_loaded = len(state_dict) - len(unexpected)
+    n_model = len(list(model.state_dict().keys()))
+    logger.info(f"  Loaded {n_loaded}/{n_model} parameter tensors")
+    if missing:
+        logger.warning(f"  Missing keys ({len(missing)}): {missing[:5]}{'...' if len(missing) > 5 else ''}")
+    if unexpected:
+        logger.warning(f"  Unexpected keys ({len(unexpected)}): {unexpected[:5]}{'...' if len(unexpected) > 5 else ''}")
+
+
+def _extract_state_dict(state: dict, component_key: Optional[str] = None) -> dict:
+    """
+    Extract a model state dict from a checkpoint or raw state dict.
+
+    If component_key is provided, look for that key first.
+    Otherwise, try common checkpoint keys, then treat as raw state dict.
+    """
+    if not isinstance(state, dict):
+        raise ValueError(f"Expected dict, got {type(state)}")
+
+    # If a specific key is requested, use it
+    if component_key and component_key in state:
+        logger.info(f"  Extracted component: '{component_key}'")
+        return state[component_key]
+
+    # Auto-detect: try common checkpoint keys
+    common_keys = [
+        "model_state_dict", "state_dict", "model",
+        "reg_net_state_dict", "discriminator_state_dict",
+    ]
+    for key in common_keys:
+        if key in state:
+            # Check if this looks like a state dict (values are tensors)
+            candidate = state[key]
+            if isinstance(candidate, dict) and any(
+                isinstance(v, torch.Tensor) for v in candidate.values()
+            ):
+                logger.info(f"  Auto-detected component key: '{key}'")
+                return candidate
+
+    # Treat the whole dict as a raw state dict if values are tensors
+    if any(isinstance(v, torch.Tensor) for v in state.values()):
+        logger.info("  Treating file as raw state dict")
+        return state
+
+    raise ValueError(
+        f"Cannot extract state dict. Available keys: {list(state.keys())}"
+    )
 
 
 class GroupNorm32(nn.GroupNorm):

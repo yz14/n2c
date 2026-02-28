@@ -1,11 +1,11 @@
 data:
-  data_dir: D:/codes/data/ncct_tiny
+  data_dir: /data0/yzhen/data/lung_pe_v1/npz_v1
   split_dir: ./splits
   num_slices: 3
   image_size: 256
-  hu_min: -1024.0
-  hu_max: 3071.0
-  num_workers: 4
+  hu_min: -550.0
+  hu_max: 250.0
+  num_workers: 24
   aug_prob: 0.5
   max_angle: 15.0
   scale_range: 0.1
@@ -35,8 +35,31 @@ model:
   resblock_updown: false
   use_fp16: false
   residual_output: true
+registration:
+  enabled: false
+  nb_features:
+  - 16
+  - 32
+  - 32
+  - 32
+  integration_steps: 7
+  smoothness_weight: 1.0
+  smoothness_penalty: l2
+  lr: 0.0001
+discriminator:
+  enabled: true
+  ndf: 64
+  n_layers: 3
+  num_D: 3
+  use_spectral_norm: true
+  gan_weight: 1.0
+  feat_match_weight: 10.0
+  lr: 0.0002
+  lr_scheduler: cosine
+  warmup_steps: 500
+  label_smoothing: 0.1
 train:
-  batch_size: 8
+  batch_size: 4
   lr: 0.0001
   weight_decay: 0.0
   num_epochs: 200
@@ -45,9 +68,16 @@ train:
   val_interval: 1
   l1_weight: 1.0
   ssim_weight: 1.0
+  use_3d_ssim: true
+  lung_weight: 10.0
   ema_rate: 0.999
   lr_scheduler: cosine
   warmup_steps: 500
   output_dir: ./outputs
   resume_checkpoint: ''
   seed: 42
+  pretrained_G: /data0/yzhen/a_test_model/v3/outputs/checkpoint_epoch0180.pt
+  pretrained_R: ''
+  pretrained_D: ''
+  grad_clip_norm: 1.0
+  grad_accumulation_steps: 1

@@ -1,0 +1,86 @@
+data:
+  data_dir: D:/codes/data/ncct_tiny
+  split_dir: ./splits
+  num_slices: 3
+  image_size: 256
+  hu_min: -1024.0
+  hu_max: 3071.0
+  num_workers: 4
+  aug_prob: 0.5
+  max_angle: 15.0
+  scale_range: 0.1
+  translate_frac: 0.05
+  noise_std: 0.02
+  brightness_range: 0.1
+  contrast_range: 0.1
+vae:
+  in_channels: 3
+  out_channels: 3
+  z_channels: 4
+  embed_dim: 4
+  ch: 128
+  ch_mult:
+  - 1
+  - 2
+  - 4
+  - 4
+  num_res_blocks: 2
+  attn_resolutions:
+  - 32
+  dropout: 0.0
+  resolution: 256
+  double_z: true
+vae_train:
+  batch_size: 8
+  num_epochs: 100
+  lr: 4.5e-06
+  weight_decay: 0.0
+  kl_weight: 1.0e-06
+  l1_weight: 1.0
+  perceptual_weight: 0.0
+  lr_scheduler: cosine
+  warmup_steps: 500
+  ema_rate: 0.9999
+  grad_clip_norm: 1.0
+  save_interval: 10
+  log_interval: 50
+  val_interval: 1
+  output_dir: ./outputs_vae
+  resume_checkpoint: ''
+  seed: 42
+unet:
+  model_channels: 128
+  channel_mult:
+  - 1
+  - 2
+  - 4
+  num_res_blocks: 2
+  attention_resolutions:
+  - 4
+  - 2
+  dropout: 0.0
+  num_heads: 4
+  use_scale_shift_norm: true
+scheduler:
+  num_train_timesteps: 1000
+  beta_schedule: linear
+  beta_start: 0.00085
+  beta_end: 0.012
+  prediction_type: epsilon
+  num_inference_steps: 50
+diffusion_train:
+  batch_size: 8
+  num_epochs: 200
+  lr: 0.0001
+  weight_decay: 0.0
+  lr_scheduler: cosine
+  warmup_steps: 500
+  ema_rate: 0.9999
+  grad_clip_norm: 1.0
+  save_interval: 10
+  log_interval: 50
+  val_interval: 1
+  output_dir: ./outputs_diffusion
+  resume_checkpoint: ''
+  pretrained_vae: ''
+  seed: 42

@@ -404,6 +404,7 @@ class GANLoss(nn.Module):
         self,
         predictions: List[List[torch.Tensor]],
         target_is_real: bool,
+        target_value: Optional[float] = None,
     ) -> torch.Tensor:
         """
         Compute LSGAN loss over all discriminator scales.
@@ -411,15 +412,20 @@ class GANLoss(nn.Module):
         Args:
             predictions:    output from MultiscaleDiscriminator.forward()
             target_is_real: True for real images, False for fake
+            target_value:   override target value (e.g. 0.9 for label smoothing).
+                            If None, uses target_real/target_fake based on target_is_real.
 
         Returns:
             scalar loss
         """
-        target_val = self.target_real if target_is_real else self.target_fake
+        if target_value is not None:
+            val = target_value
+        else:
+            val = self.target_real if target_is_real else self.target_fake
         loss = 0.0
         for scale_preds in predictions:
             pred = scale_preds[-1]  # final layer output
-            target_tensor = torch.full_like(pred, target_val)
+            target_tensor = torch.full_like(pred, val)
             loss = loss + self.mse(pred, target_tensor)
         return loss
 
