@@ -73,6 +73,18 @@ class DiscriminatorConfig:
 
 
 @dataclass
+class RefineConfig:
+    """Configuration for the refinement network (G2)."""
+    enabled: bool = False            # ON/OFF switch
+    hidden_dim: int = 64             # hidden channel dimension in ResBlocks
+    num_blocks: int = 6              # number of residual blocks
+    lr: float = 1e-4                 # learning rate for G2
+    lr_scheduler: str = "cosine"     # LR scheduler: "cosine", "step", "none"
+    warmup_steps: int = 200          # warmup steps for G2 scheduler
+    freeze_G: bool = True            # freeze G when G2 is enabled
+
+
+@dataclass
 class TrainConfig:
     batch_size: int = 2
     lr: float = 1e-4
@@ -95,6 +107,7 @@ class TrainConfig:
     pretrained_G: str = ""       # path to pretrained generator weights
     pretrained_R: str = ""       # path to pretrained registration net weights
     pretrained_D: str = ""       # path to pretrained discriminator weights
+    pretrained_G2: str = ""      # path to pretrained refinement net weights
     # Training tricks
     grad_clip_norm: float = 5.0  # max gradient norm for clipping (0 = disabled)
     grad_accumulation_steps: int = 1  # gradient accumulation steps (1 = no accumulation)
@@ -107,6 +120,7 @@ class Config:
     model: ModelConfig = field(default_factory=ModelConfig)
     registration: RegistrationConfig = field(default_factory=RegistrationConfig)
     discriminator: DiscriminatorConfig = field(default_factory=DiscriminatorConfig)
+    refine: RefineConfig = field(default_factory=RefineConfig)
     train: TrainConfig = field(default_factory=TrainConfig)
 
     def save(self, path: str):
@@ -143,10 +157,11 @@ class Config:
                 reg_raw[k] = tuple(reg_raw[k])
         reg_cfg = RegistrationConfig(**reg_raw)
         disc_cfg = DiscriminatorConfig(**raw.get("discriminator", {}))
+        refine_cfg = RefineConfig(**raw.get("refine", {}))
         train_cfg = TrainConfig(**raw.get("train", {}))
         return cls(
             data=data_cfg, model=model_cfg, registration=reg_cfg,
-            discriminator=disc_cfg, train=train_cfg,
+            discriminator=disc_cfg, refine=refine_cfg, train=train_cfg,
         )
 
     def sync_channels(self):

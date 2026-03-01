@@ -35,6 +35,10 @@ def test_config():
     assert cfg2.registration.nb_features == cfg.registration.nb_features
     assert cfg2.discriminator.ndf == cfg.discriminator.ndf
     assert cfg2.train.lung_weight == cfg.train.lung_weight
+    assert cfg2.refine.enabled == cfg.refine.enabled
+    assert cfg2.refine.hidden_dim == cfg.refine.hidden_dim
+    assert cfg2.refine.freeze_G == cfg.refine.freeze_G
+    assert cfg2.train.pretrained_G2 == cfg.train.pretrained_G2
     os.remove("./test_config.yaml")
     logger.info("Config test PASSED\n")
 
@@ -439,6 +443,103 @@ def test_full_pipeline_grd():
     logger.info("Full G+R+D pipeline test PASSED\n")
 
 
+def test_refine_net():
+    logger.info("=== Testing RefineNet (G2) ===")
+    from models.refine_net import RefineNet
+
+    B, H, W = 2, 64, 64
+    g2 = RefineNet(in_channels=C, hidden_dim=32, num_blocks=4)
+    param_count = sum(p.numel() for p in g2.parameters()) / 1e6
+    logger.info(f"G2 params: {param_count:.2f}M")
+
+    x = torch.randn(B, C, H, W)
+    y = g2(x)
+    assert y.shape == x.shape, f"Shape mismatch: {y.shape} != {x.shape}"
+    assert y.min() >= -1.0 and y.max() <= 1.0, "Output out of [-1, 1] range"
+
+    # Zero-init: initial output should be close to input (clamped)
+    x_clamp = x.clamp(-1, 1)
+    delta = (y - x_clamp).abs().mean().item()
+    logger.info(f"Initial identity delta (should be ~0): {delta:.6f}")
+    assert delta < 0.01, f"Initial output not identity: delta={delta}"
+
+    # Backward pass
+    loss = y.mean()
+    loss.backward()
+    grad_ok = all(p.grad is not None for p in g2.parameters() if p.requires_grad)
+    assert grad_ok, "Some parameters have no gradients"
+
+    logger.info("RefineNet test PASSED\n")
+
+
+def test_g2_pipeline():
+    logger.info("=== Testing G + G2 + D pipeline ===")
+    from models.unet import UNet
+    from models.refine_net import RefineNet
+    from models.discriminator import MultiscaleDiscriminator
+    from models.losses import CombinedLoss, GANLoss, FeatureMatchingLoss
+
+    B, H, W = 2, 64, 64
+
+    G = UNet(
+        image_size=H, in_channels=C, model_channels=16, out_channels=C,
+        num_res_blocks=1, attention_resolutions=(), channel_mult=(1, 2),
+        residual_output=True,
+    )
+    G2 = RefineNet(in_channels=C, hidden_dim=32, num_blocks=4)
+    D = MultiscaleDiscriminator(
+        input_nc=C * 2, ndf=16, n_layers=2, num_D=2,
+        use_spectral_norm=True, get_interm_feat=True,
+    )
+
+    criterion = CombinedLoss(l1_weight=1.0, ssim_weight=0.0, lung_weight=1.0)
+    gan_loss_fn = GANLoss()
+    fm_fn = FeatureMatchingLoss()
+
+    ncct = torch.randn(B, C, H, W)
+    cta = torch.randn(B, C, H, W)
+    mask = torch.ones(B, C, H, W)
+
+    # Freeze G
+    for p in G.parameters():
+        p.requires_grad_(False)
+    G.eval()
+
+    # Forward: G (frozen) → intermediate → G2
+    with torch.no_grad():
+        g_pred = G(ncct)
+    intermediate = ncct * g_pred.abs()
+    pred = G2(intermediate)
+
+    # Reconstruction loss on G2 output
+    loss_dict = criterion(pred, cta, mask)
+    g_loss = loss_dict["loss"]
+
+    # GAN + FM loss
+    fake_input = torch.cat([ncct, pred], dim=1)
+    real_input = torch.cat([ncct, cta], dim=1)
+    fake_feats = D(fake_input)
+    with torch.no_grad():
+        real_feats = D(real_input)
+    gan_g = gan_loss_fn(fake_feats, target_is_real=True)
+    fm = fm_fn(real_feats, fake_feats)
+    g_loss = g_loss + 1.0 * gan_g + 1.0 * fm
+
+    # Backward — only G2 should get gradients
+    g_loss.backward()
+
+    g_has_grad = any(p.grad is not None and p.grad.abs().sum() > 0
+                     for p in G.parameters() if p.requires_grad)
+    g2_has_grad = any(p.grad is not None and p.grad.abs().sum() > 0
+                      for p in G2.parameters())
+    assert not g_has_grad, "G should NOT have gradients (frozen)"
+    assert g2_has_grad, "G2 should have gradients"
+
+    logger.info(f"G2 total loss: {g_loss.item():.4f}")
+    logger.info(f"G frozen (no grads): OK, G2 has grads: OK")
+    logger.info("G + G2 + D pipeline test PASSED\n")
+
+
 if __name__ == "__main__":
     test_config()
     ds = test_dataset()
@@ -454,5 +555,7 @@ if __name__ == "__main__":
     test_visualization()
     test_forward_backward()
     test_full_pipeline_grd()
+    test_refine_net()
+    test_g2_pipeline()
     logger.info("=" * 40)
     logger.info("ALL TESTS PASSED!")

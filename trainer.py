@@ -34,6 +34,7 @@ from tqdm import tqdm
 from models.nn_utils import update_ema, load_pretrained_weights
 from models.registration import RegistrationNet
 from models.discriminator import MultiscaleDiscriminator
+from models.refine_net import RefineNet
 from models.losses import (
     CombinedLoss, GANLoss, FeatureMatchingLoss, GradLoss,
 )
@@ -101,6 +102,7 @@ class Trainer:
         augmentor: GPUAugmentor,
         config,
         device: torch.device,
+        refine_net: Optional[RefineNet] = None,
     ):
         self.model = model.to(device)
         self.criterion = criterion.to(device)
@@ -109,6 +111,20 @@ class Trainer:
         self.augmentor = augmentor
         self.config = config
         self.device = device
+
+        # --- Refinement network (G2) ---
+        self.use_refine = config.refine.enabled and refine_net is not None
+        if self.use_refine:
+            self.refine_net = refine_net.to(device)
+            self.freeze_G = config.refine.freeze_G
+            if self.freeze_G:
+                for p in self.model.parameters():
+                    p.requires_grad_(False)
+                self.model.eval()
+                logger.info("  G frozen: requires_grad=False (G2 active)")
+        else:
+            self.refine_net = None
+            self.freeze_G = False
 
         # --- Registration network ---
         self.use_reg = config.registration.enabled and reg_net is not None
@@ -142,13 +158,21 @@ class Trainer:
         # --- Load pretrained weights (before optimizer creation for correct param refs) ---
         self._load_pretrained_if_specified(config)
 
-        # --- Optimizer for G (+ R if enabled) ---
-        self._g_param_list = list(self.model.parameters())
+        # --- Optimizer for G (+ R if enabled, or G2 if refine mode) ---
+        if self.use_refine and self.freeze_G:
+            # Only G2 (+ R) params are trainable
+            self._g_param_list = list(self.refine_net.parameters())
+        else:
+            self._g_param_list = list(self.model.parameters())
+            if self.use_refine:
+                self._g_param_list += list(self.refine_net.parameters())
         if self.use_reg:
             self._g_param_list += list(self.reg_net.parameters())
+
+        g_lr = config.refine.lr if self.use_refine else config.train.lr
         self.optimizer_G = AdamW(
             self._g_param_list,
-            lr=config.train.lr,
+            lr=g_lr,
             weight_decay=config.train.weight_decay,
         )
 
@@ -166,10 +190,15 @@ class Trainer:
         # Effective steps account for gradient accumulation
         steps_per_epoch = len(train_loader) // self.grad_accumulation_steps
         total_optim_steps = config.train.num_epochs * steps_per_epoch
-        g_warmup = 0 if config.train.skip_warmup else config.train.warmup_steps
+        if self.use_refine:
+            g_sched_type = config.refine.lr_scheduler
+            g_warmup = 0 if config.train.skip_warmup else config.refine.warmup_steps
+        else:
+            g_sched_type = config.train.lr_scheduler
+            g_warmup = 0 if config.train.skip_warmup else config.train.warmup_steps
         self.scheduler_G = self._build_scheduler(
             self.optimizer_G,
-            config.train.lr_scheduler,
+            g_sched_type,
             g_warmup,
             total_optim_steps,
         )
@@ -188,9 +217,12 @@ class Trainer:
         else:
             self.scheduler_D = None
 
-        # EMA (generator only)
+        # EMA (for the active generator: G or G2)
         self.ema_rate = config.train.ema_rate
-        self.ema_params = [p.clone().detach() for p in self.model.parameters()]
+        if self.use_refine:
+            self.ema_params = [p.clone().detach() for p in self.refine_net.parameters()]
+        else:
+            self.ema_params = [p.clone().detach() for p in self.model.parameters()]
 
         # State
         self.global_step = 0
@@ -211,6 +243,10 @@ class Trainer:
             self._load_checkpoint(config.train.resume_checkpoint)
 
         # Log configuration
+        logger.info(f"  Refine (G2):      {'ON' if self.use_refine else 'OFF'}")
+        if self.use_refine:
+            logger.info(f"  G2 LR:            {g_lr}")
+            logger.info(f"  G frozen:         {self.freeze_G}")
         logger.info(f"  Registration:     {'ON' if self.use_reg else 'OFF'}")
         logger.info(f"  Discriminator:    {'ON' if self.use_disc else 'OFF'}")
         logger.info(f"  Grad clipping:    {self.grad_clip_norm if self.grad_clip_norm > 0 else 'OFF'}")
@@ -254,6 +290,12 @@ class Trainer:
             load_pretrained_weights(
                 self.discriminator, tcfg.pretrained_D,
                 component_key="discriminator_state_dict", device=self.device,
+            )
+
+        if tcfg.pretrained_G2 and self.use_refine and self.refine_net is not None:
+            load_pretrained_weights(
+                self.refine_net, tcfg.pretrained_G2,
+                component_key="refine_net_state_dict", device=self.device,
             )
 
     # ------------------------------------------------------------------
@@ -301,7 +343,8 @@ class Trainer:
                 self._save_checkpoint(epoch, is_best=False)
 
             # Epoch-level scheduler stepping (for "step" type schedulers)
-            if self.scheduler_G and cfg.lr_scheduler == "step":
+            g_sched_type = self.config.refine.lr_scheduler if self.use_refine else cfg.lr_scheduler
+            if self.scheduler_G and g_sched_type == "step":
                 self.scheduler_G.step()
             if self.scheduler_D and self.config.discriminator.lr_scheduler == "step":
                 self.scheduler_D.step()
@@ -313,15 +356,21 @@ class Trainer:
     # EMA weight swap helpers
     # ------------------------------------------------------------------
 
+    def _ema_model(self):
+        """Return the model whose weights are tracked by EMA (G2 if refine, else G)."""
+        return self.refine_net if self.use_refine else self.model
+
     def _swap_ema_weights(self):
-        """Swap model weights with EMA weights for evaluation."""
-        self._saved_model_params = [p.data.clone() for p in self.model.parameters()]
-        for p, ema_p in zip(self.model.parameters(), self.ema_params):
+        """Swap active model weights with EMA weights for evaluation."""
+        m = self._ema_model()
+        self._saved_model_params = [p.data.clone() for p in m.parameters()]
+        for p, ema_p in zip(m.parameters(), self.ema_params):
             p.data.copy_(ema_p)
 
     def _restore_model_weights(self):
-        """Restore model weights after EMA evaluation."""
-        for p, saved_p in zip(self.model.parameters(), self._saved_model_params):
+        """Restore active model weights after EMA evaluation."""
+        m = self._ema_model()
+        for p, saved_p in zip(m.parameters(), self._saved_model_params):
             p.data.copy_(saved_p)
         del self._saved_model_params
 
@@ -378,16 +427,26 @@ class Trainer:
 
             # Run G to check output range
             self.model.eval()
-            pred = self.model(ncct)
-            residual = pred - ncct
-            logger.info(f"  [G output] pred: min={pred.min():.4f}, max={pred.max():.4f}, "
-                        f"mean={pred.mean():.4f}")
+            g_pred = self.model(ncct)
+            residual = g_pred - ncct
+            logger.info(f"  [G output] pred: min={g_pred.min():.4f}, max={g_pred.max():.4f}, "
+                        f"mean={g_pred.mean():.4f}")
             logger.info(f"  [G residual] min={residual.min():.4f}, max={residual.max():.4f}, "
                         f"mean_abs={residual.abs().mean():.4f}")
             if residual.abs().mean() < 0.01:
                 logger.warning(f"  ⚠ G residual is near zero ({residual.abs().mean():.4f}). "
                                f"Model is learning identity mapping (output ≈ input).")
-            self.model.train()
+
+            # G2 intermediate diagnostics
+            if self.use_refine:
+                intermediate = ncct * g_pred.abs()
+                logger.info(f"  [G2 intermediate] min={intermediate.min():.4f}, "
+                            f"max={intermediate.max():.4f}, mean={intermediate.mean():.4f}")
+                inter_vs_cta = (intermediate - cta).abs().mean().item()
+                logger.info(f"  [G2 intermediate vs CTA] l1={inter_vs_cta:.4f}")
+
+            if not self.freeze_G:
+                self.model.train()
 
             # HU range info
             hu_min = self.config.data.hu_min
@@ -411,7 +470,16 @@ class Trainer:
             ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
 
             self.model.eval()
-            pred = self.model(ncct)
+            if self.use_refine:
+                self.refine_net.eval()
+
+            g_pred = self.model(ncct)
+            if self.use_refine:
+                intermediate = ncct * g_pred.abs()
+                pred = self.refine_net(intermediate)
+            else:
+                pred = g_pred
+
             residual = pred - ncct
 
             # Per-pixel error in normalized space
@@ -422,13 +490,23 @@ class Trainer:
             logger.info(f"  [Debug E{epoch+1}] pred range=[{pred.min():.3f}, {pred.max():.3f}], "
                         f"residual_mag={res_mag:.4f}, l1_vs_cta={l1_error:.4f}")
 
+            # G2-specific: also log intermediate quality
+            if self.use_refine:
+                inter_l1 = (intermediate - cta).abs().mean().item()
+                refine_delta = (pred - intermediate).abs().mean().item()
+                logger.info(f"  [Debug E{epoch+1}] inter_l1={inter_l1:.4f}, "
+                            f"refine_delta={refine_delta:.4f}")
+
             # Check if lung region has higher error (expected)
             if mask is not None and mask.sum() > 0:
                 lung_err = ((pred - cta).abs() * (mask > 0.5).float()).sum() / max(1, (mask > 0.5).sum())
                 bg_err = ((pred - cta).abs() * (mask <= 0.5).float()).sum() / max(1, (mask <= 0.5).sum())
                 logger.info(f"  [Debug E{epoch+1}] lung_l1={lung_err:.4f}, bg_l1={bg_err:.4f}")
 
-            self.model.train()
+            if not self.freeze_G:
+                self.model.train()
+            if self.use_refine:
+                self.refine_net.train()
         except Exception:
             pass
 
@@ -438,7 +516,12 @@ class Trainer:
 
     def _train_epoch(self, epoch: int) -> MetricTracker:
         """Run one training epoch."""
-        self.model.train()
+        if self.freeze_G:
+            self.model.eval()  # G stays frozen in eval mode
+        else:
+            self.model.train()
+        if self.use_refine:
+            self.refine_net.train()
         if self.use_reg:
             self.reg_net.train()
         if self.use_disc:
@@ -466,9 +549,20 @@ class Trainer:
                                 (micro_step + 1 == len(self.train_loader))
 
             # ============================================================
-            # Step 1: Forward G + R, compute G loss
+            # Step 1: Forward G (+ G2 if refine), compute G loss
             # ============================================================
-            pred = self.model(ncct)
+            if self.freeze_G:
+                with torch.no_grad():
+                    g_pred = self.model(ncct)
+            else:
+                g_pred = self.model(ncct)
+
+            # Refinement (G2): intermediate = ncct * |G(ncct)|, then G2 refines
+            if self.use_refine:
+                intermediate = ncct * g_pred.abs()
+                pred = self.refine_net(intermediate)
+            else:
+                pred = g_pred
 
             # Registration (if enabled)
             if self.use_reg:
@@ -562,13 +656,14 @@ class Trainer:
                     self.optimizer_D.zero_grad()
 
                 # LR scheduler (step-level for cosine warmup)
-                if self.scheduler_G and cfg.lr_scheduler == "cosine":
+                g_sched_type = self.config.refine.lr_scheduler if self.use_refine else cfg.lr_scheduler
+                if self.scheduler_G and g_sched_type == "cosine":
                     self.scheduler_G.step()
                 if self.scheduler_D and self.config.discriminator.lr_scheduler == "cosine":
                     self.scheduler_D.step()
 
-                # EMA update (generator only)
-                update_ema(self.ema_params, self.model.parameters(), rate=self.ema_rate)
+                # EMA update (active generator: G2 if refine, else G)
+                update_ema(self.ema_params, self._ema_model().parameters(), rate=self.ema_rate)
 
             # Collect visualization samples
             if len(self._train_vis_samples) < 8:
@@ -644,6 +739,8 @@ class Trainer:
     def _validate(self, epoch: int):
         """Run validation (no D, no augmentation)."""
         self.model.eval()
+        if self.use_refine:
+            self.refine_net.eval()
         if self.use_reg:
             self.reg_net.eval()
         tracker = MetricTracker()
@@ -655,7 +752,12 @@ class Trainer:
             mask_3c = batch["ncct_lung"].to(self.device)
 
             ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
-            pred = self.model(ncct)
+            g_pred = self.model(ncct)
+            if self.use_refine:
+                intermediate = ncct * g_pred.abs()
+                pred = self.refine_net(intermediate)
+            else:
+                pred = g_pred
 
             # Validation reconstruction loss (no registration — evaluate raw output)
             loss_dict = self.criterion(pred, cta, mask)
@@ -717,6 +819,8 @@ class Trainer:
         }
         if self.scheduler_G:
             state["scheduler_G_state_dict"] = self.scheduler_G.state_dict()
+        if self.use_refine and self.refine_net is not None:
+            state["refine_net_state_dict"] = self.refine_net.state_dict()
         if self.use_reg and self.reg_net is not None:
             state["reg_net_state_dict"] = self.reg_net.state_dict()
         if self.use_disc and self.discriminator is not None:
@@ -759,7 +863,9 @@ class Trainer:
         elif self.scheduler_G and "scheduler_state_dict" in state:
             self.scheduler_G.load_state_dict(state["scheduler_state_dict"])
 
-        # Load R and D if present
+        # Load G2, R and D if present
+        if self.use_refine and "refine_net_state_dict" in state:
+            self.refine_net.load_state_dict(state["refine_net_state_dict"])
         if self.use_reg and "reg_net_state_dict" in state:
             self.reg_net.load_state_dict(state["reg_net_state_dict"])
         if self.use_disc and "discriminator_state_dict" in state:

@@ -24,6 +24,7 @@ from data.transforms import GPUAugmentor
 from models.unet import UNet
 from models.registration import RegistrationNet
 from models.discriminator import MultiscaleDiscriminator
+from models.refine_net import RefineNet
 from models.losses import CombinedLoss
 from trainer import Trainer
 
@@ -148,6 +149,8 @@ def main():
                         help="Path to pretrained registration net weights (overrides config)")
     parser.add_argument("--pretrained_D", type=str, default=None,
                         help="Path to pretrained discriminator weights (overrides config)")
+    parser.add_argument("--pretrained_G2", type=str, default=None,
+                        help="Path to pretrained refinement net weights (overrides config)")
     parser.add_argument("--resume", type=str, default=None,
                         help="Path to checkpoint for resuming training (overrides config)")
     args = parser.parse_args()
@@ -166,6 +169,8 @@ def main():
         cfg.train.pretrained_R = args.pretrained_R
     if args.pretrained_D:
         cfg.train.pretrained_D = args.pretrained_D
+    if hasattr(args, 'pretrained_G2') and args.pretrained_G2:
+        cfg.train.pretrained_G2 = args.pretrained_G2
     if args.resume:
         cfg.train.resume_checkpoint = args.resume
 
@@ -222,6 +227,18 @@ def main():
         dp = sum(p.numel() for p in discriminator.parameters()) / 1e6
         logger.info(f"Discriminator (D) parameters: {dp:.2f}M")
 
+    # Refinement network (G2)
+    refine_net = None
+    if cfg.refine.enabled:
+        refine_net = RefineNet(
+            in_channels=cfg.model.out_channels,
+            hidden_dim=cfg.refine.hidden_dim,
+            num_blocks=cfg.refine.num_blocks,
+            enabled=True,
+        )
+        g2p = sum(p.numel() for p in refine_net.parameters()) / 1e6
+        logger.info(f"Refinement (G2) parameters: {g2p:.2f}M")
+
     criterion = CombinedLoss(
         l1_weight=cfg.train.l1_weight,
         ssim_weight=cfg.train.ssim_weight,
@@ -243,6 +260,7 @@ def main():
         augmentor=augmentor,
         config=cfg,
         device=device,
+        refine_net=refine_net,
     )
     trainer.train()
 
