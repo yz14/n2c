@@ -430,6 +430,76 @@ class GANLoss(nn.Module):
         return loss
 
 
+class HingeGANLoss(nn.Module):
+    """
+    Hinge GAN loss for multi-scale discriminator.
+
+    More robust than LSGAN: once D correctly classifies, gradients vanish
+    (no "overshooting"). Widely used in SAGAN, BigGAN, ProjectedGAN.
+
+    D_real: max(0, 1 - D(real))    → pushes D(real) above 1
+    D_fake: max(0, 1 + D(fake))    → pushes D(fake) below -1
+    G_fake: -D(fake)               → pushes D(fake) up
+
+    Compatible with MultiscaleDiscriminator output format:
+      List[List[Tensor]] — last element per scale is the prediction.
+    """
+
+    def forward(
+        self,
+        predictions: List[List[torch.Tensor]],
+        target_is_real: bool,
+        for_discriminator: bool = True,
+        target_value: Optional[float] = None,  # unused, for API compat
+    ) -> torch.Tensor:
+        loss = 0.0
+        for scale_preds in predictions:
+            pred = scale_preds[-1]
+            if for_discriminator:
+                if target_is_real:
+                    loss = loss + F.relu(1.0 - pred).mean()
+                else:
+                    loss = loss + F.relu(1.0 + pred).mean()
+            else:
+                # Generator loss: wants D(fake) to be high
+                loss = loss - pred.mean()
+        return loss
+
+
+def r1_gradient_penalty(
+    real_pred: List[List[torch.Tensor]],
+    real_input: torch.Tensor,
+) -> torch.Tensor:
+    """
+    R1 gradient penalty (Mescheder et al., 2018).
+
+    Penalizes the gradient of D's output w.r.t. real inputs:
+        R1 = (1/2) * E[||∇D(x_real)||²]
+
+    This is the single most effective GAN stabilization technique.
+    Used in StyleGAN2, ProjectedGAN, etc.
+
+    The caller must ensure real_input.requires_grad_(True) before D forward.
+
+    Args:
+        real_pred: D's output on real images (multi-scale format)
+        real_input: the real input tensor (must have requires_grad=True)
+
+    Returns:
+        scalar R1 penalty (without the γ/2 factor — caller applies weight)
+    """
+    # Sum all scale predictions to get a single scalar for grad computation
+    pred_sum = sum(s[-1].sum() for s in real_pred)
+    gradients = torch.autograd.grad(
+        outputs=pred_sum,
+        inputs=real_input,
+        create_graph=True,
+        only_inputs=True,
+    )[0]
+    # ||∇D||² per sample, then mean over batch
+    return gradients.pow(2).flatten(1).sum(1).mean()
+
+
 class FeatureMatchingLoss(nn.Module):
     """
     Feature matching loss between real and fake discriminator features.

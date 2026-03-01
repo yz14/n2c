@@ -36,7 +36,8 @@ from models.registration import RegistrationNet
 from models.discriminator import MultiscaleDiscriminator
 from models.refine_net import RefineNet
 from models.losses import (
-    CombinedLoss, GANLoss, FeatureMatchingLoss, GradLoss,
+    CombinedLoss, GANLoss, HingeGANLoss, FeatureMatchingLoss, GradLoss,
+    r1_gradient_penalty,
 )
 from data.transforms import GPUAugmentor
 from utils.visualization import save_sample_grid
@@ -140,15 +141,30 @@ class Trainer:
         # --- Discriminator ---
         self.use_disc = config.discriminator.enabled and discriminator is not None
         if self.use_disc:
+            dcfg = config.discriminator
             self.discriminator = discriminator.to(device)
-            self.gan_loss_fn = GANLoss().to(device)
+            # GAN loss type
+            self.gan_loss_type = dcfg.gan_loss_type
+            if dcfg.gan_loss_type == "hinge":
+                self.gan_loss_fn = HingeGANLoss().to(device)
+            else:
+                self.gan_loss_fn = GANLoss().to(device)
             self.feat_match_fn = FeatureMatchingLoss().to(device)
-            self.gan_weight = config.discriminator.gan_weight
-            self.feat_match_weight = config.discriminator.feat_match_weight
-            self.label_smoothing = config.discriminator.label_smoothing
+            self.gan_weight = dcfg.gan_weight
+            self.feat_match_weight = dcfg.feat_match_weight
+            self.label_smoothing = dcfg.label_smoothing
+            # D input mode
+            self.d_cond_mode = dcfg.d_cond_mode  # "concat" or "none"
+            # R1 gradient penalty
+            self.r1_gamma = dcfg.r1_gamma
+            self.r1_interval = max(1, dcfg.r1_interval)
+            self.d_step_count = 0  # counter for lazy R1
         else:
             self.discriminator = None
             self.label_smoothing = 0.0
+            self.d_cond_mode = "concat"
+            self.gan_loss_type = "lsgan"
+            self.r1_gamma = 0.0
 
         # --- Training tricks config ---
         self.grad_clip_norm = config.train.grad_clip_norm
@@ -252,8 +268,12 @@ class Trainer:
         logger.info(f"  Grad clipping:    {self.grad_clip_norm if self.grad_clip_norm > 0 else 'OFF'}")
         logger.info(f"  Grad accumulation:{self.grad_accumulation_steps} steps")
         if self.use_disc:
+            logger.info(f"  D cond mode:      {self.d_cond_mode}")
+            logger.info(f"  GAN loss type:    {self.gan_loss_type}")
             logger.info(f"  Label smoothing:  {self.label_smoothing}")
+            logger.info(f"  R1 gamma:         {self.r1_gamma} (interval={self.r1_interval})")
             logger.info(f"  D LR scheduler:   {config.discriminator.lr_scheduler}")
+            logger.info(f"  D type:           {config.discriminator.disc_type}")
 
     # ------------------------------------------------------------------
     # Initialization helpers
@@ -314,6 +334,18 @@ class Trainer:
         self._log_data_diagnostics()
 
         for epoch in range(self.start_epoch, cfg.num_epochs):
+            # 逐渐加大损失权重
+            if epoch < 10:
+                self.criterion.lung_weight = 5.0
+            elif epoch < 20:
+                self.criterion.lung_weight = 10.0
+            elif epoch < 40:
+                self.criterion.lung_weight = 20.0
+            elif epoch < 100:
+                self.criterion.lung_weight = 40.0
+            else:
+                self.criterion.lung_weight = 100.0
+
             train_metrics = self._train_epoch(epoch)
             logger.info(
                 f"Epoch {epoch+1}/{cfg.num_epochs} [Train] {train_metrics}"
@@ -511,6 +543,25 @@ class Trainer:
             pass
 
     # ------------------------------------------------------------------
+    # D input helper
+    # ------------------------------------------------------------------
+
+    def _build_d_input(self, ncct: torch.Tensor, image: torch.Tensor) -> torch.Tensor:
+        """Build discriminator input based on d_cond_mode.
+
+        Args:
+            ncct: (N, C, H, W) conditioning input
+            image: (N, C, H, W) real CTA or generated CTA
+
+        Returns:
+            D input tensor: concat(ncct, image) for 'concat' mode,
+                           or image alone for 'none' mode.
+        """
+        if self.d_cond_mode == "none":
+            return image
+        return torch.cat([ncct, image], dim=1)
+
+    # ------------------------------------------------------------------
     # Train epoch
     # ------------------------------------------------------------------
 
@@ -590,8 +641,8 @@ class Trainer:
             d_real_mean_val = 0.0
             d_fake_mean_val = 0.0
             if self.use_disc:
-                fake_input = torch.cat([ncct, pred], dim=1)
-                real_input = torch.cat([ncct, cta], dim=1)
+                fake_input = self._build_d_input(ncct, pred)
+                real_input = self._build_d_input(ncct, cta)
 
                 fake_features = self.discriminator(fake_input)
                 with torch.no_grad():
@@ -604,7 +655,10 @@ class Trainer:
                         s[-1].mean().item() for s in fake_features
                     ) / len(fake_features)
 
-                gan_g = self.gan_loss_fn(fake_features, target_is_real=True)
+                if self.gan_loss_type == "hinge":
+                    gan_g = self.gan_loss_fn(fake_features, target_is_real=True, for_discriminator=False)
+                else:
+                    gan_g = self.gan_loss_fn(fake_features, target_is_real=True)
                 feat_match = self.feat_match_fn(real_features, fake_features)
                 g_loss = g_loss + self.gan_weight * gan_g + self.feat_match_weight * feat_match
                 gan_g_val = gan_g.item()
@@ -614,26 +668,44 @@ class Trainer:
             (g_loss / accum).backward()
 
             # ============================================================
-            # Step 2: Forward D, compute D loss
+            # Step 2: Forward D, compute D loss (+ R1 penalty)
             # ============================================================
             d_loss_val = 0.0
+            r1_val = 0.0
             if self.use_disc:
-                fake_input = torch.cat([ncct, pred.detach()], dim=1)
-                real_input = torch.cat([ncct, cta], dim=1)
+                fake_input_d = self._build_d_input(ncct, pred.detach())
+                real_input_d = self._build_d_input(ncct, cta)
 
-                fake_preds = self.discriminator(fake_input)
-                real_preds = self.discriminator(real_input)
+                # R1 gradient penalty: requires grad on real input
+                apply_r1 = (self.r1_gamma > 0 and
+                            self.d_step_count % self.r1_interval == 0)
+                if apply_r1:
+                    real_input_d.requires_grad_(True)
 
-                # One-sided label smoothing: smooth real target (e.g. 0.9)
-                real_target = 1.0 - self.label_smoothing if self.label_smoothing > 0 else None
-                d_loss_real = self.gan_loss_fn(
-                    real_preds, target_is_real=True, target_value=real_target,
-                )
-                d_loss_fake = self.gan_loss_fn(fake_preds, target_is_real=False)
+                fake_preds = self.discriminator(fake_input_d)
+                real_preds = self.discriminator(real_input_d)
+
+                if self.gan_loss_type == "hinge":
+                    d_loss_real = self.gan_loss_fn(real_preds, target_is_real=True, for_discriminator=True)
+                    d_loss_fake = self.gan_loss_fn(fake_preds, target_is_real=False, for_discriminator=True)
+                else:
+                    # One-sided label smoothing (LSGAN only)
+                    real_target = 1.0 - self.label_smoothing if self.label_smoothing > 0 else None
+                    d_loss_real = self.gan_loss_fn(
+                        real_preds, target_is_real=True, target_value=real_target,
+                    )
+                    d_loss_fake = self.gan_loss_fn(fake_preds, target_is_real=False)
                 d_loss = 0.5 * (d_loss_real + d_loss_fake)
+
+                # R1 gradient penalty
+                if apply_r1:
+                    r1_penalty = r1_gradient_penalty(real_preds, real_input_d)
+                    d_loss = d_loss + (self.r1_gamma / 2.0) * r1_penalty
+                    r1_val = r1_penalty.item()
 
                 (d_loss / accum).backward()
                 d_loss_val = d_loss.item()
+                self.d_step_count += 1
 
             # ============================================================
             # Step 3: Optimizer step at accumulation boundary
@@ -696,6 +768,8 @@ class Trainer:
                 metrics["w_recon"] = loss_dict["loss"].item()
                 metrics["w_gan"] = self.gan_weight * gan_g_val
                 metrics["w_fm"] = self.feat_match_weight * feat_match_val
+                if r1_val > 0:
+                    metrics["r1"] = r1_val
             # Gradient norms (logged at accumulation boundaries only)
             if is_accum_boundary:
                 metrics["gnorm_G"] = grad_norm_g

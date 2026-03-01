@@ -126,23 +126,106 @@ train:
   pretrained_G2: /path/to/G2/checkpoint_best.pt
 ```
 
+# D 崩塌分析与解决方案 (2026-03-01)
+
+## Task 1: D 为什么崩塌？
+
+### 根因分析（4个原因，按影响排序）
+
+**1. 条件输入信号稀释（主因）**
+D 接收 `cat(ncct, pred)` vs `cat(ncct, cta)` — 6通道中3通道完全相同。
+真假差异仅在CTA通道，且差异极小（l1≈0.14 in [-1,1]空间）。
+D的第一层conv混合所有6通道，共享的NCCT内容主导了特征图。
+
+**2. 缺少 R1 梯度惩罚**
+没有R1惩罚，D可以退化为常数函数（输出恒定值≈0.749）而不受惩罚。
+R1 penalty `(γ/2) * E[||∇D(x_real)||²]` 强制D在真实数据上保持非零梯度。
+
+**3. LSGAN 退化平衡点**
+LSGAN的MSE损失有一个退化平衡：D对所有输入输出常数c。
+当D无法区分时，最优c使 `0.5*(MSE(c,1) + MSE(c,0))` 最小化，D停在此处。
+
+**4. 谱归一化过度约束**
+SN将D的Lipschitz常数限制为1，当真假差异极小时，D无法放大这些差异。
+
+### 已实现的 4 个解决方案
+
+**方案 A: D 输入模式开关** (`d_cond_mode`)
+- `"concat"`: 拼接模式（原方案），D接收 `cat(ncct, image)`
+- `"none"`: 无条件模式，D仅接收 `image`
+- 推荐: `"none"` — 移除信号稀释，D全部通道用于判别CTA质量
+
+**方案 B: R1 梯度惩罚** (`r1_gamma`, `r1_interval`)
+- StyleGAN2 使用的核心稳定技术，防止D退化为常数函数
+- 惩罚D在真实样本上的梯度范数: `R1 = (γ/2) * ||∇D(real)||²`
+- 懒惰执行: 每 `r1_interval` 步执行一次（默认16步），减少开销
+- 推荐: `r1_gamma=10.0, r1_interval=16`
+
+**方案 C: Hinge Loss** (`gan_loss_type`)
+- `"lsgan"`: MSE loss（原方案）
+- `"hinge"`: Hinge loss — D正确分类后梯度消失，更稳定
+- 推荐: `"hinge"` — 比LSGAN更不容易退化
+
+**方案 D: ResBlock 增强判别器** (`disc_type`)
+- `"patchgan"`: 原始PatchGAN（plain conv）
+- `"resblock"`: ResBlock判别器 + 自注意力
+  - 残差连接改善梯度流
+  - 学习型下采样（strided conv代替AvgPool2d）
+  - 可选自注意力捕获长程依赖（SAGAN风格）
+  - 双线性插值用于多尺度间下采样（优于AvgPool2d）
+
+### 推荐配置
+```yaml
+discriminator:
+  enabled: true
+  d_cond_mode: none        # 无条件模式，避免信号稀释
+  gan_loss_type: hinge     # hinge loss更稳定
+  r1_gamma: 10.0           # R1梯度惩罚
+  r1_interval: 16          # 懒惰R1
+  disc_type: patchgan      # 先用patchgan测试，不行再换resblock
+  ndf: 64
+  num_D: 2
+  gan_weight: 1.0
+  feat_match_weight: 1.0
+  label_smoothing: 0.0
+  grad_clip_norm_D: 0.0
+```
+
+### 实验建议（渐进式，每次只改一个变量）
+1. **实验1**: 仅加 R1 (`r1_gamma=10.0`) — 最小改动，验证R1效果
+2. **实验2**: R1 + unconditional (`d_cond_mode=none`) — 同时移除信号稀释
+3. **实验3**: R1 + unconditional + hinge — 全部反崩塌措施
+4. **实验4**: 如果效果仍不理想，换 `disc_type=resblock`
+
+### 新增/修改的文件
+- `config.py` — 新增 `d_cond_mode`, `gan_loss_type`, `r1_gamma`, `r1_interval`, `disc_type`, `n_blocks_resD`, `use_attention`
+- `models/losses.py` — 新增 `HingeGANLoss` + `r1_gradient_penalty()`
+- `models/discriminator_v2.py` — **新文件**: ResBlock判别器 + 自注意力
+- `trainer.py` — 集成: D输入模式、hinge/lsgan切换、R1惩罚、`_build_d_input()`
+- `train.py` — 支持 disc_type 选择（patchgan/resblock）
+- `test_pipeline.py` — 新增3个测试: ResBlock D、Hinge+R1、Unconditional D
+- `configs/recommended.yaml` — 同步更新所有新字段
+
+## Task 2: G2 + EMA 推理逻辑
+
+**结论：当前实现已正确。**
+
+当 `freeze_G=True`（推荐设置）时：
+- G 的权重来自预训练检查点，训练期间**不变** → **不需要EMA**
+- G2 的权重正在训练 → **EMA跟踪G2**
+- 验证时: `_swap_ema_weights()` 交换G2的EMA权重，G使用固定权重
+- 推理: G用固定权重 → G2用EMA权重 → 正确行为
+
+## Task 3: configs/recommended.yaml 已同步更新
+
 # TODO
 - 在服务器上运行 `python test_pipeline.py` 验证所有测试通过
-- 按上述步骤训练 G2，观察 `inter_l1`（中间产物误差）和 `refine_delta`（G2 修正幅度）
-- 如果 G2 baseline 满意，再尝试加 D
+- 按推荐配置进行渐进式D实验（先R1，再unconditional，再hinge）
+- 观察日志中 D_real vs D_fake 是否分离（健康GAN: D_real > 0, D_fake < 0 for hinge）
+- 观察 `r1` 指标是否在合理范围内（通常0.1-10.0）
 
-
-
-
-
-**未来可能计划，暂时不用实现**  
-Perceptual Loss (VGG/LPIPS): Add a perceptual loss using pre-trained VGG features. This is especially effective for generating realistic textures in medical images. Since the data is single-channel grayscale, you'd replicate to 3 channels before feeding into VGG. Weight ~0.1-1.0 relative to L1.  
-
-Progressive Training Strategy: Train in phases:
-Phase 1: G only with L1+SSIM (50 epochs)
-Phase 2: Enable R (50 epochs)
-Phase 3: Enable D (100+ epochs)
-This prevents GAN instability early on and lets G converge to a reasonable baseline first.  
+# 未来可能计划
+Perceptual Loss (VGG/LPIPS): Add a perceptual loss using pre-trained VGG features. This is especially effective for generating realistic textures in medical images. Since the data is single-channel grayscale, you'd replicate to 3 channels before feeding into VGG. Weight ~0.1-1.0 relative to L1.
 
 Mixed Precision (AMP): Use torch.cuda.amp for the generator forward/backward pass. The UNet is large (61M params) and AMP would roughly halve memory and speed up training 1.5-2x without quality loss.  
 

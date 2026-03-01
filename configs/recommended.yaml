@@ -65,7 +65,25 @@ discriminator:
   lr: 0.0002
   lr_scheduler: cosine
   warmup_steps: 500
-  label_smoothing: 0.1
+  label_smoothing: 0.0
+  grad_clip_norm_D: 0.0
+  # --- Anti-collapse settings (recommended for Phase 2+) ---
+  d_cond_mode: none            # "none" (unconditional) recommended — avoids signal dilution
+  gan_loss_type: hinge          # "hinge" more robust than "lsgan" for subtle differences
+  r1_gamma: 10.0                # R1 gradient penalty — prevents D collapse
+  r1_interval: 16               # lazy R1 every 16 steps
+  # --- Discriminator architecture ---
+  disc_type: patchgan           # "patchgan" or "resblock" (enhanced)
+  n_blocks_resD: 4              # ResBlock D only
+  use_attention: true           # self-attention in ResBlock D
+refine:
+  enabled: false
+  hidden_dim: 64
+  num_blocks: 6
+  lr: 0.0001
+  lr_scheduler: cosine
+  warmup_steps: 200
+  freeze_G: true
 train:
   batch_size: 4
   lr: 0.0002
@@ -87,5 +105,7 @@ train:
   pretrained_G: ''
   pretrained_R: ''
   pretrained_D: ''
+  pretrained_G2: ''
   grad_clip_norm: 5.0
   grad_accumulation_steps: 1
+  skip_warmup: false

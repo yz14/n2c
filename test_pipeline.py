@@ -39,6 +39,10 @@ def test_config():
     assert cfg2.refine.hidden_dim == cfg.refine.hidden_dim
     assert cfg2.refine.freeze_G == cfg.refine.freeze_G
     assert cfg2.train.pretrained_G2 == cfg.train.pretrained_G2
+    assert cfg2.discriminator.d_cond_mode == cfg.discriminator.d_cond_mode
+    assert cfg2.discriminator.gan_loss_type == cfg.discriminator.gan_loss_type
+    assert cfg2.discriminator.r1_gamma == cfg.discriminator.r1_gamma
+    assert cfg2.discriminator.disc_type == cfg.discriminator.disc_type
     os.remove("./test_config.yaml")
     logger.info("Config test PASSED\n")
 
@@ -540,6 +544,99 @@ def test_g2_pipeline():
     logger.info("G + G2 + D pipeline test PASSED\n")
 
 
+def test_resblock_discriminator():
+    logger.info("=== Testing ResBlock Discriminator ===")
+    from models.discriminator_v2 import MultiscaleResBlockDiscriminator
+
+    B, H, W = 2, 64, 64
+    D = MultiscaleResBlockDiscriminator(
+        input_nc=C, ndf=32, n_blocks=3, num_D=2,
+        use_spectral_norm=True, use_attention=True, get_interm_feat=True,
+    )
+    param_count = sum(p.numel() for p in D.parameters()) / 1e6
+    logger.info(f"ResBlock D params: {param_count:.2f}M")
+
+    x = torch.randn(B, C, H, W)
+    results = D(x)
+    assert len(results) == 2, f"Expected 2 scales, got {len(results)}"
+    for i, scale in enumerate(results):
+        assert isinstance(scale, list), f"Scale {i} should be list of features"
+        assert len(scale) >= 2, f"Scale {i} should have at least 2 features"
+        pred = scale[-1]
+        logger.info(f"  Scale {i}: {len(scale)} features, pred shape={list(pred.shape)}")
+
+    # Backward pass
+    loss = sum(s[-1].mean() for s in results)
+    loss.backward()
+    grad_ok = any(p.grad is not None and p.grad.abs().sum() > 0 for p in D.parameters())
+    assert grad_ok, "D should have gradients"
+    logger.info("ResBlock discriminator test PASSED\n")
+
+
+def test_hinge_loss_and_r1():
+    logger.info("=== Testing Hinge Loss + R1 Penalty ===")
+    from models.discriminator import MultiscaleDiscriminator
+    from models.losses import HingeGANLoss, r1_gradient_penalty
+
+    B, H, W = 2, 64, 64
+    D = MultiscaleDiscriminator(
+        input_nc=C, ndf=16, n_layers=2, num_D=2,
+        use_spectral_norm=True, get_interm_feat=True,
+    )
+    hinge_fn = HingeGANLoss()
+
+    real = torch.randn(B, C, H, W)
+    fake = torch.randn(B, C, H, W)
+
+    real_preds = D(real)
+    fake_preds = D(fake)
+
+    # D loss (hinge)
+    d_real = hinge_fn(real_preds, target_is_real=True, for_discriminator=True)
+    d_fake = hinge_fn(fake_preds, target_is_real=False, for_discriminator=True)
+    d_loss = 0.5 * (d_real + d_fake)
+    logger.info(f"  Hinge D loss: {d_loss.item():.4f} (real={d_real.item():.4f}, fake={d_fake.item():.4f})")
+
+    # G loss (hinge)
+    fake_preds2 = D(fake)
+    g_loss = hinge_fn(fake_preds2, target_is_real=True, for_discriminator=False)
+    logger.info(f"  Hinge G loss: {g_loss.item():.4f}")
+
+    # R1 gradient penalty
+    real_r1 = real.clone().requires_grad_(True)
+    real_preds_r1 = D(real_r1)
+    r1 = r1_gradient_penalty(real_preds_r1, real_r1)
+    logger.info(f"  R1 penalty: {r1.item():.4f}")
+    assert r1.item() >= 0, "R1 should be non-negative"
+
+    # R1 backward
+    total = d_loss + 5.0 * r1
+    total.backward()
+    logger.info("Hinge loss + R1 penalty test PASSED\n")
+
+
+def test_unconditional_d():
+    logger.info("=== Testing Unconditional D Mode ===")
+    from models.discriminator import MultiscaleDiscriminator
+    from models.losses import GANLoss
+
+    B, H, W = 2, 64, 64
+    # Unconditional: D gets only the image (C channels), not concat(ncct, image)
+    D = MultiscaleDiscriminator(
+        input_nc=C, ndf=16, n_layers=2, num_D=2,
+        use_spectral_norm=True, get_interm_feat=True,
+    )
+    gan_fn = GANLoss()
+
+    image = torch.randn(B, C, H, W)
+    preds = D(image)
+    loss = gan_fn(preds, target_is_real=True)
+    loss.backward()
+
+    logger.info(f"  Unconditional D loss: {loss.item():.4f}")
+    logger.info("Unconditional D mode test PASSED\n")
+
+
 if __name__ == "__main__":
     test_config()
     ds = test_dataset()
@@ -557,5 +654,8 @@ if __name__ == "__main__":
     test_full_pipeline_grd()
     test_refine_net()
     test_g2_pipeline()
+    test_resblock_discriminator()
+    test_hinge_loss_and_r1()
+    test_unconditional_d()
     logger.info("=" * 40)
     logger.info("ALL TESTS PASSED!")

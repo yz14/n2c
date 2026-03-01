@@ -107,7 +107,9 @@ class NCCTDataset(Dataset):
         # Extract 3C slices — this is where mmap reads from disk
         ncct_chunk = npz["ncct"][d:d + context_slices].astype(np.float32)
         cta_chunk = npz["cta"][d:d + context_slices].astype(np.float32)
-        mask_chunk = npz["ncct_lung"][d:d + context_slices].astype(np.float32)
+        mask_chunk = npz["ncct_lung_cvx"][d:d + context_slices].astype(np.float32)
+        mask_chunk *= ((ncct_chunk > (self.hu_min + 4.0)).astype(np.float32) +
+                       (cta_chunk  > (self.hu_min + 4.0)).astype(np.float32))
 
         # Normalize HU to [-1, 1]
         ncct_chunk = normalize_hu(ncct_chunk, self.hu_min, self.hu_max)

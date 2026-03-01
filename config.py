@@ -60,7 +60,7 @@ class RegistrationConfig:
 class DiscriminatorConfig:
     enabled: bool = True            # ON/OFF switch for staged training
     ndf: int = 64                    # base filters
-    n_layers: int = 3                # conv layers per sub-discriminator
+    n_layers: int = 3                # conv layers per sub-discriminator (patchgan)
     num_D: int = 3                   # number of discriminator scales
     use_spectral_norm: bool = True   # apply spectral normalization
     gan_weight: float = 1.0          # weight for GAN loss (generator side)
@@ -70,6 +70,15 @@ class DiscriminatorConfig:
     warmup_steps: int = 500          # warmup steps for D scheduler
     label_smoothing: float = 0.1     # one-sided label smoothing for D real targets (0=off)
     grad_clip_norm_D: float = 0.0    # D gradient clipping (0=disabled; SN already ensures stability)
+    # --- New: anti-collapse settings ---
+    d_cond_mode: str = "concat"      # D input mode: "concat" (conditional) or "none" (unconditional)
+    gan_loss_type: str = "lsgan"     # GAN loss: "lsgan" or "hinge"
+    r1_gamma: float = 10.0           # R1 gradient penalty weight (0=disabled)
+    r1_interval: int = 16            # lazy R1 every N D-steps (reduces overhead)
+    # --- New: discriminator architecture ---
+    disc_type: str = "patchgan"      # "patchgan" (original) or "resblock" (enhanced)
+    n_blocks_resD: int = 4           # number of ResBlocks per sub-D (resblock type only)
+    use_attention: bool = True       # self-attention in ResBlock D
 
 
 @dataclass
