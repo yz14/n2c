@@ -34,48 +34,8 @@
 
 
 # TODO  
-~~判别器加入后效果无提升分析~~ **已完成分析和修复 (2026-02-28 v2)**
-
-## 分析结论
-
-### 🔴 Bug1（已修复）：验证和可视化使用在线权重而非 EMA 权重
-- EMA 权重理论上更好，但从未用于验证/可视化/best checkpoint 选择
-- 用户看到的"模糊"可能部分因为没用 EMA
-
-### 🔴 问题2（需实验确认）：G 总 loss 中 FM 过强，GAN 信号被淹没
-- 重建 loss: 0.67 (47%)，GAN: 0.26 (18%)，FM: 0.50 (35%)
-- GAN 是推动清晰度的信号，但仅占 18%
-- FM 本质是 D 特征空间的 L1 正则，不产生锐化效果
-
-### 🟡 问题3：D 梯度范数极高（40→27），grad_clip=5.0 裁掉 80%+
-- D 信号极不稳定，需要通过 D_real/D_fake 均值来确认 D 是否有效
-
-### 🟡 问题4（已修复）：pretrained_G 后 LR warmup 从零重启
-- G 在前 ~2 epochs 几乎不学习，导致 val_loss 暂时恶化
-- 新增 `skip_warmup: true` 配置选项
-
-## 已实施修复
-1. `trainer.py` — **EMA 验证**：验证和可视化改用 EMA 权重（_swap_ema_weights/_restore_model_weights）
-2. `trainer.py` — **D 诊断日志**：新增 D_real、D_fake（D 对真/假图的平均输出）、w_recon、w_gan、w_fm（加权 loss 组成）
-3. `config.py` — **skip_warmup 选项**：`skip_warmup: true` 跳过 LR warmup
-
-## 下一步实验（按优先级）
-
-### 实验1：EMA + skip_warmup 重训 G+D（最小改动验证）
-在 config.yaml 中加入 `skip_warmup: true`，其他不变，重新训练 G+D。
-观察日志中的 `D_real` 和 `D_fake`：
-- 如果 D_real ≈ D_fake（D 无法区分真假）→ D 本身无效
-- 如果 D_real >> D_fake（D 有效）但图像仍模糊 → loss 权重有问题
-
-### 实验2：降低 FM 权重（如果实验1显示 D 有效但仍模糊）
-将 `feat_match_weight` 从 10.0 降到 2.0，让 GAN 信号占比提升到 30%+。
-
-### 实验3：提高 GAN 权重（如果实验2仍不够）
-将 `gan_weight` 从 1.0 提到 2.0-5.0。注意可能导致训练不稳定。
-
-### 实验4：G-only 训练更久（对比基线）
-G-only 在 E30 仍在收敛，可训练到 100+ epochs 看 loss 是否还能下降。  
-
+1. 我修改了代码并提交，随后在服务器上继续了训练和测试，你可以通过git来查看我具体修改了哪些地方。我先只训练G，配置为D:\codes\work-projects\ncct2cpta\outputs\config0.yaml，日志为D:\codes\work-projects\ncct2cpta\outputs\train0.log。得到我比较满意的结果后（肺血管基本增强了，但是生成的图像有点模糊），于是我启用了判别器D，配置为D:\codes\work-projects\ncct2cpta\outputs\config.yaml，日志为D:\codes\work-projects\ncct2cpta\outputs\train.log，我查看了训练保存的png图像，发现启用判别器似乎对效果没有什么提升，生成的图像仍然比较模糊。请你根据日志进行细致的分析，思考。如果可以发现明确的问题，请更正；如果不明确，请加入debug，并告诉我如何进行试验，以便发现根本的问题。注意，请高质量完成。  
+2. 我发现用生成的cta，逐个像素绝对值乘以原ncct，并恢复正负符号，主观上看起来挺像真实cta的，看起来也不算模糊，只不过像素值有些偏差，具体是，x_ncct * x_fake_cta，原先血管的地方x_fake_cta接近1.0，而原先组织的地方仍然是原像素值，所以相乘后，原先血管的地方像素值几乎没有变化，而非血管的地方似乎被平方了，所以值变小了，从而突出了血管像素值，使得看起来像真实的cta。所以，根据这个发现，我可不可以增加一个生成器G2，专门用来微调x_ncct * x_fake_cta的数值，使得它不仅看起来像，数值上也和cta一致。如果这个方案可行，那么G2也需要开关，而且它应该在G之后，在配准网络之前，而且判别器也是针对G2的输出，而且当启动G2后，G应该冻结不再训练（请你思考这样设计是否合理）。G2应该用复杂网络还是轻量网络（我目前倾向轻量网络）。请你仔细分析这个方案是否合理，如果合理，请高质量实现。  
 
 
 

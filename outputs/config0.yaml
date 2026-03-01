@@ -5,12 +5,12 @@ data:
   image_size: 256
   hu_min: -550.0
   hu_max: 250.0
-  num_workers: 24
+  num_workers: 16
   aug_prob: 0.5
   max_angle: 15.0
   scale_range: 0.1
   translate_frac: 0.05
-  noise_std: 0.02
+  noise_std: 0.04
   brightness_range: 0.1
   contrast_range: 0.1
 model:
@@ -58,6 +58,7 @@ discriminator:
   lr_scheduler: cosine
   warmup_steps: 500
   label_smoothing: 0.1
+  grad_clip_norm_D: 0.0
 train:
   batch_size: 4
   lr: 0.0002
@@ -73,7 +74,7 @@ train:
   ema_rate: 0.999
   lr_scheduler: cosine
   warmup_steps: 500
-  output_dir: ./outputs
+  output_dir: ./outputs0
   resume_checkpoint: ''
   seed: 42
   pretrained_G: ''
@@ -81,3 +82,4 @@ train:
   pretrained_D: ''
   grad_clip_norm: 5.0
   grad_accumulation_steps: 1
+  skip_warmup: false
