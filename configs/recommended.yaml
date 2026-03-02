@@ -34,6 +34,7 @@ data:
   brightness_range: 0.1
   contrast_range: 0.1
   lung_sample_bias: 2.0            # Lung-aware sampling: strongly prefer lung slices (0=uniform)
+  ncct_degrade_prob: 0.3            # NCCT quality degradation: blur/cutout/gamma/downsample (0=off)
 model:
   in_channels: 3
   out_channels: 3
@@ -83,7 +84,7 @@ discriminator:
   # --- Conditioning & loss ---
   d_cond_mode: diff              # Diff mode: D sees (image-ncct), isolating contrast enhancement signal
   gan_loss_type: lsgan            # LSGAN: more stable with the gradient leak fix
-  r1_gamma: 1.0                  # GENTLE R1 (was 10.0 — too aggressive, flattened D)
+  r1_gamma: 0.0                  # R1 disabled: spectral norm already constrains D (R1 caused explosion in config2)
   r1_interval: 16
   # --- Architecture ---
   disc_type: patchgan
@@ -131,3 +132,6 @@ train:
   grad_accumulation_steps: 1
   skip_warmup: false
   perceptual_weight: 0.5          # VGG perceptual loss for sharpness
+  # --- Self-refinement: G(ncct * G(ncct).abs()) → CTA ---
+  g_self_refine_prob: 0.3          # 30% of steps: train G to refine its own intermediate
+  g_self_refine_weight: 0.5        # weight for self-refinement loss

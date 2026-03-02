@@ -208,6 +208,13 @@ class Trainer:
             self.perceptual_loss = None
             self.perceptual_weight = 0.0
 
+        # --- Self-refinement: G(ncct * G(ncct).abs()) → CTA ---
+        self.g_self_refine_prob = config.train.g_self_refine_prob
+        self.g_self_refine_weight = config.train.g_self_refine_weight
+        if self.g_self_refine_prob > 0:
+            logger.info(f"  Self-refinement:  prob={self.g_self_refine_prob}, "
+                        f"weight={self.g_self_refine_weight}")
+
         # --- Training tricks config ---
         self.grad_clip_norm = config.train.grad_clip_norm
         self.grad_clip_norm_D = config.discriminator.grad_clip_norm_D if self.use_disc else 0.0
@@ -372,8 +379,8 @@ class Trainer:
         logger.info(f"  LR (G):        {cfg.lr}")
         logger.info(f"  Output dir:    {self.output_dir}")
 
-        # Diagnostic: log data statistics from first batch
-        self._log_data_diagnostics()
+        # # Diagnostic: log data statistics from first batch
+        # self._log_data_diagnostics()
 
         # D warmup: pre-train D before joint training
         if self.start_epoch == 0:
@@ -846,6 +853,23 @@ class Trainer:
                 g_loss = g_loss + self.smooth_weight * smooth_loss
                 smooth_loss_val = smooth_loss.item()
 
+            # Self-refinement: G(ncct * G(ncct).abs()) → CTA
+            # Occasionally train G to refine its own intermediate output.
+            # At inference: pass 1 → g_pred, pass 2 → G(ncct * g_pred.abs()) → sharper.
+            refine_loss_val = 0.0
+            if (self.g_self_refine_prob > 0 and not self.freeze_G
+                    and random.random() < self.g_self_refine_prob):
+                with torch.no_grad():
+                    intermediate = (ncct * g_pred.detach().abs()).clamp(-1.0, 1.0)
+                refined = self.model(intermediate)
+                refine_recon = self.criterion(refined, cta, mask)
+                refine_loss = refine_recon["loss"]
+                if self.use_perceptual:
+                    refine_loss = refine_loss + self.perceptual_weight * \
+                        self.perceptual_loss(refined, cta)
+                g_loss = g_loss + self.g_self_refine_weight * refine_loss
+                refine_loss_val = refine_loss.item()
+
             # GAN loss (generator side) — G wants D to classify fake as real
             gan_g_val = 0.0
             feat_match_val = 0.0
@@ -1018,6 +1042,8 @@ class Trainer:
             }
             if self.use_perceptual:
                 metrics["percep"] = percep_val
+            if refine_loss_val > 0:
+                metrics["self_refine"] = refine_loss_val
             if self.use_reg:
                 metrics["smooth"] = smooth_loss_val
             if self.use_disc:

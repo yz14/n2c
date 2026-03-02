@@ -922,6 +922,70 @@ def test_quality_degradation():
     logger.info("Quality Degradation test PASSED\n")
 
 
+def test_ncct_degrade_augmentor():
+    """Test NCCT quality degradation in GPUAugmentor."""
+    logger.info("=== Testing NCCT Quality Degradation Augmentor ===")
+    from data.transforms import GPUAugmentor, _gaussian_blur_2d, _random_cutout, \
+        _gamma_transform, _downsample_upsample
+
+    B, H, W = 2, 64, 64
+    D = 3 * C  # 3C slices
+    x = torch.randn(B, D, H, W).clamp(-1, 1)
+
+    # Test individual helper functions
+    blurred = _gaussian_blur_2d(x, kernel_size=5, sigma=1.0)
+    assert blurred.shape == x.shape, "Blur shape mismatch"
+    logger.info(f"  blur: diff={( blurred - x).abs().mean():.4f}")
+
+    cutout = _random_cutout(x[:1])
+    assert cutout.shape == x[:1].shape, "Cutout shape mismatch"
+
+    gamma_out = _gamma_transform(x, gamma=2.0)
+    assert gamma_out.shape == x.shape, "Gamma shape mismatch"
+    assert gamma_out.min() >= -1.0 and gamma_out.max() <= 1.0
+    logger.info(f"  gamma: diff={(gamma_out - x).abs().mean():.4f}")
+
+    down_out = _downsample_upsample(x, scale=4)
+    assert down_out.shape == x.shape, "Downsample shape mismatch"
+    logger.info(f"  downsample: diff={(down_out - x).abs().mean():.4f}")
+
+    # Test GPUAugmentor with ncct_degrade_prob
+    aug = GPUAugmentor(num_slices=C, aug_prob=0.0, ncct_degrade_prob=1.0)  # only degrade
+    ncct = torch.randn(B, D, H, W).clamp(-1, 1)
+    cta = torch.randn(B, D, H, W).clamp(-1, 1)
+    mask = torch.ones(B, D, H, W)
+    ncct_out, cta_out, mask_out = aug(ncct.clone(), cta.clone(), mask.clone(), training=True)
+    # Output should be middle C slices
+    assert ncct_out.shape == (B, C, H, W)
+    assert cta_out.shape == (B, C, H, W)
+    # CTA should be unmodified (degradation only applies to NCCT)
+    expected_cta = cta[:, C:2*C]
+    assert torch.allclose(cta_out, expected_cta), "CTA should not be modified by NCCT degradation"
+
+    logger.info("NCCT Quality Degradation Augmentor test PASSED\n")
+
+
+def test_self_refine_config():
+    """Test self-refinement config fields."""
+    logger.info("=== Testing Self-Refinement Config ===")
+    from config import Config
+
+    cfg = Config()
+    assert cfg.train.g_self_refine_prob == 0.0
+    assert cfg.train.g_self_refine_weight == 0.5
+    assert cfg.data.ncct_degrade_prob == 0.0
+    logger.info("  Defaults OK")
+
+    cfg2 = Config.load("configs/recommended.yaml")
+    assert cfg2.train.g_self_refine_prob == 0.3
+    assert cfg2.train.g_self_refine_weight == 0.5
+    assert cfg2.data.ncct_degrade_prob == 0.3
+    assert cfg2.discriminator.r1_gamma == 0.0  # disabled: SN sufficient
+    logger.info("  Recommended config OK")
+
+    logger.info("Self-Refinement Config test PASSED\n")
+
+
 def test_new_config_fields():
     """Test that new config fields load correctly."""
     logger.info("=== Testing New Config Fields ===")
@@ -975,6 +1039,8 @@ if __name__ == "__main__":
     test_d_warmup_lr_fix()
     test_d_diff_mode()
     test_quality_degradation()
+    test_ncct_degrade_augmentor()
+    test_self_refine_config()
     test_new_config_fields()
     # Pre-existing tests (may fail due to unrelated issues)
     try:

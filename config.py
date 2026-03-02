@@ -26,6 +26,7 @@ class DataConfig:
     brightness_range: float = 0.1
     contrast_range: float = 0.1
     lung_sample_bias: float = 0.0  # lung-aware sampling bias (0=uniform, 2.0=strong lung preference)
+    ncct_degrade_prob: float = 0.0  # NCCT quality degradation probability (0=disabled, 0.3=recommended)
 
 
 @dataclass
@@ -131,6 +132,9 @@ class TrainConfig:
     grad_accumulation_steps: int = 1  # gradient accumulation steps (1 = no accumulation)
     skip_warmup: bool = False    # skip LR warmup (useful when loading pretrained weights)
     perceptual_weight: float = 0.0  # VGG perceptual loss weight (0=disabled, recommended: 0.1-1.0)
+    # --- Self-refinement: G also learns to refine its own intermediate output ---
+    g_self_refine_prob: float = 0.0  # prob of self-refinement step per iteration (0=disabled)
+    g_self_refine_weight: float = 0.5  # weight for self-refinement loss
 
 
 @dataclass
