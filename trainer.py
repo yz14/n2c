@@ -159,12 +159,37 @@ class Trainer:
             self.r1_gamma = dcfg.r1_gamma
             self.r1_interval = max(1, dcfg.r1_interval)
             self.d_step_count = 0  # counter for lazy R1
+            # Progressive GAN weight ramp-up
+            self.gan_warmup_epochs = dcfg.gan_warmup_epochs
+            # D warmup (pre-train D before joint training)
+            self.d_warmup_steps = dcfg.d_warmup_steps
+            # DiffAugment
+            if dcfg.diffaugment_policy:
+                from data.diffaugment import DiffAugment
+                self.diffaugment_fn = DiffAugment(policy=dcfg.diffaugment_policy)
+                logger.info(f"  DiffAugment:      {dcfg.diffaugment_policy}")
+            else:
+                self.diffaugment_fn = None
         else:
             self.discriminator = None
             self.label_smoothing = 0.0
             self.d_cond_mode = "concat"
             self.gan_loss_type = "lsgan"
             self.r1_gamma = 0.0
+            self.gan_warmup_epochs = 0
+            self.d_warmup_steps = 0
+            self.diffaugment_fn = None
+
+        # --- Perceptual loss (VGG) ---
+        self.use_perceptual = config.train.perceptual_weight > 0
+        if self.use_perceptual:
+            from models.perceptual_loss import VGGPerceptualLoss
+            self.perceptual_loss = VGGPerceptualLoss().to(device)
+            self.perceptual_weight = config.train.perceptual_weight
+            logger.info(f"  Perceptual loss:  weight={self.perceptual_weight}")
+        else:
+            self.perceptual_loss = None
+            self.perceptual_weight = 0.0
 
         # --- Training tricks config ---
         self.grad_clip_norm = config.train.grad_clip_norm
@@ -332,6 +357,10 @@ class Trainer:
 
         # Diagnostic: log data statistics from first batch
         self._log_data_diagnostics()
+
+        # D warmup: pre-train D before joint training
+        if self.start_epoch == 0:
+            self._run_d_warmup()
 
         for epoch in range(self.start_epoch, cfg.num_epochs):
             # 逐渐加大损失权重
@@ -562,6 +591,110 @@ class Trainer:
         return torch.cat([ncct, image], dim=1)
 
     # ------------------------------------------------------------------
+    # Progressive GAN weight & D warmup
+    # ------------------------------------------------------------------
+
+    def _get_effective_gan_weight(self, epoch: int) -> float:
+        """Compute effective GAN weight with linear ramp-up over warmup epochs.
+
+        Starts at 0 and linearly increases to self.gan_weight over
+        gan_warmup_epochs. This prevents the GAN loss from destabilizing
+        training early when D is still poorly trained.
+        """
+        if self.gan_warmup_epochs <= 0:
+            return self.gan_weight
+        progress = min(1.0, (epoch + 1) / self.gan_warmup_epochs)
+        return self.gan_weight * progress
+
+    def _run_d_warmup(self):
+        """Pre-train D for d_warmup_steps on frozen G output vs real CTA.
+
+        This gives D time to learn the real/fake distinction before G
+        receives GAN gradients. Without warmup, random D provides noise
+        gradients that can destabilize G.
+        """
+        if not self.use_disc or self.d_warmup_steps <= 0:
+            return
+
+        logger.info(f"  D warmup: pre-training D for {self.d_warmup_steps} steps "
+                     f"(G frozen)...")
+        self.discriminator.train()
+        self.model.eval()
+
+        step = 0
+        d_real_sum, d_fake_sum = 0.0, 0.0
+        while step < self.d_warmup_steps:
+            for batch in self.train_loader:
+                if step >= self.d_warmup_steps:
+                    break
+
+                ncct_3c = batch["ncct"].to(self.device)
+                cta_3c = batch["cta"].to(self.device)
+                mask_3c = batch["ncct_lung"].to(self.device)
+                ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=True)
+
+                with torch.no_grad():
+                    g_pred = self.model(ncct)
+                    if self.use_refine:
+                        intermediate = ncct * g_pred.abs()
+                        pred = self.refine_net(intermediate)
+                    else:
+                        pred = g_pred
+
+                fake_input_d = self._build_d_input(ncct, pred.detach())
+                real_input_d = self._build_d_input(ncct, cta)
+
+                # DiffAugment
+                if self.diffaugment_fn is not None:
+                    fake_input_d = self.diffaugment_fn(fake_input_d)
+                    real_input_d = self.diffaugment_fn(real_input_d)
+
+                # R1 on first step to check D health
+                apply_r1 = (self.r1_gamma > 0 and step % self.r1_interval == 0)
+                if apply_r1:
+                    real_input_d.requires_grad_(True)
+
+                fake_preds = self.discriminator(fake_input_d)
+                real_preds = self.discriminator(real_input_d)
+
+                if self.gan_loss_type == "hinge":
+                    d_loss_real = self.gan_loss_fn(real_preds, target_is_real=True, for_discriminator=True)
+                    d_loss_fake = self.gan_loss_fn(fake_preds, target_is_real=False, for_discriminator=True)
+                else:
+                    d_loss_real = self.gan_loss_fn(real_preds, target_is_real=True)
+                    d_loss_fake = self.gan_loss_fn(fake_preds, target_is_real=False)
+                d_loss = 0.5 * (d_loss_real + d_loss_fake)
+
+                if apply_r1:
+                    r1_penalty = r1_gradient_penalty(real_preds, real_input_d)
+                    d_loss = d_loss + (self.r1_gamma / 2.0) * r1_penalty
+
+                self.optimizer_D.zero_grad()
+                d_loss.backward()
+                if self.grad_clip_norm_D > 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        self.discriminator.parameters(), self.grad_clip_norm_D)
+                self.optimizer_D.step()
+
+                # Track statistics
+                with torch.no_grad():
+                    d_real_val = sum(s[-1].mean().item() for s in real_preds) / len(real_preds)
+                    d_fake_val = sum(s[-1].mean().item() for s in fake_preds) / len(fake_preds)
+                    d_real_sum += d_real_val
+                    d_fake_sum += d_fake_val
+
+                step += 1
+                if step % 100 == 0:
+                    logger.info(f"    D warmup step {step}/{self.d_warmup_steps}: "
+                                f"D_real={d_real_sum/step:.4f}, D_fake={d_fake_sum/step:.4f}")
+
+        logger.info(f"  D warmup complete: D_real={d_real_sum/step:.4f}, "
+                     f"D_fake={d_fake_sum/step:.4f}")
+
+        if not self.freeze_G:
+            self.model.train()
+
+    # ------------------------------------------------------------------
     # Train epoch
     # ------------------------------------------------------------------
 
@@ -628,6 +761,13 @@ class Trainer:
             loss_dict = self.criterion(recon_target, cta, mask)
             g_loss = loss_dict["loss"]
 
+            # Perceptual loss (VGG features)
+            percep_val = 0.0
+            if self.use_perceptual:
+                percep_loss = self.perceptual_loss(recon_target, cta)
+                g_loss = g_loss + self.perceptual_weight * percep_loss
+                percep_val = percep_loss.item()
+
             # Registration smoothness loss
             smooth_loss_val = 0.0
             if self.use_reg and displacement is not None:
@@ -641,8 +781,21 @@ class Trainer:
             d_real_mean_val = 0.0
             d_fake_mean_val = 0.0
             if self.use_disc:
+                # CRITICAL: Freeze D params during G step to prevent gradient
+                # leak. Without this, g_loss.backward() computes gradients for
+                # D params that oppose D's own loss, causing D to converge to a
+                # constant function (D_real ≈ D_fake).
+                for p in self.discriminator.parameters():
+                    p.requires_grad_(False)
+
                 fake_input = self._build_d_input(ncct, pred)
                 real_input = self._build_d_input(ncct, cta)
+
+                # DiffAugment: apply same augmentation to both real and fake
+                # before D sees them (prevents D overfitting)
+                if self.diffaugment_fn is not None:
+                    fake_input = self.diffaugment_fn(fake_input)
+                    real_input = self.diffaugment_fn(real_input)
 
                 fake_features = self.discriminator(fake_input)
                 with torch.no_grad():
@@ -655,14 +808,21 @@ class Trainer:
                         s[-1].mean().item() for s in fake_features
                     ) / len(fake_features)
 
+                # Compute effective GAN weight (progressive ramp-up)
+                eff_gan_weight = self._get_effective_gan_weight(epoch)
+
                 if self.gan_loss_type == "hinge":
                     gan_g = self.gan_loss_fn(fake_features, target_is_real=True, for_discriminator=False)
                 else:
                     gan_g = self.gan_loss_fn(fake_features, target_is_real=True)
                 feat_match = self.feat_match_fn(real_features, fake_features)
-                g_loss = g_loss + self.gan_weight * gan_g + self.feat_match_weight * feat_match
+                g_loss = g_loss + eff_gan_weight * gan_g + self.feat_match_weight * feat_match
                 gan_g_val = gan_g.item()
                 feat_match_val = feat_match.item()
+
+                # Unfreeze D params for the upcoming D step
+                for p in self.discriminator.parameters():
+                    p.requires_grad_(True)
 
             # Scale loss for gradient accumulation and backward
             (g_loss / accum).backward()
@@ -681,6 +841,14 @@ class Trainer:
                             self.d_step_count % self.r1_interval == 0)
                 if apply_r1:
                     real_input_d.requires_grad_(True)
+
+                # DiffAugment for D step
+                # When R1 is active, skip augmenting real input (R1 needs
+                # clean gradients on actual data, not augmented data)
+                if self.diffaugment_fn is not None:
+                    fake_input_d = self.diffaugment_fn(fake_input_d)
+                    if not apply_r1:
+                        real_input_d = self.diffaugment_fn(real_input_d)
 
                 fake_preds = self.discriminator(fake_input_d)
                 real_preds = self.discriminator(real_input_d)
@@ -755,6 +923,8 @@ class Trainer:
                 "ssim": loss_dict["ssim"].item(),
                 "lr_G": self.optimizer_G.param_groups[0]["lr"],
             }
+            if self.use_perceptual:
+                metrics["percep"] = percep_val
             if self.use_reg:
                 metrics["smooth"] = smooth_loss_val
             if self.use_disc:
@@ -766,8 +936,9 @@ class Trainer:
                 metrics["D_fake"] = d_fake_mean_val
                 # Weighted loss contributions (for diagnosing loss balance)
                 metrics["w_recon"] = loss_dict["loss"].item()
-                metrics["w_gan"] = self.gan_weight * gan_g_val
+                metrics["w_gan"] = eff_gan_weight * gan_g_val
                 metrics["w_fm"] = self.feat_match_weight * feat_match_val
+                metrics["eff_gan_w"] = eff_gan_weight
                 if r1_val > 0:
                     metrics["r1"] = r1_val
             # Gradient norms (logged at accumulation boundaries only)

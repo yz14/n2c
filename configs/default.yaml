@@ -47,7 +47,7 @@ registration:
   smoothness_penalty: l2
   lr: 0.0001
 discriminator:
-  enabled: false
+  enabled: true
   ndf: 64
   n_layers: 3
   num_D: 3
@@ -58,8 +58,27 @@ discriminator:
   lr_scheduler: cosine
   warmup_steps: 500
   label_smoothing: 0.1
+  grad_clip_norm_D: 0.0
+  d_cond_mode: concat
+  gan_loss_type: lsgan
+  r1_gamma: 10.0
+  r1_interval: 16
+  disc_type: patchgan
+  n_blocks_resD: 4
+  use_attention: true
+  gan_warmup_epochs: 5
+  d_warmup_steps: 0
+  diffaugment_policy: ''
+refine:
+  enabled: false
+  hidden_dim: 64
+  num_blocks: 6
+  lr: 0.0001
+  lr_scheduler: cosine
+  warmup_steps: 200
+  freeze_G: true
 train:
-  batch_size: 8
+  batch_size: 2
   lr: 0.0001
   weight_decay: 0.0
   num_epochs: 200
@@ -79,5 +98,8 @@ train:
   pretrained_G: ''
   pretrained_R: ''
   pretrained_D: ''
-  grad_clip_norm: 1.0
+  pretrained_G2: ''
+  grad_clip_norm: 5.0
   grad_accumulation_steps: 1
+  skip_warmup: false
+  perceptual_weight: 0.0

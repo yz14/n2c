@@ -79,6 +79,10 @@ class DiscriminatorConfig:
     disc_type: str = "patchgan"      # "patchgan" (original) or "resblock" (enhanced)
     n_blocks_resD: int = 4           # number of ResBlocks per sub-D (resblock type only)
     use_attention: bool = True       # self-attention in ResBlock D
+    # --- New: training stability ---
+    gan_warmup_epochs: int = 5       # linearly ramp GAN weight from 0 to gan_weight over N epochs
+    d_warmup_steps: int = 0          # pre-train D for N steps before joint training (0=disabled)
+    diffaugment_policy: str = ""     # DiffAugment policy: "color,translation,cutout" or "" (disabled)
 
 
 @dataclass
@@ -121,6 +125,7 @@ class TrainConfig:
     grad_clip_norm: float = 5.0  # max gradient norm for clipping (0 = disabled)
     grad_accumulation_steps: int = 1  # gradient accumulation steps (1 = no accumulation)
     skip_warmup: bool = False    # skip LR warmup (useful when loading pretrained weights)
+    perceptual_weight: float = 0.0  # VGG perceptual loss weight (0=disabled, recommended: 0.1-1.0)
 
 
 @dataclass
@@ -138,8 +143,8 @@ class Config:
         d = asdict(self)
         # Convert tuples to lists for YAML compatibility
         self._tuples_to_lists(d)
-        with open(path, "w") as f:
-            yaml.dump(d, f, default_flow_style=False, sort_keys=False)
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.dump(d, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     @staticmethod
     def _tuples_to_lists(d):
@@ -151,7 +156,7 @@ class Config:
 
     @classmethod
     def load(cls, path: str) -> "Config":
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             raw = yaml.safe_load(f)
         data_cfg = DataConfig(**raw.get("data", {}))
         model_raw = raw.get("model", {})
