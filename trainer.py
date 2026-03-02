@@ -21,6 +21,7 @@ Features:
 
 import logging
 import math
+import random
 from pathlib import Path
 from typing import Optional, Dict, List
 
@@ -170,6 +171,19 @@ class Trainer:
                 logger.info(f"  DiffAugment:      {dcfg.diffaugment_policy}")
             else:
                 self.diffaugment_fn = None
+            # Quality degradation negative samples for D
+            self.d_quality_aug_prob = dcfg.d_quality_aug_prob
+            self.d_quality_aug_weight = dcfg.d_quality_aug_weight
+            if dcfg.d_quality_aug:
+                from data.quality_augment import QualityDegradation
+                self.quality_degrade_fn = QualityDegradation(
+                    policies=dcfg.d_quality_aug, severity="strong",
+                )
+                logger.info(f"  D quality aug:    {dcfg.d_quality_aug} "
+                            f"(prob={self.d_quality_aug_prob}, "
+                            f"weight={self.d_quality_aug_weight})")
+            else:
+                self.quality_degrade_fn = None
         else:
             self.discriminator = None
             self.label_smoothing = 0.0
@@ -179,6 +193,9 @@ class Trainer:
             self.gan_warmup_epochs = 0
             self.d_warmup_steps = 0
             self.diffaugment_fn = None
+            self.quality_degrade_fn = None
+            self.d_quality_aug_prob = 0.0
+            self.d_quality_aug_weight = 0.0
 
         # --- Perceptual loss (VGG) ---
         self.use_perceptual = config.train.perceptual_weight > 0
@@ -583,11 +600,17 @@ class Trainer:
             image: (N, C, H, W) real CTA or generated CTA
 
         Returns:
-            D input tensor: concat(ncct, image) for 'concat' mode,
-                           or image alone for 'none' mode.
+            D input tensor depending on mode:
+              - 'none':   image alone (C channels)
+              - 'concat': concat(ncct, image) (2C channels)
+              - 'diff':   image - ncct (C channels) — isolates the contrast
+                          enhancement signal, removing shared background.
+                          Best for NCCT→CTA where images are nearly identical.
         """
         if self.d_cond_mode == "none":
             return image
+        elif self.d_cond_mode == "diff":
+            return image - ncct
         return torch.cat([ncct, image], dim=1)
 
     # ------------------------------------------------------------------
@@ -612,12 +635,23 @@ class Trainer:
         This gives D time to learn the real/fake distinction before G
         receives GAN gradients. Without warmup, random D provides noise
         gradients that can destabilize G.
+
+        NOTE: The cosine LR scheduler sets LR=0 at step 0 (warmup phase).
+        Since D warmup runs BEFORE the main training loop and the scheduler
+        is never stepped here, we must manually set the optimizer LR to the
+        base D learning rate for the duration of warmup. After warmup, we
+        rebuild the scheduler so the main loop starts from step 0.
         """
         if not self.use_disc or self.d_warmup_steps <= 0:
             return
 
+        # --- Fix: set D optimizer to base LR (scheduler starts at 0) ---
+        base_d_lr = self.config.discriminator.lr
+        for pg in self.optimizer_D.param_groups:
+            pg['lr'] = base_d_lr
+
         logger.info(f"  D warmup: pre-training D for {self.d_warmup_steps} steps "
-                     f"(G frozen)...")
+                     f"(G frozen, D_lr={base_d_lr})...")
         self.discriminator.train()
         self.model.eval()
 
@@ -665,18 +699,41 @@ class Trainer:
                     d_loss_fake = self.gan_loss_fn(fake_preds, target_is_real=False)
                 d_loss = 0.5 * (d_loss_real + d_loss_fake)
 
+                # Quality degradation negatives during warmup too
+                if (self.quality_degrade_fn is not None and
+                        random.random() < self.d_quality_aug_prob):
+                    with torch.no_grad():
+                        degraded_cta = self.quality_degrade_fn(cta)
+                    degraded_input_d = self._build_d_input(ncct, degraded_cta)
+                    if self.diffaugment_fn is not None:
+                        degraded_input_d = self.diffaugment_fn(degraded_input_d)
+                    degraded_preds = self.discriminator(degraded_input_d)
+                    if self.gan_loss_type == "hinge":
+                        d_loss_deg = self.gan_loss_fn(
+                            degraded_preds, target_is_real=False,
+                            for_discriminator=True,
+                        )
+                    else:
+                        d_loss_deg = self.gan_loss_fn(
+                            degraded_preds, target_is_real=False,
+                        )
+                    d_loss = d_loss + self.d_quality_aug_weight * d_loss_deg
+
                 if apply_r1:
                     r1_penalty = r1_gradient_penalty(real_preds, real_input_d)
                     d_loss = d_loss + (self.r1_gamma / 2.0) * r1_penalty
 
                 self.optimizer_D.zero_grad()
                 d_loss.backward()
-                if self.grad_clip_norm_D > 0:
-                    torch.nn.utils.clip_grad_norm_(
-                        self.discriminator.parameters(), self.grad_clip_norm_D)
+
+                # Debug: compute gradient norm before clipping
+                grad_norm_d = torch.nn.utils.clip_grad_norm_(
+                    self.discriminator.parameters(),
+                    self.grad_clip_norm_D if self.grad_clip_norm_D > 0 else float('inf'),
+                )
                 self.optimizer_D.step()
 
-                # Track statistics
+                # Track statistics (per-step values, not running averages)
                 with torch.no_grad():
                     d_real_val = sum(s[-1].mean().item() for s in real_preds) / len(real_preds)
                     d_fake_val = sum(s[-1].mean().item() for s in fake_preds) / len(fake_preds)
@@ -685,11 +742,25 @@ class Trainer:
 
                 step += 1
                 if step % 100 == 0:
-                    logger.info(f"    D warmup step {step}/{self.d_warmup_steps}: "
-                                f"D_real={d_real_sum/step:.4f}, D_fake={d_fake_sum/step:.4f}")
+                    cur_lr = self.optimizer_D.param_groups[0]['lr']
+                    logger.info(
+                        f"    D warmup step {step}/{self.d_warmup_steps}: "
+                        f"D_real={d_real_val:.4f}, D_fake={d_fake_val:.4f}, "
+                        f"d_loss={d_loss.item():.4f}, grad_norm={grad_norm_d:.4f}, "
+                        f"lr={cur_lr:.6f}"
+                    )
 
-        logger.info(f"  D warmup complete: D_real={d_real_sum/step:.4f}, "
-                     f"D_fake={d_fake_sum/step:.4f}")
+        logger.info(f"  D warmup complete: D_real_avg={d_real_sum/step:.4f}, "
+                     f"D_fake_avg={d_fake_sum/step:.4f}")
+
+        # --- Rebuild D scheduler so main training starts from step 0 ---
+        dcfg = self.config.discriminator
+        d_warmup_sched = 0 if self.config.train.skip_warmup else dcfg.warmup_steps
+        steps_per_epoch = len(self.train_loader) // self.grad_accumulation_steps
+        total_optim_steps = self.config.train.num_epochs * steps_per_epoch
+        self.scheduler_D = self._build_scheduler(
+            self.optimizer_D, dcfg.lr_scheduler, d_warmup_sched, total_optim_steps,
+        )
 
         if not self.freeze_G:
             self.model.train()
@@ -864,6 +935,28 @@ class Trainer:
                     )
                     d_loss_fake = self.gan_loss_fn(fake_preds, target_is_real=False)
                 d_loss = 0.5 * (d_loss_real + d_loss_fake)
+
+                # Quality degradation negative samples: teach D to assess
+                # image quality (sharpness, noise, resolution) in addition
+                # to real-vs-generated distinction.
+                if (self.quality_degrade_fn is not None and
+                        random.random() < self.d_quality_aug_prob):
+                    with torch.no_grad():
+                        degraded_cta = self.quality_degrade_fn(cta)
+                    degraded_input_d = self._build_d_input(ncct, degraded_cta)
+                    if self.diffaugment_fn is not None:
+                        degraded_input_d = self.diffaugment_fn(degraded_input_d)
+                    degraded_preds = self.discriminator(degraded_input_d)
+                    if self.gan_loss_type == "hinge":
+                        d_loss_degraded = self.gan_loss_fn(
+                            degraded_preds, target_is_real=False,
+                            for_discriminator=True,
+                        )
+                    else:
+                        d_loss_degraded = self.gan_loss_fn(
+                            degraded_preds, target_is_real=False,
+                        )
+                    d_loss = d_loss + self.d_quality_aug_weight * d_loss_degraded
 
                 # R1 gradient penalty
                 if apply_r1:

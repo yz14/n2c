@@ -33,6 +33,47 @@ import torch.nn.functional as F
 from torch.nn.utils import spectral_norm
 
 
+def init_d_weights(net: nn.Module, init_type: str = "normal", gain: float = 0.02):
+    """Initialize discriminator weights (standard GAN practice).
+
+    Conv weights are initialized with normal_(0, gain).
+    This is the default initialization used in pix2pix, pix2pixHD, and SPADE.
+    Handles spectral-normed layers (weight stored as weight_orig).
+
+    Args:
+        net: discriminator module
+        init_type: 'normal' or 'xavier' or 'kaiming'
+        gain: std for normal init (default 0.02)
+    """
+    def _init_func(m):
+        classname = m.__class__.__name__
+        if hasattr(m, 'weight_orig'):
+            # Spectral-normed layer: init weight_orig
+            if init_type == "normal":
+                nn.init.normal_(m.weight_orig.data, 0.0, gain)
+            elif init_type == "xavier":
+                nn.init.xavier_normal_(m.weight_orig.data, gain=gain)
+            elif init_type == "kaiming":
+                nn.init.kaiming_normal_(m.weight_orig.data, a=0.2, nonlinearity='leaky_relu')
+        elif hasattr(m, 'weight') and m.weight is not None:
+            if classname.find('Conv') != -1 or classname.find('Linear') != -1:
+                if init_type == "normal":
+                    nn.init.normal_(m.weight.data, 0.0, gain)
+                elif init_type == "xavier":
+                    nn.init.xavier_normal_(m.weight.data, gain=gain)
+                elif init_type == "kaiming":
+                    nn.init.kaiming_normal_(m.weight.data, a=0.2, nonlinearity='leaky_relu')
+            elif classname.find('Norm') != -1:
+                nn.init.normal_(m.weight.data, 1.0, gain)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias.data, 0.0)
+        if hasattr(m, 'bias') and m.bias is not None and classname.find('Norm') == -1:
+            nn.init.constant_(m.bias.data, 0.0)
+
+    net.apply(_init_func)
+    return net
+
+
 class NLayerDiscriminator(nn.Module):
     """
     PatchGAN discriminator with spectral normalization.

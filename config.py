@@ -25,6 +25,7 @@ class DataConfig:
     noise_std: float = 0.02      # Gaussian noise std (in normalized space)
     brightness_range: float = 0.1
     contrast_range: float = 0.1
+    lung_sample_bias: float = 0.0  # lung-aware sampling bias (0=uniform, 2.0=strong lung preference)
 
 
 @dataclass
@@ -71,7 +72,7 @@ class DiscriminatorConfig:
     label_smoothing: float = 0.1     # one-sided label smoothing for D real targets (0=off)
     grad_clip_norm_D: float = 0.0    # D gradient clipping (0=disabled; SN already ensures stability)
     # --- New: anti-collapse settings ---
-    d_cond_mode: str = "concat"      # D input mode: "concat" (conditional) or "none" (unconditional)
+    d_cond_mode: str = "concat"      # D input: "concat"|"none"|"diff" (diff=image-ncct, best for NCCT→CTA)
     gan_loss_type: str = "lsgan"     # GAN loss: "lsgan" or "hinge"
     r1_gamma: float = 10.0           # R1 gradient penalty weight (0=disabled)
     r1_interval: int = 16            # lazy R1 every N D-steps (reduces overhead)
@@ -83,6 +84,10 @@ class DiscriminatorConfig:
     gan_warmup_epochs: int = 5       # linearly ramp GAN weight from 0 to gan_weight over N epochs
     d_warmup_steps: int = 0          # pre-train D for N steps before joint training (0=disabled)
     diffaugment_policy: str = ""     # DiffAugment policy: "color,translation,cutout" or "" (disabled)
+    # --- Quality degradation negative samples for D ---
+    d_quality_aug: str = ""          # degradation types: "blur,noise,downsample" or "" (disabled)
+    d_quality_aug_prob: float = 0.5  # probability of adding degraded negative per D step
+    d_quality_aug_weight: float = 0.5  # weight for quality assessment D loss term
 
 
 @dataclass

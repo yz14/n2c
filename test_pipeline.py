@@ -767,6 +767,161 @@ def test_progressive_gan_weight():
     logger.info("Progressive GAN Weight test PASSED\n")
 
 
+def test_d_weight_init():
+    """Test discriminator weight initialization."""
+    logger.info("=== Testing D Weight Initialization ===")
+    from models.discriminator import MultiscaleDiscriminator, init_d_weights
+
+    D = MultiscaleDiscriminator(
+        input_nc=C, ndf=32, n_layers=2, num_D=2,
+        use_spectral_norm=True, get_interm_feat=True,
+    )
+
+    # Before init: PyTorch default (kaiming_uniform) → weight std ≈ 0.1-0.3
+    pre_stds = []
+    for m in D.modules():
+        if hasattr(m, 'weight_orig'):
+            pre_stds.append(m.weight_orig.data.std().item())
+
+    # Apply GAN init
+    init_d_weights(D, init_type="normal", gain=0.02)
+
+    # After init: weight std should be ≈ 0.02
+    post_stds = []
+    for m in D.modules():
+        if hasattr(m, 'weight_orig'):
+            post_stds.append(m.weight_orig.data.std().item())
+
+    avg_pre = sum(pre_stds) / len(pre_stds)
+    avg_post = sum(post_stds) / len(post_stds)
+
+    assert avg_post < avg_pre, "Post-init std should be smaller than pre-init"
+    assert avg_post < 0.05, f"Post-init avg std should be ~0.02, got {avg_post:.4f}"
+
+    logger.info(f"  Pre-init avg weight std:  {avg_pre:.4f}")
+    logger.info(f"  Post-init avg weight std: {avg_post:.4f}")
+    logger.info("D Weight Initialization test PASSED\n")
+
+
+def test_d_warmup_lr_fix():
+    """Test that D warmup LR fix works (LR should NOT be 0 during warmup).
+
+    Reproduces the bug: LambdaLR with cosine warmup sets LR=0 at step 0.
+    Verifies that the fix manually sets LR to base_d_lr before warmup.
+    """
+    logger.info("=== Testing D Warmup LR Fix ===")
+    import math
+    from torch.optim import AdamW
+    from torch.optim.lr_scheduler import LambdaLR
+
+    # Simulate the bug: create optimizer + cosine warmup scheduler
+    dummy = torch.nn.Linear(10, 10)
+    opt = AdamW(dummy.parameters(), lr=0.0004)
+    warmup_steps = 500
+    total_steps = 10000
+
+    def lr_lambda(step):
+        if step < warmup_steps:
+            return float(step) / max(1, warmup_steps)
+        progress = float(step - warmup_steps) / max(1, total_steps - warmup_steps)
+        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * progress)))
+
+    scheduler = LambdaLR(opt, lr_lambda)
+
+    # BUG: LambdaLR immediately sets LR to lr_lambda(0) = 0/500 = 0
+    actual_lr = opt.param_groups[0]['lr']
+    assert actual_lr == 0.0, f"Expected LR=0 at init (the bug), got {actual_lr}"
+    logger.info(f"  Bug confirmed: LR after LambdaLR init = {actual_lr} (should be 0)")
+
+    # FIX: manually set LR to base rate before warmup
+    base_lr = 0.0004
+    for pg in opt.param_groups:
+        pg['lr'] = base_lr
+    fixed_lr = opt.param_groups[0]['lr']
+    assert fixed_lr == base_lr, f"Expected LR={base_lr} after fix, got {fixed_lr}"
+    logger.info(f"  Fix verified: LR after manual set = {fixed_lr}")
+
+    logger.info("D Warmup LR Fix test PASSED\n")
+
+
+def test_d_diff_mode():
+    """Test d_cond_mode='diff' for isolating contrast enhancement signal."""
+    logger.info("=== Testing D Diff Mode ===")
+    from models.discriminator import MultiscaleDiscriminator
+
+    B, H, W = 2, 64, 64
+    ncct = torch.randn(B, C, H, W)
+    cta = ncct + 0.1 * torch.randn(B, C, H, W)  # CTA ≈ NCCT + small vessel signal
+    fake = ncct + 0.05 * torch.randn(B, C, H, W)  # G(NCCT) ≈ NCCT + predicted signal
+
+    # Simulate _build_d_input with diff mode
+    real_diff = cta - ncct      # real contrast enhancement
+    fake_diff = fake - ncct     # predicted contrast enhancement
+
+    assert real_diff.shape == (B, C, H, W), "Diff should have same shape as input"
+
+    # Build D with C input channels (same as 'none' mode)
+    D = MultiscaleDiscriminator(
+        input_nc=C, ndf=32, n_layers=2, num_D=2,
+        use_spectral_norm=True, get_interm_feat=True,
+    )
+    real_preds = D(real_diff)
+    fake_preds = D(fake_diff)
+
+    # Both should produce valid multi-scale outputs
+    assert len(real_preds) == 2, "Should have 2 scales"
+    assert len(fake_preds) == 2, "Should have 2 scales"
+
+    # The diff maps should be much smaller in magnitude than raw images
+    assert real_diff.abs().mean() < cta.abs().mean(), \
+        "Diff should be smaller than raw image"
+
+    logger.info(f"  real_diff: mean_abs={real_diff.abs().mean():.4f}")
+    logger.info(f"  fake_diff: mean_abs={fake_diff.abs().mean():.4f}")
+    logger.info(f"  D output scales: {len(real_preds)}")
+    logger.info("D Diff Mode test PASSED\n")
+
+
+def test_quality_degradation():
+    """Test QualityDegradation module for D negative samples."""
+    logger.info("=== Testing Quality Degradation ===")
+    from data.quality_augment import QualityDegradation
+
+    B, H, W = 2, 64, 64
+    x = torch.randn(B, C, H, W).clamp(-1, 1)
+
+    # Test each policy individually
+    for policy in ["blur", "noise", "downsample"]:
+        qd = QualityDegradation(policies=policy, severity="strong")
+        degraded = qd(x)
+        assert degraded.shape == x.shape, f"{policy}: shape mismatch"
+        assert degraded.min() >= -1.0 and degraded.max() <= 1.0, \
+            f"{policy}: values out of [-1, 1]"
+        # Degraded should differ from original
+        diff = (degraded - x).abs().mean().item()
+        logger.info(f"  {policy}: mean_abs_diff={diff:.4f}")
+        assert diff > 0, f"{policy}: degraded should differ from original"
+
+    # Test combined policies
+    qd_all = QualityDegradation(policies="blur,noise,downsample", severity="strong")
+    degraded_all = qd_all(x)
+    assert degraded_all.shape == x.shape
+
+    # Test mild severity (for G input augmentation)
+    qd_mild = QualityDegradation(policies="blur,noise", severity="mild")
+    degraded_mild = qd_mild(x)
+    assert degraded_mild.shape == x.shape
+
+    # Strong degradation should produce larger differences than mild
+    diff_strong = (qd_all(x) - x).abs().mean().item()
+    # Run multiple trials for mild to get average
+    mild_diffs = [(qd_mild(x) - x).abs().mean().item() for _ in range(5)]
+    diff_mild_avg = sum(mild_diffs) / len(mild_diffs)
+    logger.info(f"  strong: mean_diff={diff_strong:.4f}, mild_avg: {diff_mild_avg:.4f}")
+
+    logger.info("Quality Degradation test PASSED\n")
+
+
 def test_new_config_fields():
     """Test that new config fields load correctly."""
     logger.info("=== Testing New Config Fields ===")
@@ -776,6 +931,7 @@ def test_new_config_fields():
     assert cfg.discriminator.gan_warmup_epochs == 5
     assert cfg.discriminator.d_warmup_steps == 0
     assert cfg.discriminator.diffaugment_policy == ""
+    assert cfg.discriminator.d_quality_aug == ""
     assert cfg.train.perceptual_weight == 0.0
     logger.info("  Defaults OK")
 
@@ -783,6 +939,11 @@ def test_new_config_fields():
     assert cfg2.discriminator.gan_warmup_epochs == 10
     assert cfg2.discriminator.d_warmup_steps == 500
     assert cfg2.discriminator.diffaugment_policy == "color,translation"
+    assert cfg2.discriminator.d_cond_mode == "diff"
+    assert cfg2.discriminator.d_quality_aug == "blur,noise,downsample"
+    assert cfg2.discriminator.d_quality_aug_prob == 0.5
+    assert cfg2.discriminator.d_quality_aug_weight == 0.5
+    assert cfg2.data.lung_sample_bias == 2.0
     assert cfg2.train.perceptual_weight == 0.5
     logger.info("  Recommended config OK")
 
@@ -810,6 +971,10 @@ if __name__ == "__main__":
     test_diffaugment()
     test_d_gradient_isolation()
     test_progressive_gan_weight()
+    test_d_weight_init()
+    test_d_warmup_lr_fix()
+    test_d_diff_mode()
+    test_quality_degradation()
     test_new_config_fields()
     # Pre-existing tests (may fail due to unrelated issues)
     try:

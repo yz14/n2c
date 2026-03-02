@@ -23,7 +23,7 @@ from data.dataset import NCCTDataset
 from data.transforms import GPUAugmentor
 from models.unet import UNet
 from models.registration import RegistrationNet
-from models.discriminator import MultiscaleDiscriminator
+from models.discriminator import MultiscaleDiscriminator, init_d_weights
 from models.discriminator_v2 import MultiscaleResBlockDiscriminator
 from models.refine_net import RefineNet
 from models.losses import CombinedLoss
@@ -87,6 +87,7 @@ def build_dataloaders(cfg: Config, train_file: str, valid_file: str):
         image_size=data_cfg.image_size,
         hu_min=data_cfg.hu_min,
         hu_max=data_cfg.hu_max,
+        lung_sample_bias=data_cfg.lung_sample_bias,
     )
 
     val_dataset = NCCTDataset(
@@ -219,6 +220,8 @@ def main():
         # D input channels depend on conditioning mode
         if dcfg.d_cond_mode == "none":
             disc_input_nc = cfg.model.out_channels  # image only
+        elif dcfg.d_cond_mode == "diff":
+            disc_input_nc = cfg.model.out_channels  # (image - ncct), same channels as image
         else:
             disc_input_nc = cfg.model.in_channels + cfg.model.out_channels  # concat(ncct, cta)
 
@@ -243,8 +246,10 @@ def main():
                 get_interm_feat=True,
                 enabled=True,
             )
+        # Standard GAN weight initialization (normal_(0, 0.02))
+        init_d_weights(discriminator, init_type="normal", gain=0.02)
         dp = sum(p.numel() for p in discriminator.parameters()) / 1e6
-        logger.info(f"Discriminator (D) [{dcfg.disc_type}] parameters: {dp:.2f}M")
+        logger.info(f"Discriminator (D) [{dcfg.disc_type}] parameters: {dp:.2f}M (init=normal_0.02)")
         logger.info(f"  D input channels: {disc_input_nc} (cond_mode={dcfg.d_cond_mode})")
         logger.info(f"  GAN loss: {dcfg.gan_loss_type}, R1: gamma={dcfg.r1_gamma} interval={dcfg.r1_interval}")
 

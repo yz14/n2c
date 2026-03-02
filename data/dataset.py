@@ -61,12 +61,14 @@ class NCCTDataset(Dataset):
         image_size: int = 256,
         hu_min: float = -1024.0,
         hu_max: float = 3071.0,
+        lung_sample_bias: float = 0.0,
     ):
         self.data_dir = Path(data_dir)
         self.num_slices = num_slices
         self.image_size = image_size
         self.hu_min = hu_min
         self.hu_max = hu_max
+        self.lung_sample_bias = lung_sample_bias
 
         # Load file list
         with open(split_file, "r") as f:
@@ -75,6 +77,8 @@ class NCCTDataset(Dataset):
 
         # Pre-scan to get depth (D) for each file to validate slice extraction
         self._depth_cache: Dict[str, int] = {}
+        # Cache for lung-aware sampling: {filepath_str: probability_array}
+        self._lung_prob_cache: Dict[str, np.ndarray] = {}
 
     def __len__(self) -> int:
         return len(self.filenames)
@@ -86,6 +90,42 @@ class NCCTDataset(Dataset):
             with np.load(filepath, mmap_mode="r") as npz:
                 self._depth_cache[key] = npz["ncct"].shape[0]
         return self._depth_cache[key]
+
+    def _get_lung_sample_probs(self, filepath: Path, depth: int,
+                               context_slices: int) -> np.ndarray:
+        """Compute per-start-position sampling probability based on lung mask density.
+
+        For each valid start position d, computes the mean mask value over
+        slices [d, d+context_slices). Positions with more lung content get
+        higher probability. The lung_sample_bias controls the sharpness:
+          prob ∝ (mask_density + epsilon) ^ lung_sample_bias
+
+        Results are cached per file to avoid repeated disk reads.
+        """
+        key = str(filepath)
+        max_start = depth - context_slices
+        if max_start <= 0:
+            return np.array([1.0])
+
+        if key not in self._lung_prob_cache or len(self._lung_prob_cache[key]) != max_start:
+            with np.load(filepath, mmap_mode="r") as npz:
+                mask = npz["ncct_lung_cvx"]  # (D, H, W)
+                # Compute per-slice mean mask density
+                slice_density = np.array([mask[i].mean() for i in range(depth)],
+                                         dtype=np.float32)
+            # For each start position, average density over the context window
+            densities = np.array([
+                slice_density[d:d + context_slices].mean()
+                for d in range(max_start)
+            ], dtype=np.float64)
+            # Apply bias: higher bias → stronger preference for lung slices
+            # epsilon ensures non-lung slices still have non-zero probability
+            epsilon = 0.01
+            probs = (densities + epsilon) ** self.lung_sample_bias
+            probs /= probs.sum()
+            self._lung_prob_cache[key] = probs
+
+        return self._lung_prob_cache[key]
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
         filename = self.filenames[idx]
@@ -101,6 +141,10 @@ class NCCTDataset(Dataset):
         if max_start <= 0:
             d = 0
             context_slices = min(context_slices, depth)
+        elif self.lung_sample_bias > 0:
+            # Lung-aware sampling: prefer slices with more lung content
+            probs = self._get_lung_sample_probs(filepath, depth, context_slices)
+            d = np.random.choice(max_start, p=probs)
         else:
             d = np.random.randint(0, max_start)
 
