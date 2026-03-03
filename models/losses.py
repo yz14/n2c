@@ -577,3 +577,120 @@ class GradLoss(nn.Module):
             return (dy ** 2).mean() + (dx ** 2).mean()
         else:
             return dy.abs().mean() + dx.abs().mean()
+
+
+# ---------------------------------------------------------------------------
+# Frequency domain loss
+# ---------------------------------------------------------------------------
+
+class FrequencyLoss(nn.Module):
+    """
+    FFT-based frequency domain loss for penalizing missing high-frequency
+    details (edges, textures, vessel structures).
+
+    Inspired by Focal Frequency Loss (Jiang et al., ICCV 2021).
+
+    Computes 2D real FFT of pred and target, applies radial frequency
+    weighting to emphasize high frequencies, and returns the weighted L1
+    distance on the amplitude spectrum.
+
+    This directly combats blurry output: L1/SSIM losses encourage the model
+    to predict the mean of possible outputs (smooth), while this loss
+    explicitly penalizes missing high-frequency content.
+
+    Args:
+        weight_mode: frequency weighting strategy
+            - "high_pass": linearly increasing weight with radial frequency
+              (strongest penalty on highest frequencies — most aggressive)
+            - "uniform": equal weight across all frequencies (baseline)
+        cutoff_ratio: fraction of max radial frequency below which weight
+            is zeroed out (0.0 = no cutoff, 0.1 = ignore lowest 10% freqs).
+            Useful to avoid penalizing large-scale intensity shifts.
+        log_scale: if True, compute loss on log(1 + amplitude) to reduce
+            the dominance of the DC / low-frequency components.
+    """
+
+    def __init__(
+        self,
+        weight_mode: str = "high_pass",
+        cutoff_ratio: float = 0.0,
+        log_scale: bool = True,
+    ):
+        super().__init__()
+        assert weight_mode in ("high_pass", "uniform")
+        self.weight_mode = weight_mode
+        self.cutoff_ratio = cutoff_ratio
+        self.log_scale = log_scale
+        self._freq_weight_cache: dict = {}
+
+    def _get_freq_weight(
+        self, h: int, w: int, device: torch.device,
+    ) -> torch.Tensor:
+        """Build and cache radial frequency weighting map.
+
+        Output shape: (h, w//2+1) matching rfft2 output spatial dims.
+        """
+        key = (h, w, str(device))
+        if key in self._freq_weight_cache:
+            return self._freq_weight_cache[key]
+
+        # rfft2 output has shape (..., h, w//2+1)
+        w_rfft = w // 2 + 1
+
+        # Normalized frequency axes: [0, 1] where 1 = Nyquist
+        freq_y = torch.arange(h, device=device, dtype=torch.float32)
+        freq_y = torch.min(freq_y, h - freq_y) / (h / 2.0)  # fold and normalize
+        freq_x = torch.arange(w_rfft, device=device, dtype=torch.float32)
+        freq_x = freq_x / (w / 2.0)
+
+        # Radial frequency (Euclidean distance from DC)
+        fy, fx = torch.meshgrid(freq_y, freq_x, indexing="ij")
+        radius = torch.sqrt(fy ** 2 + fx ** 2)
+        max_r = radius.max().clamp(min=1e-8)
+        radius = radius / max_r  # normalize to [0, 1]
+
+        if self.weight_mode == "high_pass":
+            weight = radius
+        else:  # uniform
+            weight = torch.ones_like(radius)
+
+        # Zero out frequencies below cutoff
+        if self.cutoff_ratio > 0:
+            weight = weight * (radius >= self.cutoff_ratio).float()
+
+        # Normalize so mean weight ≈ 1 (keeps loss scale independent of mode)
+        weight = weight / (weight.mean() + 1e-8)
+
+        self._freq_weight_cache[key] = weight
+        return weight
+
+    def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """
+        Compute frequency domain loss.
+
+        Args:
+            pred:   (N, C, H, W) predicted image in [-1, 1]
+            target: (N, C, H, W) target image in [-1, 1]
+
+        Returns:
+            scalar loss
+        """
+        # 2D real FFT with orthonormal normalization (energy-preserving)
+        pred_fft = torch.fft.rfft2(pred, norm="ortho")
+        target_fft = torch.fft.rfft2(target, norm="ortho")
+
+        # Amplitude spectrum
+        pred_amp = pred_fft.abs()
+        target_amp = target_fft.abs()
+
+        if self.log_scale:
+            pred_amp = torch.log1p(pred_amp)
+            target_amp = torch.log1p(target_amp)
+
+        # Frequency weighting map: (H, W//2+1)
+        weight = self._get_freq_weight(pred.shape[2], pred.shape[3], pred.device)
+
+        # Weighted L1 in frequency domain
+        diff = (pred_amp - target_amp).abs() * weight[None, None, :, :]
+
+        return diff.mean()

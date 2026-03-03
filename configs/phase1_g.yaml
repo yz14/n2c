@@ -1,0 +1,104 @@
+# ==========================================================================
+# Phase 1: Train Generator (G) only
+# ==========================================================================
+# 目标: G学习 NCCT → CTA 和 degraded_CTA → CTA 双任务
+# 输入: NCCT (12 slices, 400×400) + 降质CTA (概率20%)
+# 输出: 合成CTA (模糊但血管基本增强)
+# 预计训练: 100-200 epochs
+#
+# 训练完成标志:
+#   - sharpness ratio > 0.5 (输出不是完全模糊)
+#   - lung_l1 < 0.15 (肺区误差可接受)
+#   - 可视化: 血管基本增强, 整体偏模糊是正常的
+#
+# 训练完成后: 用 phase2_g_d.yaml 继续训练 (加载此阶段的checkpoint)
+# ==========================================================================
+
+data:
+  data_dir: D:/codes/data/ncct_tiny   # 数据目录 (包含 .npz 文件)
+  split_dir: ./splits                  # 训练/验证/测试划分文件目录
+  lung_sample_bias: 2.0                # 肺部切片采样偏向 (0=均匀, 2.0=偏向含肺切片)
+  num_slices: 12                       # 2.5D: 每个样本的切片数 (中间C片用于训练)
+  image_size: 400                      # 输入图像尺寸 (H=W)
+  hu_min: -550.0                       # HU窗下限 (归一化到-1)
+  hu_max: 250.0                        # HU窗上限 (归一化到+1)
+  num_workers: 4                       # DataLoader worker数
+  # --- 数据增强 ---
+  aug_prob: 0.5                        # 空间+像素增强概率
+  ncct_degrade_prob: 0.5               # NCCT质量退化概率 (blur/cutout/gamma/downsample)
+  max_angle: 15.0                      # 最大旋转角度 (度)
+  scale_range: 0.1                     # 缩放范围 [1-0.1, 1+0.1]
+  translate_frac: 0.05                 # 最大平移比例
+  noise_std: 0.07                      # 高斯噪声标准差
+  brightness_range: 0.1                # 亮度调整范围
+  contrast_range: 0.1                  # 对比度调整范围
+
+model:
+  in_channels: 12                      # = num_slices (自动同步)
+  out_channels: 12                     # = num_slices (自动同步)
+  model_channels: 64                   # 基础通道数 (64→128→256→512)
+  channel_mult:                        # 各层通道倍数
+  - 1                                  # 64
+  - 2                                  # 128
+  - 4                                  # 256
+  - 8                                  # 512
+  num_res_blocks: 2                    # 每层残差块数
+  attention_resolutions:               # 在哪些下采样倍率启用注意力
+  - 4                                  # 1/4 分辨率
+  - 8                                  # 1/8 分辨率
+  dropout: 0.0                         # Dropout率 (0=关闭)
+  use_checkpoint: false                # 梯度检查点 (省显存但慢)
+  num_heads: 4                         # 注意力头数
+  num_head_channels: -1                # 每头通道数 (-1=自动)
+  use_scale_shift_norm: false          # 是否使用 scale-shift normalization
+  conv_resample: true                  # 使用卷积上/下采样 (vs 插值)
+  resblock_updown: false               # 是否在残差块内做上/下采样
+  use_fp16: false                      # 半精度训练 (true=省显存)
+  residual_output: true                # 残差输出: output = input + prediction
+
+registration:
+  enabled: false                       # Phase 1: 关闭配准网络
+
+discriminator:
+  enabled: false                       # Phase 1: 关闭判别器
+
+refine:
+  enabled: false                       # Phase 1: 关闭精修网络
+
+train:
+  batch_size: 2                        # 批大小 (受限于GPU显存)
+  lr: 0.0002                           # 学习率 (AdamW)
+  weight_decay: 0.0                    # 权重衰减
+  num_epochs: 200                      # 训练轮数
+  save_interval: 10                    # 每N轮保存checkpoint
+  log_interval: 50                     # 每N步打印日志
+  val_interval: 1                      # 每N轮验证
+  # --- 损失函数 ---
+  l1_weight: 1.0                       # L1损失权重
+  ssim_weight: 1.0                     # SSIM损失权重
+  use_3d_ssim: true                    # 3D SSIM (利用切片间相关性, 12 slices推荐true)
+  lung_weight: 10.0                    # 肺区损失权重倍数 (默认值, 被schedule覆盖)
+  lung_weight_schedule: '10:5,20:10,40:20,999:40'  # 渐进肺区权重: epoch<10→5, <20→10, <40→20, else→40
+  # --- 额外损失 ---
+  perceptual_weight: 0.5              # VGG感知损失权重 (0=关闭, 0.1-1.0推荐)
+  freq_weight: 0.1                    # FFT频域损失权重 (0=关闭, 0.1-0.5推荐)
+  # --- CTA退化双任务 ---
+  g_cta_degrade_prob: 0.2             # 概率替换NCCT输入为降质CTA (0=关闭)
+  g_self_refine_prob: 0.0             # 自精修概率 (0=关闭)
+  g_self_refine_weight: 0.5           # 自精修损失权重
+  # --- 优化器 ---
+  ema_rate: 0.999                     # EMA衰减率 (指数移动平均)
+  lr_scheduler: cosine                # 学习率调度: "cosine", "step", "none"
+  warmup_steps: 500                   # 学习率预热步数
+  grad_clip_norm: 5.0                 # 梯度裁剪最大范数 (0=关闭)
+  grad_accumulation_steps: 8          # 梯度累积步数 (等效batch=2×8=16)
+  skip_warmup: false                  # 跳过预热 (加载预训练权重时可设true)
+  # --- 输出 ---
+  output_dir: ./outputs_phase1_g
+  resume_checkpoint: ''               # 恢复训练的checkpoint路径
+  seed: 42
+  # --- 预训练权重 (仅加载权重, 从epoch 0开始训练) ---
+  pretrained_G: ''
+  pretrained_R: ''
+  pretrained_D: ''
+  pretrained_G2: ''

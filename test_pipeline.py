@@ -925,15 +925,16 @@ def test_quality_degradation():
 def test_ncct_degrade_augmentor():
     """Test NCCT quality degradation in GPUAugmentor."""
     logger.info("=== Testing NCCT Quality Degradation Augmentor ===")
-    from data.transforms import GPUAugmentor, _gaussian_blur_2d, _random_cutout, \
+    from data.transforms import GPUAugmentor, _random_cutout, \
         _gamma_transform, _downsample_upsample
+    from data.aug_utils import gaussian_blur_2d
 
     B, H, W = 2, 64, 64
     D = 3 * C  # 3C slices
     x = torch.randn(B, D, H, W).clamp(-1, 1)
 
     # Test individual helper functions
-    blurred = _gaussian_blur_2d(x, kernel_size=5, sigma=1.0)
+    blurred = gaussian_blur_2d(x, kernel_size=5, sigma=1.0)
     assert blurred.shape == x.shape, "Blur shape mismatch"
     logger.info(f"  blur: diff={( blurred - x).abs().mean():.4f}")
 
@@ -965,25 +966,64 @@ def test_ncct_degrade_augmentor():
     logger.info("NCCT Quality Degradation Augmentor test PASSED\n")
 
 
-def test_self_refine_config():
-    """Test self-refinement config fields."""
-    logger.info("=== Testing Self-Refinement Config ===")
+def test_cta_degradation():
+    """Test CTADegradation module and config fields."""
+    logger.info("=== Testing CTA Degradation ===")
+    from data.cta_degrade import CTADegradation
+    from data.aug_utils import gaussian_blur_2d
     from config import Config
 
+    B, H, W = 2, 64, 64
+
+    # --- Test shared gaussian_blur_2d ---
+    x = torch.randn(B, C, H, W).clamp(-1, 1)
+    blurred = gaussian_blur_2d(x, kernel_size=5, sigma=1.0)
+    assert blurred.shape == x.shape, "Shared blur shape mismatch"
+    logger.info(f"  shared blur: diff={(blurred - x).abs().mean():.4f}")
+
+    # --- Test CTADegradation module ---
+    ncct = torch.randn(B, C, H, W).clamp(-1, 1)
+    cta = torch.randn(B, C, H, W).clamp(-1, 1)
+
+    degrade = CTADegradation()
+    degraded = degrade(ncct, cta)
+    assert degraded.shape == ncct.shape, "Shape mismatch"
+    assert degraded.min() >= -1.0 and degraded.max() <= 1.0, "Values out of [-1, 1]"
+
+    # Core property: degraded ≈ ncct * |cta|^alpha, should differ from both ncct and cta
+    diff_from_ncct = (degraded - ncct).abs().mean().item()
+    diff_from_cta = (degraded - cta).abs().mean().item()
+    logger.info(f"  diff_from_ncct={diff_from_ncct:.4f}, diff_from_cta={diff_from_cta:.4f}")
+    assert diff_from_ncct > 0, "Degraded should differ from NCCT"
+    assert diff_from_cta > 0, "Degraded should differ from CTA"
+
+    # Verify alpha=1.0 (exact ncct * |cta|) case
+    degrade_exact = CTADegradation(alpha_range=(1.0, 1.0), blur_prob=0.0, noise_prob=0.0)
+    exact = degrade_exact(ncct, cta)
+    expected = (ncct * cta.abs()).clamp(-1, 1)
+    assert torch.allclose(exact, expected, atol=1e-6), \
+        "With alpha=1, no blur, no noise: should be exactly ncct * |cta|"
+    logger.info("  exact mode (alpha=1, no blur/noise) verified")
+
+    # Multiple calls should give different results (randomness)
+    d1 = degrade(ncct, cta)
+    d2 = degrade(ncct, cta)
+    # With random alpha, blur, noise — very unlikely to be identical
+    logger.info(f"  two calls diff={(d1 - d2).abs().mean():.4f}")
+
+    # --- Test config fields ---
     cfg = Config()
-    assert cfg.train.g_self_refine_prob == 0.0
-    assert cfg.train.g_self_refine_weight == 0.5
+    assert cfg.train.g_cta_degrade_prob == 0.0
     assert cfg.data.ncct_degrade_prob == 0.0
     logger.info("  Defaults OK")
 
     cfg2 = Config.load("configs/recommended.yaml")
-    assert cfg2.train.g_self_refine_prob == 0.3
-    assert cfg2.train.g_self_refine_weight == 0.5
+    assert cfg2.train.g_cta_degrade_prob == 0.2
     assert cfg2.data.ncct_degrade_prob == 0.3
     assert cfg2.discriminator.r1_gamma == 0.0  # disabled: SN sufficient
     logger.info("  Recommended config OK")
 
-    logger.info("Self-Refinement Config test PASSED\n")
+    logger.info("CTA Degradation test PASSED\n")
 
 
 def test_new_config_fields():
@@ -1014,6 +1054,237 @@ def test_new_config_fields():
     logger.info("New Config Fields test PASSED\n")
 
 
+def test_frequency_loss():
+    logger.info("=== Testing Frequency Loss ===")
+    from models.losses import FrequencyLoss
+
+    B, H, W = 2, 64, 64
+
+    # Test 1: identical inputs → loss ≈ 0
+    x = torch.randn(B, C, H, W)
+    fl = FrequencyLoss(weight_mode="high_pass", log_scale=True)
+    loss_same = fl(x, x)
+    assert loss_same.item() < 1e-6, f"Same input loss should be ~0, got {loss_same.item()}"
+    logger.info(f"  Same input loss: {loss_same.item():.8f} (OK)")
+
+    # Test 2: blurred target → loss > 0 (penalizes missing high freq)
+    target = torch.randn(B, C, H, W)
+    blurred = torch.nn.functional.avg_pool2d(target, 3, stride=1, padding=1)
+    loss_blur = fl(blurred, target)
+    assert loss_blur.item() > 0, "Blurred vs sharp should have positive loss"
+    logger.info(f"  Blurred vs sharp loss: {loss_blur.item():.4f}")
+
+    # Test 3: sharp pred should have lower freq loss than blurred pred (same target)
+    # Add small noise to target so it's not identical but preserves high-freq content
+    sharp_pred = target + 0.01 * torch.randn_like(target)
+    loss_sharp = fl(sharp_pred, target)
+    assert loss_sharp.item() < loss_blur.item(), \
+        f"Sharp pred should have lower freq loss than blurred: {loss_sharp.item():.4f} vs {loss_blur.item():.4f}"
+    logger.info(f"  Sharp vs blurred freq loss: {loss_sharp.item():.4f} < {loss_blur.item():.4f} (OK)")
+
+    # Test 4: gradient flows
+    pred = torch.randn(B, C, H, W, requires_grad=True)
+    loss = fl(pred, target)
+    loss.backward()
+    assert pred.grad is not None and pred.grad.abs().sum() > 0, "Gradient should flow"
+    logger.info(f"  Gradient flow: OK (grad_norm={pred.grad.norm():.4f})")
+
+    # Test 5: weight modes
+    fl_uniform = FrequencyLoss(weight_mode="uniform", log_scale=False)
+    loss_uniform = fl_uniform(blurred, target)
+    logger.info(f"  Uniform mode loss: {loss_uniform.item():.4f}")
+
+    # Test 6: cutoff ratio
+    fl_cutoff = FrequencyLoss(weight_mode="high_pass", cutoff_ratio=0.2)
+    loss_cutoff = fl_cutoff(blurred, target)
+    logger.info(f"  Cutoff=0.2 loss: {loss_cutoff.item():.4f}")
+
+    # Test 7: cache works (same size → reuse)
+    _ = fl(blurred, target)
+    assert len(fl._freq_weight_cache) == 1, "Cache should have 1 entry"
+    logger.info("  Cache: OK")
+
+    logger.info("Frequency Loss test PASSED\n")
+
+
+def test_registration_augmentation():
+    logger.info("=== Testing Registration Augmentation ===")
+    from data.reg_augment import RegistrationAugmentation
+
+    B, H, W = 2, 64, 64
+    cta = torch.randn(B, C, H, W)
+
+    # Test 1: affine only (no elastic, no degrade)
+    aug = RegistrationAugmentation(
+        max_angle=10.0, max_translate=0.05, max_scale=0.1,
+        elastic_alpha=0.0, degrade=False,
+    )
+    out = aug(cta)
+    assert out.shape == cta.shape, f"Shape mismatch: {out.shape}"
+    assert out.min() >= -1.0 and out.max() <= 1.0, "Output out of range"
+    diff = (out - cta).abs().mean().item()
+    assert diff > 0.01, f"Affine should change image, diff={diff:.4f}"
+    logger.info(f"  Affine only: diff={diff:.4f} (OK)")
+
+    # Test 2: affine + elastic
+    aug_elastic = RegistrationAugmentation(
+        max_angle=5.0, elastic_alpha=8.0, elastic_points=6, degrade=False,
+    )
+    out2 = aug_elastic(cta)
+    diff2 = (out2 - cta).abs().mean().item()
+    assert diff2 > 0.01, f"Elastic should change image, diff={diff2:.4f}"
+    logger.info(f"  Affine + elastic: diff={diff2:.4f} (OK)")
+
+    # Test 3: full augmentation (affine + elastic + degrade)
+    aug_full = RegistrationAugmentation(
+        max_angle=5.0, elastic_alpha=6.0, degrade=True,
+    )
+    out3 = aug_full(cta)
+    assert out3.shape == cta.shape
+    logger.info(f"  Full augmentation: diff={(out3 - cta).abs().mean().item():.4f} (OK)")
+
+    # Test 4: output stays in [-1, 1]
+    extreme = torch.ones(B, C, H, W) * 0.99
+    out4 = aug_full(extreme)
+    assert out4.min() >= -1.0 and out4.max() <= 1.0, "Should be clamped"
+    logger.info("  Range clamping: OK")
+
+    logger.info("Registration Augmentation test PASSED\n")
+
+
+def test_g2_multi_input_config():
+    logger.info("=== Testing G2 Multi-Input Config ===")
+    from config import Config
+
+    # Test default config
+    cfg = Config()
+    assert cfg.refine.g2_input_modes == "intermediate", \
+        f"Default should be 'intermediate', got '{cfg.refine.g2_input_modes}'"
+    logger.info("  Default g2_input_modes: OK")
+
+    # Test g.yaml has multi-input modes
+    cfg2 = Config.load("configs/g.yaml")
+    modes = [m.strip() for m in cfg2.refine.g2_input_modes.split(",")]
+    assert "synthesized" in modes, "g.yaml should have synthesized mode"
+    assert "degraded" in modes, "g.yaml should have degraded mode"
+    assert "intermediate" in modes, "g.yaml should have intermediate mode"
+    logger.info(f"  g.yaml g2_input_modes: {modes} (OK)")
+
+    # Test R pre-training config
+    assert cfg2.registration.r_pretrain_epochs == 5
+    assert cfg2.registration.r_pretrain_elastic_alpha == 6.0
+    logger.info(f"  R pretrain config: epochs={cfg2.registration.r_pretrain_epochs}, "
+                f"elastic_alpha={cfg2.registration.r_pretrain_elastic_alpha} (OK)")
+
+    logger.info("G2 Multi-Input Config test PASSED\n")
+
+
+def test_3d_augmentation_utils():
+    logger.info("=== Testing 3D Augmentation Utils ===")
+    from data.aug_utils import (
+        gaussian_blur_2d, gaussian_blur_3d, gaussian_blur_auto,
+        downsample_upsample_auto, _3D_CHANNEL_THRESHOLD,
+    )
+
+    B, H, W = 2, 64, 64
+
+    # Test 1: 3-channel input → auto selects 2D (below threshold)
+    x3 = torch.randn(B, 3, H, W)
+    out3 = gaussian_blur_auto(x3, kernel_size=5, sigma=1.0)
+    assert out3.shape == x3.shape, f"Shape mismatch: {out3.shape}"
+    # Compare with explicit 2D call
+    out3_2d = gaussian_blur_2d(x3, kernel_size=5, sigma=1.0)
+    assert torch.allclose(out3, out3_2d, atol=1e-6), "C<4 should use 2D blur"
+    logger.info(f"  C=3 → 2D blur (threshold={_3D_CHANNEL_THRESHOLD}): OK")
+
+    # Test 2: 12-channel input → auto selects 3D
+    x12 = torch.randn(B, 12, H, W)
+    out12 = gaussian_blur_auto(x12, kernel_size=5, sigma=1.0)
+    assert out12.shape == x12.shape, f"Shape mismatch: {out12.shape}"
+    # 3D blur should differ from 2D blur (cross-slice smoothing)
+    out12_2d = gaussian_blur_2d(x12, kernel_size=5, sigma=1.0)
+    diff_3d_vs_2d = (out12 - out12_2d).abs().mean().item()
+    assert diff_3d_vs_2d > 0.001, f"3D and 2D should differ, got {diff_3d_vs_2d:.6f}"
+    logger.info(f"  C=12 → 3D blur (3D-2D diff={diff_3d_vs_2d:.4f}): OK")
+
+    # Test 3: 3D blur produces cross-slice smoothing
+    # Create a sharp edge in the depth dimension
+    x_edge = torch.zeros(1, 12, 32, 32)
+    x_edge[:, 6:, :, :] = 1.0  # sharp step at slice 6
+    out_edge = gaussian_blur_3d(x_edge, kernel_size=5, sigma=1.5)
+    # After 3D blur, the edge should be smoothed
+    edge_val = out_edge[0, 5, 16, 16].item()  # just before edge
+    assert edge_val > 0.01, f"3D blur should smooth depth edge, got {edge_val:.4f}"
+    logger.info(f"  Depth smoothing at edge: {edge_val:.4f} (OK)")
+
+    # Test 4: downsample_upsample_auto
+    ds12 = downsample_upsample_auto(x12, scale=2)
+    assert ds12.shape == x12.shape
+    ds_diff = (ds12 - x12).abs().mean().item()
+    assert ds_diff > 0.01, f"Downsample should change image, got {ds_diff:.4f}"
+    logger.info(f"  C=12 downsample-upsample diff={ds_diff:.4f}: OK")
+
+    ds3 = downsample_upsample_auto(x3, scale=2)
+    assert ds3.shape == x3.shape
+    logger.info(f"  C=3 downsample-upsample: OK")
+
+    logger.info("3D Augmentation Utils test PASSED\n")
+
+
+def test_multi_slice_perceptual_loss():
+    logger.info("=== Testing Multi-Slice Perceptual Loss ===")
+    from models.perceptual_loss import VGGPerceptualLoss
+
+    device = torch.device("cpu")
+    vgg_loss = VGGPerceptualLoss().to(device)
+
+    B, H, W = 1, 64, 64
+
+    # Test 1: C=3 → 1 group
+    x3 = torch.randn(B, 3, H, W)
+    groups3 = vgg_loss._preprocess(x3)
+    assert len(groups3) == 1, f"C=3 should give 1 group, got {len(groups3)}"
+    assert groups3[0].shape == (B, 3, H, W)
+    logger.info(f"  C=3 → {len(groups3)} group: OK")
+
+    # Test 2: C=12 → 4 groups
+    x12 = torch.randn(B, 12, H, W)
+    groups12 = vgg_loss._preprocess(x12)
+    assert len(groups12) == 4, f"C=12 should give 4 groups, got {len(groups12)}"
+    for i, g in enumerate(groups12):
+        assert g.shape == (B, 3, H, W), f"Group {i} wrong shape: {g.shape}"
+    logger.info(f"  C=12 → {len(groups12)} groups: OK")
+
+    # Test 3: C=9 → 3 groups
+    x9 = torch.randn(B, 9, H, W)
+    groups9 = vgg_loss._preprocess(x9)
+    assert len(groups9) == 3, f"C=9 should give 3 groups, got {len(groups9)}"
+    logger.info(f"  C=9 → {len(groups9)} groups: OK")
+
+    # Test 4: C=1 → 1 group (replicated to 3ch)
+    x1 = torch.randn(B, 1, H, W)
+    groups1 = vgg_loss._preprocess(x1)
+    assert len(groups1) == 1 and groups1[0].shape[1] == 3
+    logger.info(f"  C=1 → {len(groups1)} group (replicated): OK")
+
+    # Test 5: Forward pass works with C=12
+    pred = torch.randn(B, 12, H, W, requires_grad=True)
+    target = torch.randn(B, 12, H, W)
+    loss = vgg_loss(pred, target)
+    assert loss.shape == (), f"Loss should be scalar, got {loss.shape}"
+    loss.backward()
+    assert pred.grad is not None, "Gradient should flow"
+    logger.info(f"  C=12 forward+backward: loss={loss.item():.4f} (OK)")
+
+    # Test 6: Same input → lower loss
+    loss_same = vgg_loss(target, target)
+    assert loss_same.item() < loss.item() * 0.1, \
+        f"Same input loss ({loss_same.item():.4f}) should be much lower than different ({loss.item():.4f})"
+    logger.info(f"  Same-input loss={loss_same.item():.6f} << {loss.item():.4f}: OK")
+
+    logger.info("Multi-Slice Perceptual Loss test PASSED\n")
+
+
 if __name__ == "__main__":
     test_config()
     ds = test_dataset()
@@ -1040,8 +1311,13 @@ if __name__ == "__main__":
     test_d_diff_mode()
     test_quality_degradation()
     test_ncct_degrade_augmentor()
-    test_self_refine_config()
+    test_cta_degradation()
     test_new_config_fields()
+    test_frequency_loss()
+    test_registration_augmentation()
+    test_g2_multi_input_config()
+    test_3d_augmentation_utils()
+    test_multi_slice_perceptual_loss()
     # Pre-existing tests (may fail due to unrelated issues)
     try:
         test_g2_pipeline()

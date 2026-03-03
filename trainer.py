@@ -42,6 +42,8 @@ from models.losses import (
 )
 from data.transforms import GPUAugmentor
 from utils.visualization import save_sample_grid
+from data.quality_augment import QualityDegradation
+from data.cta_degrade import CTADegradation
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +130,25 @@ class Trainer:
             self.refine_net = None
             self.freeze_G = False
 
+        # --- G2 multi-input training modes ---
+        if self.use_refine:
+            modes_str = config.refine.g2_input_modes
+            self.g2_input_modes = [m.strip() for m in modes_str.split(",") if m.strip()]
+            valid_modes = {"synthesized", "degraded", "intermediate"}
+            for m in self.g2_input_modes:
+                assert m in valid_modes, f"Invalid g2_input_mode: '{m}'. Must be one of {valid_modes}"
+            if "degraded" in self.g2_input_modes:
+                from data.quality_augment import QualityDegradation
+                self.g2_degrade_fn = QualityDegradation(
+                    policies="blur,noise,downsample", severity="mild",
+                )
+            else:
+                self.g2_degrade_fn = None
+            logger.info(f"  G2 input modes:   {self.g2_input_modes}")
+        else:
+            self.g2_input_modes = []
+            self.g2_degrade_fn = None
+
         # --- Registration network ---
         self.use_reg = config.registration.enabled and reg_net is not None
         if self.use_reg:
@@ -175,7 +196,6 @@ class Trainer:
             self.d_quality_aug_prob = dcfg.d_quality_aug_prob
             self.d_quality_aug_weight = dcfg.d_quality_aug_weight
             if dcfg.d_quality_aug:
-                from data.quality_augment import QualityDegradation
                 self.quality_degrade_fn = QualityDegradation(
                     policies=dcfg.d_quality_aug, severity="strong",
                 )
@@ -208,12 +228,25 @@ class Trainer:
             self.perceptual_loss = None
             self.perceptual_weight = 0.0
 
-        # --- Self-refinement: G(ncct * G(ncct).abs()) → CTA ---
-        self.g_self_refine_prob = config.train.g_self_refine_prob
-        self.g_self_refine_weight = config.train.g_self_refine_weight
-        if self.g_self_refine_prob > 0:
-            logger.info(f"  Self-refinement:  prob={self.g_self_refine_prob}, "
-                        f"weight={self.g_self_refine_weight}")
+        # --- Frequency domain loss (FFT) ---
+        self.use_freq_loss = config.train.freq_weight > 0
+        if self.use_freq_loss:
+            from models.losses import FrequencyLoss
+            self.freq_loss = FrequencyLoss(weight_mode="high_pass", log_scale=True).to(device)
+            self.freq_weight = config.train.freq_weight
+            logger.info(f"  Frequency loss:   weight={self.freq_weight}")
+        else:
+            self.freq_loss = None
+            self.freq_weight = 0.0
+
+        # --- CTA degradation dual-task: G also learns degraded_CTA → CTA ---
+        self.g_cta_degrade_prob = config.train.g_cta_degrade_prob
+        if self.g_cta_degrade_prob > 0:
+            self.cta_degrade_fn = CTADegradation()
+            logger.info(f"  CTA degradation:  prob={self.g_cta_degrade_prob} "
+                        f"({self.cta_degrade_fn})")
+        else:
+            self.cta_degrade_fn = None
 
         # --- Training tricks config ---
         self.grad_clip_norm = config.train.grad_clip_norm
@@ -224,20 +257,29 @@ class Trainer:
         self._load_pretrained_if_specified(config)
 
         # --- Optimizer for G (+ R if enabled, or G2 if refine mode) ---
+        # Use parameter groups so each component can have its own LR.
+        g_lr = config.refine.lr if self.use_refine else config.train.lr
+        param_groups = []
         if self.use_refine and self.freeze_G:
             # Only G2 (+ R) params are trainable
-            self._g_param_list = list(self.refine_net.parameters())
+            param_groups.append({"params": list(self.refine_net.parameters()), "lr": g_lr})
         else:
-            self._g_param_list = list(self.model.parameters())
+            param_groups.append({"params": list(self.model.parameters()), "lr": g_lr})
             if self.use_refine:
-                self._g_param_list += list(self.refine_net.parameters())
+                param_groups.append({"params": list(self.refine_net.parameters()), "lr": g_lr})
         if self.use_reg:
-            self._g_param_list += list(self.reg_net.parameters())
+            r_lr = config.registration.lr
+            param_groups.append({"params": list(self.reg_net.parameters()), "lr": r_lr})
+            logger.info(f"  Registration LR:  {r_lr} (separate from G LR={g_lr})")
 
-        g_lr = config.refine.lr if self.use_refine else config.train.lr
+        # Flat param list for gradient clipping
+        self._g_param_list = []
+        for pg in param_groups:
+            self._g_param_list += pg["params"]
+
         self.optimizer_G = AdamW(
-            self._g_param_list,
-            lr=g_lr,
+            param_groups,
+            lr=g_lr,  # default LR (overridden by per-group LR)
             weight_decay=config.train.weight_decay,
         )
 
@@ -288,6 +330,11 @@ class Trainer:
             self.ema_params = [p.clone().detach() for p in self.refine_net.parameters()]
         else:
             self.ema_params = [p.clone().detach() for p in self.model.parameters()]
+
+        # --- Progressive lung weight schedule ---
+        self.lung_weight_schedule = self._parse_lung_weight_schedule(
+            config.train.lung_weight_schedule, config.train.lung_weight,
+        )
 
         # State
         self.global_step = 0
@@ -367,6 +414,149 @@ class Trainer:
                 component_key="refine_net_state_dict", device=self.device,
             )
 
+    @staticmethod
+    def _parse_lung_weight_schedule(schedule_str: str, default_weight: float):
+        """Parse progressive lung weight schedule string.
+
+        Format: "epoch1:weight1,epoch2:weight2,..." — at epoch < epoch_i, use weight_i.
+        Example: "10:5,20:10,40:20,999:40" means:
+            epoch < 10 → 5.0, epoch < 20 → 10.0, epoch < 40 → 20.0, else → 40.0
+
+        Returns list of (epoch_threshold, weight) tuples sorted by threshold,
+        or empty list if schedule is disabled (uses default_weight).
+        """
+        if not schedule_str or not schedule_str.strip():
+            return []
+        schedule = []
+        for part in schedule_str.split(","):
+            part = part.strip()
+            if ":" not in part:
+                continue
+            epoch_str, weight_str = part.split(":", 1)
+            schedule.append((int(epoch_str.strip()), float(weight_str.strip())))
+        schedule.sort(key=lambda x: x[0])
+        if schedule:
+            logger.info(f"  Lung weight schedule: {schedule}")
+        return schedule
+
+    def _get_lung_weight(self, epoch: int) -> float:
+        """Get lung weight for the given epoch based on schedule or default."""
+        if not self.lung_weight_schedule:
+            return self.config.train.lung_weight
+        for threshold, weight in self.lung_weight_schedule:
+            if epoch < threshold:
+                return weight
+        # Past all thresholds → use last weight
+        return self.lung_weight_schedule[-1][1]
+
+    def _sample_g2_input(
+        self,
+        ncct: torch.Tensor,
+        cta: torch.Tensor,
+        g_pred: torch.Tensor,
+    ) -> torch.Tensor:
+        """Sample a G2 input based on configured multi-input modes.
+
+        Randomly selects one of the enabled modes each call:
+          - "synthesized":  G2 refines G(ncct) directly
+          - "degraded":     G2 refines quality-degraded real CTA
+          - "intermediate": G2 refines ncct * |G(ncct)| (default)
+
+        All outputs are detached from G's computation graph (G is frozen
+        during G2 training), so gradients flow only through G2.
+        """
+        mode = random.choice(self.g2_input_modes)
+        if mode == "synthesized":
+            return g_pred.detach()
+        elif mode == "degraded":
+            with torch.no_grad():
+                return self.g2_degrade_fn(cta)
+        else:  # "intermediate"
+            return (ncct * g_pred.abs()).detach()
+
+    def _pretrain_registration(self):
+        """Pre-train registration network R with spatially augmented CTA pairs.
+
+        Creates misaligned source images by applying small affine transforms,
+        elastic deformation, and optional pixel degradation to real CTA.
+        R learns to align source → target before seeing actual G/G2 output.
+
+        Uses a temporary optimizer (does not affect main optimizer/scheduler).
+        """
+        rcfg = self.config.registration
+        num_epochs = rcfg.r_pretrain_epochs
+        if num_epochs <= 0 or not self.use_reg:
+            return
+
+        from data.reg_augment import RegistrationAugmentation
+        from torch.optim import AdamW
+
+        reg_aug = RegistrationAugmentation(
+            max_angle=rcfg.r_pretrain_max_angle,
+            max_translate=rcfg.r_pretrain_max_translate,
+            max_scale=rcfg.r_pretrain_max_scale,
+            elastic_alpha=rcfg.r_pretrain_elastic_alpha,
+            elastic_points=rcfg.r_pretrain_elastic_points,
+            degrade=rcfg.r_pretrain_degrade,
+        )
+        logger.info(f"  R pre-training: {num_epochs} epochs with {reg_aug}")
+
+        # Temporary optimizer for R only (does not affect main scheduler)
+        r_optimizer = AdamW(
+            self.reg_net.parameters(),
+            lr=rcfg.lr,
+            weight_decay=self.config.train.weight_decay,
+        )
+
+        self.reg_net.train()
+        best_loss = float("inf")
+
+        for ep in range(num_epochs):
+            ep_loss = 0.0
+            n_steps = 0
+            pbar = tqdm(self.train_loader, desc=f"R-pretrain {ep+1}/{num_epochs}", leave=False)
+            for batch in pbar:
+                ncct_3c = batch["ncct"].to(self.device)
+                cta_3c = batch["cta"].to(self.device)
+                mask_3c = batch["ncct_lung"].to(self.device)
+
+                # Extract middle slices (no training augmentation)
+                _, cta, _ = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
+
+                # Create misaligned source
+                with torch.no_grad():
+                    source = reg_aug(cta)
+
+                # Forward R: align source → target (cta)
+                reg_out = self.reg_net(source, cta)
+                warped = reg_out["warped"]
+                displacement = reg_out["displacement"]
+
+                # Loss: reconstruction + smoothness
+                recon_loss = F.l1_loss(warped, cta)
+                smooth_loss = self.grad_loss(displacement)
+                loss = recon_loss + self.smooth_weight * smooth_loss
+
+                loss.backward()
+                # Gradient clipping
+                torch.nn.utils.clip_grad_norm_(
+                    self.reg_net.parameters(), max_norm=self.grad_clip_norm,
+                )
+                r_optimizer.step()
+                r_optimizer.zero_grad()
+
+                ep_loss += loss.item()
+                n_steps += 1
+                pbar.set_postfix(loss=f"{loss.item():.4f}")
+
+            avg_loss = ep_loss / max(1, n_steps)
+            if avg_loss < best_loss:
+                best_loss = avg_loss
+            logger.info(f"  R-pretrain E{ep+1}: loss={avg_loss:.4f} "
+                        f"(best={best_loss:.4f})")
+
+        logger.info(f"  R pre-training complete (best_loss={best_loss:.4f})")
+
     # ------------------------------------------------------------------
     # Training loop
     # ------------------------------------------------------------------
@@ -379,25 +569,24 @@ class Trainer:
         logger.info(f"  LR (G):        {cfg.lr}")
         logger.info(f"  Output dir:    {self.output_dir}")
 
-        # # Diagnostic: log data statistics from first batch
-        # self._log_data_diagnostics()
+        # Diagnostic: log data statistics from first batch
+        if self.start_epoch == 0:
+            self._log_data_diagnostics()
 
         # D warmup: pre-train D before joint training
         if self.start_epoch == 0:
             self._run_d_warmup()
 
+        # R pre-training: train R with spatially augmented CTA pairs
+        if self.start_epoch == 0:
+            self._pretrain_registration()
+
         for epoch in range(self.start_epoch, cfg.num_epochs):
-            # 逐渐加大损失权重
-            if epoch < 10:
-                self.criterion.lung_weight = 5.0
-            elif epoch < 20:
-                self.criterion.lung_weight = 10.0
-            elif epoch < 40:
-                self.criterion.lung_weight = 20.0
-            elif epoch < 100:
-                self.criterion.lung_weight = 40.0
-            else:
-                self.criterion.lung_weight = 100.0
+            # Progressive lung weight (config-driven schedule or fixed value)
+            lw = self._get_lung_weight(epoch)
+            self.criterion.lung_weight = lw
+            if epoch == self.start_epoch or (self.lung_weight_schedule and epoch % 10 == 0):
+                logger.info(f"  Epoch {epoch+1}: lung_weight={lw:.1f}")
 
             train_metrics = self._train_epoch(epoch)
             logger.info(
@@ -546,7 +735,15 @@ class Trainer:
 
     @torch.no_grad()
     def _log_epoch_diagnostics(self, epoch: int):
-        """Log model output statistics at end of epoch for debugging."""
+        """Log model output statistics at end of epoch for debugging.
+
+        Metrics logged:
+          - pred range, residual magnitude, L1 vs CTA
+          - Output saturation: % of values at ±1 boundary (high = gradient dead zone)
+          - High-frequency energy ratio: pred vs CTA (low = blurry output)
+          - Lung vs background L1 (lung should be higher due to enhancement signal)
+          - G2-specific: intermediate quality and refinement delta
+        """
         try:
             batch = next(iter(self.val_loader or self.train_loader))
             ncct_3c = batch["ncct"].to(self.device)
@@ -575,6 +772,26 @@ class Trainer:
             logger.info(f"  [Debug E{epoch+1}] pred range=[{pred.min():.3f}, {pred.max():.3f}], "
                         f"residual_mag={res_mag:.4f}, l1_vs_cta={l1_error:.4f}")
 
+            # Output saturation: fraction of values clamped at ±1 boundary
+            sat_high = (pred >= 0.99).float().mean().item() * 100
+            sat_low = (pred <= -0.99).float().mean().item() * 100
+            if sat_high > 5 or sat_low > 5:
+                logger.warning(f"  [Debug E{epoch+1}] ⚠ Output saturation: "
+                               f"at+1={sat_high:.1f}%, at-1={sat_low:.1f}%")
+
+            # High-frequency energy: measures sharpness via gradient magnitude
+            # Low ratio (pred/cta) indicates blurry output
+            pred_grad_h = (pred[:, :, 1:, :] - pred[:, :, :-1, :]).abs().mean().item()
+            pred_grad_w = (pred[:, :, :, 1:] - pred[:, :, :, :-1]).abs().mean().item()
+            cta_grad_h = (cta[:, :, 1:, :] - cta[:, :, :-1, :]).abs().mean().item()
+            cta_grad_w = (cta[:, :, :, 1:] - cta[:, :, :, :-1]).abs().mean().item()
+            pred_hf = pred_grad_h + pred_grad_w
+            cta_hf = cta_grad_h + cta_grad_w
+            hf_ratio = pred_hf / max(cta_hf, 1e-8)
+            logger.info(f"  [Debug E{epoch+1}] sharpness: pred_hf={pred_hf:.4f}, "
+                        f"cta_hf={cta_hf:.4f}, ratio={hf_ratio:.3f} "
+                        f"({'blurry' if hf_ratio < 0.7 else 'ok' if hf_ratio < 0.95 else 'sharp'})")
+
             # G2-specific: also log intermediate quality
             if self.use_refine:
                 inter_l1 = (intermediate - cta).abs().mean().item()
@@ -592,8 +809,8 @@ class Trainer:
                 self.model.train()
             if self.use_refine:
                 self.refine_net.train()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"  [Debug E{epoch+1}] diagnostics failed: {e}")
 
     # ------------------------------------------------------------------
     # D input helper
@@ -807,6 +1024,15 @@ class Trainer:
 
             ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=True)
 
+            # CTA degradation dual-task: with probability p, replace NCCT input
+            # with degraded CTA ≈ ncct * |cta|^alpha. This teaches G to also
+            # restore degraded CTA → real CTA, enabling two-pass inference:
+            #   pass 1: G(ncct) → g_pred
+            #   pass 2: G(ncct * g_pred.abs()) → sharper output
+            if self.cta_degrade_fn is not None and random.random() < self.g_cta_degrade_prob:
+                with torch.no_grad():
+                    ncct = self.cta_degrade_fn(ncct, cta)
+
             is_accum_boundary = ((micro_step + 1) % accum == 0) or \
                                 (micro_step + 1 == len(self.train_loader))
 
@@ -819,10 +1045,10 @@ class Trainer:
             else:
                 g_pred = self.model(ncct)
 
-            # Refinement (G2): intermediate = ncct * |G(ncct)|, then G2 refines
+            # Refinement (G2): multi-input mode training
             if self.use_refine:
-                intermediate = ncct * g_pred.abs()
-                pred = self.refine_net(intermediate)
+                g2_input = self._sample_g2_input(ncct, cta, g_pred)
+                pred = self.refine_net(g2_input)
             else:
                 pred = g_pred
 
@@ -846,29 +1072,19 @@ class Trainer:
                 g_loss = g_loss + self.perceptual_weight * percep_loss
                 percep_val = percep_loss.item()
 
+            # Frequency domain loss (FFT high-frequency penalty)
+            freq_val = 0.0
+            if self.use_freq_loss:
+                freq_loss = self.freq_loss(recon_target, cta)
+                g_loss = g_loss + self.freq_weight * freq_loss
+                freq_val = freq_loss.item()
+
             # Registration smoothness loss
             smooth_loss_val = 0.0
             if self.use_reg and displacement is not None:
                 smooth_loss = self.grad_loss(displacement)
                 g_loss = g_loss + self.smooth_weight * smooth_loss
                 smooth_loss_val = smooth_loss.item()
-
-            # Self-refinement: G(ncct * G(ncct).abs()) → CTA
-            # Occasionally train G to refine its own intermediate output.
-            # At inference: pass 1 → g_pred, pass 2 → G(ncct * g_pred.abs()) → sharper.
-            refine_loss_val = 0.0
-            if (self.g_self_refine_prob > 0 and not self.freeze_G
-                    and random.random() < self.g_self_refine_prob):
-                with torch.no_grad():
-                    intermediate = (ncct * g_pred.detach().abs()).clamp(-1.0, 1.0)
-                refined = self.model(intermediate)
-                refine_recon = self.criterion(refined, cta, mask)
-                refine_loss = refine_recon["loss"]
-                if self.use_perceptual:
-                    refine_loss = refine_loss + self.perceptual_weight * \
-                        self.perceptual_loss(refined, cta)
-                g_loss = g_loss + self.g_self_refine_weight * refine_loss
-                refine_loss_val = refine_loss.item()
 
             # GAN loss (generator side) — G wants D to classify fake as real
             gan_g_val = 0.0
@@ -1042,8 +1258,8 @@ class Trainer:
             }
             if self.use_perceptual:
                 metrics["percep"] = percep_val
-            if refine_loss_val > 0:
-                metrics["self_refine"] = refine_loss_val
+            if self.use_freq_loss:
+                metrics["freq"] = freq_val
             if self.use_reg:
                 metrics["smooth"] = smooth_loss_val
             if self.use_disc:

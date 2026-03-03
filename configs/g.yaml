@@ -2,42 +2,38 @@
 #
 # Phase 2 config: G pretrained, D enabled with stability fixes.
 #
-# Key improvements:
+# Key improvements over the problematic configs (config1-4):
 #   1. D gradient leak FIX: D params frozen during G backward (in trainer.py)
 #   2. D warmup: pre-train D for 500 steps before joint training
-#   3. D warmup LR FIX: manually set D LR to base rate during warmup
-#   4. D weight init: normal_(0, 0.02) standard GAN initialization
-#   5. d_cond_mode=diff: D sees (image-ncct) to isolate contrast enhancement signal
-#      This is CRITICAL for NCCT→CTA where raw images are nearly identical.
-#   6. Lung-aware sampling: bias=2.0 ensures slices contain lung/vessel regions
-#   7. Progressive GAN weight: 0→0.1 over 10 epochs (prevents G destabilization)
-#   8. Feature matching loss: stable gradient signal (weight=10.0)
-#   9. VGG perceptual loss: directly improves sharpness (weight=0.5)
-#  10. DiffAugment: prevents D overfitting
-#  11. Lower R1 gamma (1.0 vs 10.0): gentler D regularization
-#  12. Lower gan_weight (0.1 vs 1.0): GAN doesn't overwhelm reconstruction
-#  13. D gradient clipping (1.0): extra safety for D stability
+#   3. Progressive GAN weight: 0→0.1 over 10 epochs (prevents G destabilization)
+#   4. Feature matching loss: stable gradient signal (weight=10.0)
+#   5. VGG perceptual loss: directly improves sharpness (weight=0.5)
+#   6. DiffAugment: prevents D overfitting
+#   7. Lower R1 gamma (1.0 vs 10.0): gentler D regularization
+#   8. Conditional D (concat): provides more context for subtle differences
+#   9. Lower gan_weight (0.1 vs 1.0): GAN doesn't overwhelm reconstruction
+#  10. D gradient clipping (1.0): extra safety for D stability
 
 data:
-  data_dir: /data0/yzhen/data/lung_pe_v1/npz_v1
+  data_dir: D:/codes/data/ncct_tiny
   split_dir: ./splits
-  num_slices: 3
-  image_size: 256
-  hu_min: -1024.0
-  hu_max: 600.0
-  num_workers: 24
+  lung_sample_bias: 2.0        # 肺部优先采样
+  num_slices: 12
+  image_size: 400
+  hu_min: -550.0
+  hu_max: 250.0
+  num_workers: 4
   aug_prob: 0.5
+  ncct_degrade_prob: 0.5
   max_angle: 15.0
   scale_range: 0.1
   translate_frac: 0.05
-  noise_std: 0.02
+  noise_std: 0.07
   brightness_range: 0.1
   contrast_range: 0.1
-  lung_sample_bias: 2.0            # Lung-aware sampling: strongly prefer lung slices (0=uniform)
-  ncct_degrade_prob: 0.3            # NCCT quality degradation: blur/cutout/gamma/downsample (0=off)
 model:
-  in_channels: 3
-  out_channels: 3
+  in_channels: 12
+  out_channels: 12
   model_channels: 64
   channel_mult:
   - 1
@@ -68,6 +64,14 @@ registration:
   smoothness_weight: 1.0
   smoothness_penalty: l2
   lr: 0.0001
+  # --- R pre-training (Phase 4): spatially augmented CTA pairs ---
+  r_pretrain_epochs: 5              # pre-train R for 5 epochs (0=disabled)
+  r_pretrain_max_angle: 5.0         # max rotation degrees for spatial misalignment
+  r_pretrain_max_translate: 0.03    # max translation fraction
+  r_pretrain_max_scale: 0.05        # max scale deviation
+  r_pretrain_elastic_alpha: 6.0     # elastic deformation intensity
+  r_pretrain_elastic_points: 8      # control grid size (lower=smoother)
+  r_pretrain_degrade: true          # also apply pixel degradation
 discriminator:
   enabled: true
   ndf: 64
@@ -82,10 +86,13 @@ discriminator:
   label_smoothing: 0.0
   grad_clip_norm_D: 1.0          # Clip D gradients for extra safety
   # --- Conditioning & loss ---
-  d_cond_mode: diff              # Diff mode: D sees (image-ncct), isolating contrast enhancement signal
+  d_cond_mode: diff              # D sees (image - ncct), focuses on enhancement signal
   gan_loss_type: lsgan            # LSGAN: more stable with the gradient leak fix
-  r1_gamma: 0.0                  # R1 disabled: spectral norm already constrains D (R1 caused explosion in config2)
+  r1_gamma: 0.0                  # Start without R1, enable if D is unstable
   r1_interval: 16
+  d_quality_aug: "blur,noise,downsample"   # 启用质量降质负样本
+  d_quality_aug_prob: 0.5
+  d_quality_aug_weight: 0.5
   # --- Architecture ---
   disc_type: patchgan
   n_blocks_resD: 4
@@ -94,10 +101,6 @@ discriminator:
   gan_warmup_epochs: 10           # Ramp GAN weight from 0→gan_weight over 10 epochs
   d_warmup_steps: 500             # Pre-train D for 500 steps before joint training
   diffaugment_policy: "color,translation"  # DiffAugment: prevent D overfitting
-  # --- Quality degradation negative samples for D ---
-  d_quality_aug: "blur,noise,downsample"  # D sees degraded CTA as additional negatives
-  d_quality_aug_prob: 0.5                 # 50% chance per D step
-  d_quality_aug_weight: 0.5               # weight for quality D loss term
 refine:
   enabled: false
   hidden_dim: 64
@@ -106,8 +109,10 @@ refine:
   lr_scheduler: cosine
   warmup_steps: 200
   freeze_G: true
+  # --- G2 multi-input training (Phase 3) ---
+  g2_input_modes: 'synthesized,degraded,intermediate'  # 3 input modes for diverse training
 train:
-  batch_size: 4
+  batch_size: 2
   lr: 0.0002
   weight_decay: 0.0
   num_epochs: 200
@@ -116,12 +121,13 @@ train:
   val_interval: 1
   l1_weight: 1.0
   ssim_weight: 1.0
-  use_3d_ssim: false
+  use_3d_ssim: true
   lung_weight: 10.0
+  lung_weight_schedule: '10:5,20:10,40:20,999:40'
   ema_rate: 0.999
   lr_scheduler: cosine
   warmup_steps: 500
-  output_dir: ./outputs_gan_stable
+  output_dir: ./outputs_g
   resume_checkpoint: ''
   seed: 42
   pretrained_G: ''                # Set to your pretrained G checkpoint path
@@ -129,9 +135,10 @@ train:
   pretrained_D: ''
   pretrained_G2: ''
   grad_clip_norm: 5.0
-  grad_accumulation_steps: 1
+  grad_accumulation_steps: 8
   skip_warmup: false
-  perceptual_weight: 0.5          # VGG perceptual loss for sharpness
-  freq_weight: 0.1                # FFT frequency loss for high-freq detail
-  # --- CTA degradation dual-task: G also learns degraded_CTA → real CTA ---
-  g_cta_degrade_prob: 0.2          # 20% of steps: replace NCCT with degraded CTA as G input
+  perceptual_weight: 0.5          # VGG perceptual loss for sharpness (策略2: 0.1→0.5)
+  freq_weight: 0.1                 # FFT frequency loss for high-freq detail (策略4)
+  g_cta_degrade_prob: 0.2          # CTA degradation dual-task (策略5: two-pass inference)
+  g_self_refine_prob: 0.0          # self-refine step probability (0=disabled)
+  g_self_refine_weight: 0.5        # weight for self-refinement loss

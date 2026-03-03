@@ -79,29 +79,45 @@ class VGGPerceptualLoss(nn.Module):
     def _preprocess(self, x: torch.Tensor) -> torch.Tensor:
         """Convert input from [-1, 1] to VGG-normalized [0, 1] RGB format.
 
-        Handles arbitrary channel count by replicating to 3 channels.
+        For multi-channel 2.5D data (C >= 6), returns a list of 3-channel
+        groups covering the full depth range. For C <= 3, returns a single
+        3-channel tensor.
+
+        Returns:
+            List of (N, 3, H, W) tensors, each VGG-normalized.
         """
         # [-1, 1] → [0, 1]
         x = (x + 1.0) * 0.5
 
-        # Handle channel dimension: replicate single/multi-channel to 3ch
         C = x.shape[1]
+        groups = []
+
         if C == 1:
-            x = x.repeat(1, 3, 1, 1)
-        elif C != 3:
-            # For multi-slice input (e.g. C=3 is fine, C=9 take middle 3)
-            mid = C // 2
-            if C >= 3:
-                x = x[:, mid - 1:mid + 2, :, :]
-            else:
-                x = x[:, :1, :, :].repeat(1, 3, 1, 1)
+            groups.append(x.repeat(1, 3, 1, 1))
+        elif C == 2:
+            # Pad to 3: first, second, mean
+            groups.append(torch.cat([x, x.mean(dim=1, keepdim=True)], dim=1))
+        elif C == 3:
+            groups.append(x)
+        elif C >= 6:
+            # Multi-slice: extract non-overlapping 3-channel groups
+            # e.g. C=12 → [0:3], [3:6], [6:9], [9:12] = 4 groups
+            n_groups = C // 3
+            for i in range(n_groups):
+                groups.append(x[:, i*3:(i+1)*3, :, :])
+        else:
+            # C in [4, 5]: take first 3 and last 3 (may overlap)
+            groups.append(x[:, :3, :, :])
+            groups.append(x[:, -3:, :, :])
 
-        if self.resize:
-            x = F.interpolate(x, size=(224, 224), mode="bilinear", align_corners=False)
-
-        # ImageNet normalization
-        x = (x - self.vgg_mean) / self.vgg_std
-        return x
+        # Apply VGG normalization and optional resize to each group
+        result = []
+        for g in groups:
+            if self.resize:
+                g = F.interpolate(g, size=(224, 224), mode="bilinear", align_corners=False)
+            g = (g - self.vgg_mean) / self.vgg_std
+            result.append(g)
+        return result
 
     def _extract_features(self, x: torch.Tensor) -> List[torch.Tensor]:
         """Extract feature maps at specified VGG layers."""
@@ -116,6 +132,10 @@ class VGGPerceptualLoss(nn.Module):
         """
         Compute perceptual loss.
 
+        For multi-channel 2.5D data (C >= 6), computes perceptual loss on
+        multiple non-overlapping 3-slice groups and averages them. This
+        provides full depth coverage instead of only using the middle 3 slices.
+
         Args:
             pred:   (N, C, H, W) predicted image in [-1, 1]
             target: (N, C, H, W) target image in [-1, 1]
@@ -123,23 +143,26 @@ class VGGPerceptualLoss(nn.Module):
         Returns:
             Scalar perceptual loss (weighted sum of L1 distances in VGG space).
         """
-        pred_vgg = self._preprocess(pred)
-        target_vgg = self._preprocess(target)
+        pred_groups = self._preprocess(pred)
+        target_groups = self._preprocess(target)
 
-        pred_feats = self._extract_features(pred_vgg)
-        with torch.no_grad():
-            target_feats = self._extract_features(target_vgg)
-
-        loss = 0.0
+        assert len(pred_groups) == len(target_groups)
         layer_indices = sorted(self.layer_weights.keys())
-        for feat_idx, layer_idx in enumerate(layer_indices):
-            weight = self.layer_weights[layer_idx]
-            # Normalize by number of elements for scale-invariance
-            n_elements = pred_feats[feat_idx].numel() / pred_feats[feat_idx].shape[0]
-            loss = loss + weight * F.l1_loss(
-                pred_feats[feat_idx], target_feats[feat_idx]
-            )
-        return loss
+
+        total_loss = 0.0
+        for pred_vgg, target_vgg in zip(pred_groups, target_groups):
+            pred_feats = self._extract_features(pred_vgg)
+            with torch.no_grad():
+                target_feats = self._extract_features(target_vgg)
+
+            for feat_idx, layer_idx in enumerate(layer_indices):
+                weight = self.layer_weights[layer_idx]
+                total_loss = total_loss + weight * F.l1_loss(
+                    pred_feats[feat_idx], target_feats[feat_idx]
+                )
+
+        # Average over groups
+        return total_loss / len(pred_groups)
 
     def train(self, mode=True):
         """Override to keep VGG always in eval mode."""

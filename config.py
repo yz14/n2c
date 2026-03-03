@@ -56,6 +56,14 @@ class RegistrationConfig:
     smoothness_weight: float = 1.0   # weight for deformation smoothness loss
     smoothness_penalty: str = "l2"   # 'l1' or 'l2' for GradLoss
     lr: float = 1e-4                 # separate learning rate for registration net
+    # --- R pre-training: train R with degraded+misaligned CTA before main training ---
+    r_pretrain_epochs: int = 0       # pre-train R for N epochs with augmented CTA pairs (0=disabled)
+    r_pretrain_max_angle: float = 5.0   # max rotation angle (degrees) for spatial misalignment
+    r_pretrain_max_translate: float = 0.03  # max translation fraction for spatial misalignment
+    r_pretrain_max_scale: float = 0.05  # max scale deviation for spatial misalignment
+    r_pretrain_elastic_alpha: float = 6.0  # elastic deformation intensity (0=disabled)
+    r_pretrain_elastic_points: int = 8  # control grid size for elastic deformation
+    r_pretrain_degrade: bool = True  # also apply pixel degradation (blur/noise/downsample)
 
 
 @dataclass
@@ -101,6 +109,13 @@ class RefineConfig:
     lr_scheduler: str = "cosine"     # LR scheduler: "cosine", "step", "none"
     warmup_steps: int = 200          # warmup steps for G2 scheduler
     freeze_G: bool = True            # freeze G when G2 is enabled
+    # --- G2 multi-input training modes (Phase 3) ---
+    # Comma-separated list of input modes, randomly sampled each step:
+    #   "synthesized"  — G2(G(ncct)): refine G's direct output
+    #   "degraded"     — G2(degrade(cta)): refine quality-degraded real CTA
+    #   "intermediate" — G2(ncct * |G(ncct)|): refine intermediate representation
+    # Default "intermediate" matches the original single-mode behavior.
+    g2_input_modes: str = "intermediate"
 
 
 @dataclass
@@ -115,7 +130,8 @@ class TrainConfig:
     l1_weight: float = 1.0
     ssim_weight: float = 1.0
     use_3d_ssim: bool = True     # use 3D SSIM loss (treats C as depth)
-    lung_weight: float = 10.0    # loss weight multiplier for lung regions
+    lung_weight: float = 10.0    # loss weight multiplier for lung regions (used when schedule is empty)
+    lung_weight_schedule: str = ""  # progressive lung weight: "epoch1:w1,epoch2:w2,..." e.g. "10:5,20:10,40:20,999:40"
     ema_rate: float = 0.999
     lr_scheduler: str = "cosine" # "cosine" or "step" or "none"
     warmup_steps: int = 500
@@ -132,9 +148,12 @@ class TrainConfig:
     grad_accumulation_steps: int = 1  # gradient accumulation steps (1 = no accumulation)
     skip_warmup: bool = False    # skip LR warmup (useful when loading pretrained weights)
     perceptual_weight: float = 0.0  # VGG perceptual loss weight (0=disabled, recommended: 0.1-1.0)
-    # --- Self-refinement: G also learns to refine its own intermediate output ---
-    g_self_refine_prob: float = 0.0  # prob of self-refinement step per iteration (0=disabled)
-    g_self_refine_weight: float = 0.5  # weight for self-refinement loss
+    freq_weight: float = 0.0        # FFT frequency loss weight (0=disabled, recommended: 0.1-0.5)
+    # --- CTA degradation dual-task: G also learns degraded_CTA → real CTA ---
+    g_cta_degrade_prob: float = 0.0  # prob of replacing NCCT input with degraded CTA (0=disabled)
+    # --- Self-refinement: G(ncct * G(ncct).abs()) → CTA ---
+    g_self_refine_prob: float = 0.0   # prob of self-refine step per training step (0=disabled)
+    g_self_refine_weight: float = 0.5 # weight for self-refinement loss
 
 
 @dataclass

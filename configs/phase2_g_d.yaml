@@ -1,0 +1,131 @@
+# ==========================================================================
+# Phase 2: G + D (判别器辅助提升清晰度)
+# ==========================================================================
+# 前置: Phase 1 训练完成, 加载 G 的 checkpoint
+# 目标: D 辅助 G 生成更清晰、更多细节的 CTA (类似超分辨率中 D 的作用)
+# D 使用 diff 模式: 看 (image - ncct) 差异信号, 聚焦增强效果质量
+#
+# 关键设计:
+#   - D warmup: 先训练 D 500步, 让 D 学会区分真假
+#   - 渐进 GAN 权重: 0→0.1 经过10个epoch, 防止 G 崩溃
+#   - Feature matching: 权重10.0, 比 GAN loss 更稳定的梯度信号
+#   - DiffAugment: 防止 D 过拟合 (数据量小时尤其重要)
+#   - 质量退化负样本: D 学习评估图像质量 (模糊/噪声/低分辨)
+#
+# 训练完成标志:
+#   - sharpness ratio > 0.7 (输出接近真实清晰度)
+#   - D_real > D_fake (D 能有效区分, 差值 > 0.1)
+#   - 可视化: 细节比 Phase 1 明显改善, 边缘更锐利
+#
+# 训练完成后: 用 phase3_g_g2_d.yaml 继续训练 (冻结G, 开启G2)
+# ==========================================================================
+
+data:
+  data_dir: D:/codes/data/ncct_tiny
+  split_dir: ./splits
+  lung_sample_bias: 2.0
+  num_slices: 12
+  image_size: 400
+  hu_min: -550.0
+  hu_max: 250.0
+  num_workers: 4
+  aug_prob: 0.5
+  ncct_degrade_prob: 0.5
+  max_angle: 15.0
+  scale_range: 0.1
+  translate_frac: 0.05
+  noise_std: 0.07
+  brightness_range: 0.1
+  contrast_range: 0.1
+
+model:
+  in_channels: 12
+  out_channels: 12
+  model_channels: 64
+  channel_mult: [1, 2, 4, 8]
+  num_res_blocks: 2
+  attention_resolutions: [4, 8]
+  dropout: 0.0
+  use_checkpoint: false
+  num_heads: 4
+  num_head_channels: -1
+  use_scale_shift_norm: false
+  conv_resample: true
+  resblock_updown: false
+  use_fp16: false
+  residual_output: true
+
+registration:
+  enabled: false                       # Phase 2: 配准网络关闭
+
+discriminator:
+  enabled: true                        # ★ Phase 2: 开启判别器
+  ndf: 64                              # D 基础通道数
+  n_layers: 3                          # PatchGAN 卷积层数 (感受野大小)
+  num_D: 2                             # 多尺度D数量 (2=两个尺度)
+  use_spectral_norm: true              # 谱归一化 (稳定训练)
+  # --- 损失权重 ---
+  gan_weight: 0.1                      # GAN损失权重 (低: 不压过重建损失)
+  feat_match_weight: 10.0              # Feature matching权重 (稳定的梯度信号)
+  lr: 0.0004                           # D学习率 (TTUR: D_lr = 2× G_lr)
+  lr_scheduler: cosine                 # D学习率调度: "cosine", "step", "none"
+  warmup_steps: 500                    # D学习率预热步数
+  label_smoothing: 0.0                 # 标签平滑 (0=关闭, 0.1=单边平滑)
+  grad_clip_norm_D: 1.0                # D梯度裁剪 (额外安全措施)
+  # --- D输入模式 ---
+  d_cond_mode: diff                    # "none": 只看图像
+                                       # "concat": 拼接 (ncct, image)
+                                       # "diff": 差值 (image - ncct), ★推荐: 聚焦增强信号
+  gan_loss_type: lsgan                 # "lsgan": 最小二乘GAN (稳定)
+                                       # "hinge": Hinge损失 (更激进)
+  r1_gamma: 0.0                        # R1梯度惩罚 (0=关闭, 先观察D是否稳定)
+  r1_interval: 16                      # R1计算间隔 (每N步D计算一次)
+  # --- D架构 ---
+  disc_type: patchgan                  # "patchgan": 标准PatchGAN
+                                       # "resblock": ResBlock增强版 (更强但更慢)
+  n_blocks_resD: 4                     # ResBlock D 的块数 (仅resblock类型)
+  use_attention: true                  # 自注意力 (仅resblock类型)
+  # --- 训练稳定性 ---
+  gan_warmup_epochs: 10                # GAN权重渐进: 0→gan_weight 经过N个epoch
+  d_warmup_steps: 500                  # D预训练: 先训练D N步再联合训练
+  diffaugment_policy: "color,translation"  # DiffAugment策略 (防D过拟合)
+                                       # 选项: "color", "translation", "cutout" 任意组合
+  # --- 质量退化负样本 ---
+  d_quality_aug: "blur,noise,downsample"  # D的额外负样本类型
+  d_quality_aug_prob: 0.5              # 每步D添加退化负样本的概率
+  d_quality_aug_weight: 0.5            # 退化负样本损失权重
+
+refine:
+  enabled: false                       # Phase 2: 精修网络关闭
+
+train:
+  batch_size: 2
+  lr: 0.0002
+  weight_decay: 0.0
+  num_epochs: 100                      # Phase 2 通常100轮足够
+  save_interval: 10
+  log_interval: 50
+  val_interval: 1
+  l1_weight: 1.0
+  ssim_weight: 1.0
+  use_3d_ssim: true
+  lung_weight: 10.0
+  lung_weight_schedule: '10:5,20:10,40:20,999:40'
+  perceptual_weight: 0.5
+  freq_weight: 0.1
+  g_cta_degrade_prob: 0.2
+  g_self_refine_prob: 0.0
+  g_self_refine_weight: 0.5
+  ema_rate: 0.999
+  lr_scheduler: cosine
+  warmup_steps: 500
+  grad_clip_norm: 5.0
+  grad_accumulation_steps: 8
+  skip_warmup: true                    # ★ 跳过预热 (G已预训练, 不需要从低LR开始)
+  output_dir: ./outputs_phase2_g_d
+  resume_checkpoint: ''
+  seed: 42
+  pretrained_G: './outputs_phase1_g/best_model.pth'  # ★ 加载Phase 1的G权重
+  pretrained_R: ''
+  pretrained_D: ''
+  pretrained_G2: ''

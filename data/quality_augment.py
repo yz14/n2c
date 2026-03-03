@@ -20,30 +20,7 @@ import random
 import torch
 import torch.nn.functional as F
 
-
-def _gaussian_blur(x: torch.Tensor, kernel_size: int, sigma: float) -> torch.Tensor:
-    """Apply Gaussian blur to (N, C, H, W) tensor.
-
-    Uses separable 1D convolution for efficiency.
-    """
-    # Create 1D Gaussian kernel
-    coords = torch.arange(kernel_size, dtype=torch.float32, device=x.device)
-    coords -= kernel_size // 2
-    g = torch.exp(-0.5 * (coords / sigma) ** 2)
-    g /= g.sum()
-
-    # Reshape for depthwise conv: (C, 1, K) and (C, 1, 1, K)
-    C = x.shape[1]
-    kernel_h = g.view(1, 1, -1, 1).expand(C, -1, -1, -1)  # (C, 1, K, 1)
-    kernel_w = g.view(1, 1, 1, -1).expand(C, -1, -1, -1)  # (C, 1, 1, K)
-
-    pad = kernel_size // 2
-    # Separable: first blur horizontally, then vertically
-    x = F.pad(x, [pad, pad, 0, 0], mode="reflect")
-    x = F.conv2d(x, kernel_w, groups=C)
-    x = F.pad(x, [0, 0, pad, pad], mode="reflect")
-    x = F.conv2d(x, kernel_h, groups=C)
-    return x
+from data.aug_utils import gaussian_blur_auto, downsample_upsample_auto
 
 
 def _gaussian_noise(x: torch.Tensor, std: float) -> torch.Tensor:
@@ -52,11 +29,11 @@ def _gaussian_noise(x: torch.Tensor, std: float) -> torch.Tensor:
 
 
 def _downsample_upsample(x: torch.Tensor, scale: int) -> torch.Tensor:
-    """Downsample then upsample to create resolution artifacts."""
-    H, W = x.shape[-2:]
-    small = F.interpolate(x, size=(H // scale, W // scale), mode="bilinear",
-                          align_corners=False)
-    return F.interpolate(small, size=(H, W), mode="bilinear", align_corners=False)
+    """Downsample then upsample to create resolution artifacts.
+
+    Auto-selects 2D or 3D interpolation based on channel count.
+    """
+    return downsample_upsample_auto(x, scale)
 
 
 class QualityDegradation:
@@ -113,7 +90,7 @@ class QualityDegradation:
             if policy == "blur":
                 ks = random.choice(self.params["blur_kernels"])
                 sigma = random.uniform(*self.params["blur_sigma"])
-                x = _gaussian_blur(x, kernel_size=ks, sigma=sigma)
+                x = gaussian_blur_auto(x, kernel_size=ks, sigma=sigma)
 
             elif policy == "noise":
                 std = random.uniform(*self.params["noise_std"])

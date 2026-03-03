@@ -22,6 +22,8 @@ import torch
 import torch.nn.functional as F
 from typing import Tuple
 
+from data.aug_utils import gaussian_blur_2d, gaussian_blur_auto, downsample_upsample_auto
+
 
 class GPUAugmentor:
     """
@@ -287,7 +289,7 @@ class GPUAugmentor:
                 if deg == "blur":
                     ks = py_random.choice([3, 5, 7])
                     sigma = py_random.uniform(0.5, 2.0)
-                    sample = _gaussian_blur_2d(sample, ks, sigma)
+                    sample = gaussian_blur_auto(sample, ks, sigma)
                 elif deg == "cutout":
                     sample = _random_cutout(sample)
                 elif deg == "gamma":
@@ -295,7 +297,7 @@ class GPUAugmentor:
                     sample = _gamma_transform(sample, gamma)
                 elif deg == "downsample":
                     scale = py_random.choice([2, 3, 4])
-                    sample = _downsample_upsample(sample, scale)
+                    sample = downsample_upsample_auto(sample, scale)
             ncct[idx:idx + 1] = sample.clamp(-1.0, 1.0)
 
         return ncct
@@ -304,27 +306,6 @@ class GPUAugmentor:
 # ------------------------------------------------------------------
 # Helper functions for quality degradation (GPU-compatible)
 # ------------------------------------------------------------------
-
-def _gaussian_blur_2d(
-    x: torch.Tensor, kernel_size: int, sigma: float
-) -> torch.Tensor:
-    """Apply 2D Gaussian blur to (N, C, H, W) using separable depthwise conv."""
-    C = x.shape[1]
-    coords = torch.arange(kernel_size, dtype=torch.float32, device=x.device)
-    coords -= kernel_size // 2
-    g = torch.exp(-0.5 * (coords / sigma) ** 2)
-    g /= g.sum()
-
-    kernel_h = g.view(1, 1, -1, 1).expand(C, -1, -1, -1)
-    kernel_w = g.view(1, 1, 1, -1).expand(C, -1, -1, -1)
-
-    pad = kernel_size // 2
-    x = F.pad(x, [pad, pad, 0, 0], mode="reflect")
-    x = F.conv2d(x, kernel_w, groups=C)
-    x = F.pad(x, [0, 0, pad, pad], mode="reflect")
-    x = F.conv2d(x, kernel_h, groups=C)
-    return x
-
 
 def _random_cutout(x: torch.Tensor) -> torch.Tensor:
     """Apply 1-3 random rectangular cutouts to (1, C, H, W) tensor.

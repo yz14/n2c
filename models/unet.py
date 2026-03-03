@@ -458,4 +458,7 @@ class UNet(nn.Module):
         # Constrain output to [-1, 1] to match data normalization range.
         # Without this, residual addition can produce values outside [-1, 1],
         # causing SSIM (data_range=2.0) miscalculation and D training issues.
-        return torch.tanh(output)
+        # NOTE: clamp instead of tanh — tanh compresses gradients near ±1,
+        # making it hard to produce high-contrast CTA values (vessels).
+        # clamp gives full gradient within [-1, 1], matching RefineNet design.
+        return output.clamp(-1.0, 1.0)

@@ -1,0 +1,151 @@
+# ==========================================================================
+# Phase 4: G(frozen) + G2 + D + R (精修 + 判别器 + 配准)
+# ==========================================================================
+# 前置: Phase 3 训练完成, 加载 G, G2, D 的 checkpoint
+# 目标: 开启配准网络R, 消除生成CTA与真实CTA之间的空间偏差,
+#       使损失函数更有效 (对齐后的L1/SSIM更准确反映图像质量)
+#
+# R 预训练:
+#   在主训练开始前, R先用 (空间增强的降质CTA, 真实CTA) 对进行预训练
+#   空间增强包括: 小角度旋转, 小幅平移, 轻微缩放, 弹性形变
+#   像素退化包括: 模糊, 噪声, 低分辨率 (模拟G输出质量)
+#   预训练后R已有初步对齐能力, 主训练中继续与G2联合优化
+#
+# 数据流:
+#   ncct → G(ncct) → intermediate → G2(intermediate) → pred
+#   pred + cta → R → warped_pred + displacement
+#   loss = recon(warped_pred, cta) + smooth(displacement) + perceptual + freq + GAN
+#
+# 梯度流:
+#   loss → R (学习对齐) → G2 (学习更好的输出以利于对齐)
+#   G 冻结, 不参与梯度更新
+#
+# 训练完成标志:
+#   - smooth loss 稳定在较低值
+#   - warped output 比 raw output 的 L1 更低
+#   - 位移场平滑且幅度合理 (< 5 pixels)
+# ==========================================================================
+
+data:
+  data_dir: D:/codes/data/ncct_tiny
+  split_dir: ./splits
+  lung_sample_bias: 2.0
+  num_slices: 12
+  image_size: 400
+  hu_min: -550.0
+  hu_max: 250.0
+  num_workers: 4
+  aug_prob: 0.5
+  ncct_degrade_prob: 0.3
+  max_angle: 15.0
+  scale_range: 0.1
+  translate_frac: 0.05
+  noise_std: 0.07
+  brightness_range: 0.1
+  contrast_range: 0.1
+
+model:
+  in_channels: 12
+  out_channels: 12
+  model_channels: 64
+  channel_mult: [1, 2, 4, 8]
+  num_res_blocks: 2
+  attention_resolutions: [4, 8]
+  dropout: 0.0
+  use_checkpoint: false
+  num_heads: 4
+  num_head_channels: -1
+  use_scale_shift_norm: false
+  conv_resample: true
+  resblock_updown: false
+  use_fp16: false
+  residual_output: true
+
+registration:
+  enabled: true                        # ★ Phase 4: 开启配准网络
+  nb_features:                         # 编码器特征通道数
+  - 16
+  - 32
+  - 32
+  - 32
+  integration_steps: 7                 # 缩放平方积分步数 (7=diffeomorphic, 0=直接位移)
+  smoothness_weight: 1.0               # 位移场平滑损失权重
+  smoothness_penalty: l2               # 平滑惩罚类型: "l1" 或 "l2"
+  lr: 0.0001                           # R学习率 (独立于G/G2, 通过optimizer param groups)
+  # --- R 预训练 ---
+  r_pretrain_epochs: 5                 # ★ 预训练R: 5个epoch
+  r_pretrain_max_angle: 5.0            # 预训练空间增强: 最大旋转角度 (度)
+  r_pretrain_max_translate: 0.03       # 预训练空间增强: 最大平移比例
+  r_pretrain_max_scale: 0.05           # 预训练空间增强: 最大缩放偏差
+  r_pretrain_elastic_alpha: 6.0        # 弹性形变强度 (像素, 0=关闭)
+  r_pretrain_elastic_points: 8         # 弹性形变控制网格大小 (越小越平滑)
+  r_pretrain_degrade: true             # 是否也施加像素退化 (blur/noise/downsample)
+
+discriminator:
+  enabled: true                        # Phase 4: D继续辅助
+  ndf: 64
+  n_layers: 3
+  num_D: 2
+  use_spectral_norm: true
+  gan_weight: 0.1
+  feat_match_weight: 10.0
+  lr: 0.0004
+  lr_scheduler: cosine
+  warmup_steps: 500
+  label_smoothing: 0.0
+  grad_clip_norm_D: 1.0
+  d_cond_mode: diff
+  gan_loss_type: lsgan
+  r1_gamma: 0.0
+  r1_interval: 16
+  disc_type: patchgan
+  n_blocks_resD: 4
+  use_attention: true
+  gan_warmup_epochs: 5
+  d_warmup_steps: 200
+  diffaugment_policy: "color,translation"
+  d_quality_aug: "blur,noise,downsample"
+  d_quality_aug_prob: 0.5
+  d_quality_aug_weight: 0.5
+
+refine:
+  enabled: true                        # Phase 4: G2继续精修
+  hidden_dim: 64
+  num_blocks: 6
+  lr: 0.0001
+  lr_scheduler: cosine
+  warmup_steps: 200
+  freeze_G: true                       # G仍然冻结
+  g2_input_modes: 'synthesized,degraded,intermediate'
+
+train:
+  batch_size: 2
+  lr: 0.0002
+  weight_decay: 0.0
+  num_epochs: 100
+  save_interval: 10
+  log_interval: 50
+  val_interval: 1
+  l1_weight: 1.0
+  ssim_weight: 1.0
+  use_3d_ssim: true
+  lung_weight: 10.0
+  lung_weight_schedule: '10:10,999:20'
+  perceptual_weight: 0.5
+  freq_weight: 0.1
+  g_cta_degrade_prob: 0.0
+  g_self_refine_prob: 0.0
+  g_self_refine_weight: 0.5
+  ema_rate: 0.999
+  lr_scheduler: cosine
+  warmup_steps: 200
+  grad_clip_norm: 5.0
+  grad_accumulation_steps: 8
+  skip_warmup: false
+  output_dir: ./outputs_phase4_g_g2_d_r
+  resume_checkpoint: ''
+  seed: 42
+  pretrained_G: './outputs_phase3_g_g2_d/best_model.pth'   # ★ Phase 3的G
+  pretrained_G2: './outputs_phase3_g_g2_d/best_model.pth'  # ★ Phase 3的G2
+  pretrained_D: './outputs_phase3_g_g2_d/best_model.pth'   # ★ Phase 3的D
+  pretrained_R: ''                     # R从零开始 (将通过r_pretrain_epochs预训练)

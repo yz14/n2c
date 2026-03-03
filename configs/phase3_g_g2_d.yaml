@@ -1,0 +1,134 @@
+# ==========================================================================
+# Phase 3: G(frozen) + G2 + D (精修网络 + 判别器)
+# ==========================================================================
+# 前置: Phase 2 训练完成, 加载 G 和 D 的 checkpoint
+# 目标: 冻结G, 训练G2精修网络进一步提升图像质量
+#
+# G2 多输入训练:
+#   - "synthesized":  G2 直接精修 G(ncct) 的输出
+#   - "degraded":     G2 精修质量退化的真实CTA (blur/noise/downsample)
+#   - "intermediate": G2 精修 ncct * |G(ncct)| 中间表示
+#   三种模式随机交替, 让G2学会从多种输入恢复高质量CTA
+#
+# D 的作用:
+#   - 只判断真实CTA为真, 其它所有输出(G2输出)为假
+#   - 类似超分辨率中D的作用, 辅助G2提升图像清晰度和细节
+#
+# 训练完成标志:
+#   - sharpness ratio > 0.8
+#   - refine_delta > 0 (G2确实在修正输出)
+#   - inter_l1 > pred_l1 (G2输出优于中间表示)
+#
+# 训练完成后: 用 phase4_g_g2_d_r.yaml 继续训练 (开启配准网络R)
+# ==========================================================================
+
+data:
+  data_dir: D:/codes/data/ncct_tiny
+  split_dir: ./splits
+  lung_sample_bias: 2.0
+  num_slices: 12
+  image_size: 400
+  hu_min: -550.0
+  hu_max: 250.0
+  num_workers: 4
+  aug_prob: 0.5
+  ncct_degrade_prob: 0.3               # 降低NCCT退化概率 (G已训练好, 不需要太强鲁棒性)
+  max_angle: 15.0
+  scale_range: 0.1
+  translate_frac: 0.05
+  noise_std: 0.07
+  brightness_range: 0.1
+  contrast_range: 0.1
+
+model:
+  in_channels: 12
+  out_channels: 12
+  model_channels: 64
+  channel_mult: [1, 2, 4, 8]
+  num_res_blocks: 2
+  attention_resolutions: [4, 8]
+  dropout: 0.0
+  use_checkpoint: false
+  num_heads: 4
+  num_head_channels: -1
+  use_scale_shift_norm: false
+  conv_resample: true
+  resblock_updown: false
+  use_fp16: false
+  residual_output: true
+
+registration:
+  enabled: false                       # Phase 3: 配准网络关闭
+
+discriminator:
+  enabled: true                        # ★ Phase 3: D辅助G2
+  ndf: 64
+  n_layers: 3
+  num_D: 2
+  use_spectral_norm: true
+  gan_weight: 0.1
+  feat_match_weight: 10.0
+  lr: 0.0004
+  lr_scheduler: cosine
+  warmup_steps: 500
+  label_smoothing: 0.0
+  grad_clip_norm_D: 1.0
+  d_cond_mode: diff                    # diff模式: D看增强信号差异
+  gan_loss_type: lsgan
+  r1_gamma: 0.0
+  r1_interval: 16
+  disc_type: patchgan
+  n_blocks_resD: 4
+  use_attention: true
+  gan_warmup_epochs: 5                 # G2阶段可减少warmup (D已有基础)
+  d_warmup_steps: 200                  # D较少warmup (已预训练过)
+  diffaugment_policy: "color,translation"
+  d_quality_aug: "blur,noise,downsample"
+  d_quality_aug_prob: 0.5
+  d_quality_aug_weight: 0.5
+
+refine:
+  enabled: true                        # ★ Phase 3: 开启精修网络G2
+  hidden_dim: 64                       # G2隐藏通道数
+  num_blocks: 6                        # G2残差块数 (6=轻量但有效)
+  lr: 0.0001                           # G2学习率 (比G低, 精细调整)
+  lr_scheduler: cosine
+  warmup_steps: 200
+  freeze_G: true                       # ★ 冻结G: G参数不更新
+  # --- G2 多输入训练模式 ---
+  g2_input_modes: 'synthesized,degraded,intermediate'
+                                       # "synthesized":  G2(G(ncct)) — 直接精修G输出
+                                       # "degraded":     G2(degrade(cta)) — 精修退化CTA
+                                       # "intermediate": G2(ncct*|G(ncct)|) — 精修中间表示
+
+train:
+  batch_size: 2
+  lr: 0.0002                           # 此值被G2的lr覆盖 (因为freeze_G=true)
+  weight_decay: 0.0
+  num_epochs: 100
+  save_interval: 10
+  log_interval: 50
+  val_interval: 1
+  l1_weight: 1.0
+  ssim_weight: 1.0
+  use_3d_ssim: true
+  lung_weight: 10.0
+  lung_weight_schedule: '10:10,999:20' # G2阶段: 肺区权重起步更高
+  perceptual_weight: 0.5
+  freq_weight: 0.1
+  g_cta_degrade_prob: 0.0             # Phase 3: 关闭CTA退化双任务 (G已冻结)
+  g_self_refine_prob: 0.0
+  g_self_refine_weight: 0.5
+  ema_rate: 0.999
+  lr_scheduler: cosine
+  warmup_steps: 200
+  grad_clip_norm: 5.0
+  grad_accumulation_steps: 8
+  skip_warmup: false
+  output_dir: ./outputs_phase3_g_g2_d
+  resume_checkpoint: ''
+  seed: 42
+  pretrained_G: './outputs_phase2_g_d/best_model.pth'   # ★ 加载Phase 2的G
+  pretrained_D: './outputs_phase2_g_d/best_model.pth'   # ★ 加载Phase 2的D
+  pretrained_R: ''
+  pretrained_G2: ''                    # G2从零开始 (零初始化=恒等映射)
