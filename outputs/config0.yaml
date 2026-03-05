@@ -1,21 +1,23 @@
 data:
   data_dir: /data0/yzhen/data/lung_pe_v1/npz_v1
   split_dir: ./splits
-  num_slices: 3
-  image_size: 256
+  num_slices: 12
+  image_size: 320
   hu_min: -550.0
   hu_max: 250.0
-  num_workers: 16
+  num_workers: 24
   aug_prob: 0.5
   max_angle: 15.0
   scale_range: 0.1
   translate_frac: 0.05
-  noise_std: 0.04
+  noise_std: 0.09
   brightness_range: 0.1
   contrast_range: 0.1
+  lung_sample_bias: 2.0
+  ncct_degrade_prob: 0.5
 model:
-  in_channels: 3
-  out_channels: 3
+  in_channels: 12
+  out_channels: 12
   model_channels: 64
   channel_mult:
   - 1
@@ -46,40 +48,76 @@ registration:
   smoothness_weight: 1.0
   smoothness_penalty: l2
   lr: 0.0001
+  r_pretrain_epochs: 0
+  r_pretrain_max_angle: 5.0
+  r_pretrain_max_translate: 0.03
+  r_pretrain_max_scale: 0.05
+  r_pretrain_elastic_alpha: 6.0
+  r_pretrain_elastic_points: 8
+  r_pretrain_degrade: true
 discriminator:
-  enabled: false
+  enabled: true
   ndf: 64
   n_layers: 3
-  num_D: 3
+  num_D: 2
   use_spectral_norm: true
-  gan_weight: 1.0
-  feat_match_weight: 10.0
-  lr: 0.0002
+  gan_weight: 0.2
+  feat_match_weight: 1.0
+  lr: 0.0004
   lr_scheduler: cosine
   warmup_steps: 500
-  label_smoothing: 0.1
-  grad_clip_norm_D: 0.0
+  label_smoothing: 0.0
+  grad_clip_norm_D: 1.0
+  d_cond_mode: none
+  gan_loss_type: lsgan
+  r1_gamma: 0.0
+  r1_interval: 16
+  disc_type: patchgan
+  n_blocks_resD: 4
+  use_attention: true
+  gan_warmup_epochs: 10
+  d_warmup_steps: 500
+  diffaugment_policy: color,translation
+  d_quality_aug: blur,noise,downsample
+  d_quality_aug_prob: 0.5
+  d_quality_aug_weight: 0.5
+refine:
+  enabled: false
+  hidden_dim: 64
+  num_blocks: 6
+  lr: 0.0001
+  lr_scheduler: cosine
+  warmup_steps: 200
+  freeze_G: true
+  g2_input_modes: intermediate
 train:
-  batch_size: 4
+  batch_size: 2
   lr: 0.0002
   weight_decay: 0.0
-  num_epochs: 200
+  num_epochs: 100
   save_interval: 10
   log_interval: 50
   val_interval: 1
   l1_weight: 1.0
   ssim_weight: 1.0
-  use_3d_ssim: false
+  use_3d_ssim: true
   lung_weight: 10.0
+  lung_weight_schedule: '999:20'
   ema_rate: 0.999
   lr_scheduler: cosine
   warmup_steps: 500
-  output_dir: ./outputs0
+  output_dir: ./outputs_phase2_g_d
   resume_checkpoint: ''
   seed: 42
-  pretrained_G: ''
+  pretrained_G: /data0/yzhen/a_test_model/v0/outputs_phase1_g/checkpoint_epoch0010.pt
   pretrained_R: ''
   pretrained_D: ''
+  pretrained_G2: ''
   grad_clip_norm: 5.0
-  grad_accumulation_steps: 1
-  skip_warmup: false
+  grad_accumulation_steps: 8
+  skip_warmup: true
+  perceptual_weight: 0.0
+  freq_weight: 0.2
+  g_cta_degrade_prob: 0.2
+  g_self_refine_prob: 0.0
+  g_self_refine_weight: 0.5

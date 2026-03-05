@@ -180,6 +180,7 @@ class Trainer:
             # R1 gradient penalty
             self.r1_gamma = dcfg.r1_gamma
             self.r1_interval = max(1, dcfg.r1_interval)
+            self.r1_warmup_steps = dcfg.r1_warmup_steps
             self.d_step_count = 0  # counter for lazy R1
             # Progressive GAN weight ramp-up
             self.gan_warmup_epochs = dcfg.gan_warmup_epochs
@@ -367,7 +368,8 @@ class Trainer:
             logger.info(f"  D cond mode:      {self.d_cond_mode}")
             logger.info(f"  GAN loss type:    {self.gan_loss_type}")
             logger.info(f"  Label smoothing:  {self.label_smoothing}")
-            logger.info(f"  R1 gamma:         {self.r1_gamma} (interval={self.r1_interval})")
+            r1_warmup_str = f", warmup={self.r1_warmup_steps}steps" if self.r1_warmup_steps > 0 else ""
+            logger.info(f"  R1 gamma:         {self.r1_gamma} (interval={self.r1_interval}{r1_warmup_str})")
             logger.info(f"  D LR scheduler:   {config.discriminator.lr_scheduler}")
             logger.info(f"  D type:           {config.discriminator.disc_type}")
 
@@ -507,6 +509,7 @@ class Trainer:
             lr=rcfg.lr,
             weight_decay=self.config.train.weight_decay,
         )
+        r_optimizer.zero_grad(set_to_none=True)
 
         self.reg_net.train()
         best_loss = float("inf")
@@ -543,7 +546,7 @@ class Trainer:
                     self.reg_net.parameters(), max_norm=self.grad_clip_norm,
                 )
                 r_optimizer.step()
-                r_optimizer.zero_grad()
+                r_optimizer.zero_grad(set_to_none=True)
 
                 ep_loss += loss.item()
                 n_steps += 1
@@ -569,9 +572,9 @@ class Trainer:
         logger.info(f"  LR (G):        {cfg.lr}")
         logger.info(f"  Output dir:    {self.output_dir}")
 
-        # Diagnostic: log data statistics from first batch
-        if self.start_epoch == 0:
-            self._log_data_diagnostics()
+        # # Diagnostic: log data statistics from first batch
+        # if self.start_epoch == 0:
+        #     self._log_data_diagnostics()
 
         # D warmup: pre-train D before joint training
         if self.start_epoch == 0:
@@ -634,10 +637,25 @@ class Trainer:
         """Return the model whose weights are tracked by EMA (G2 if refine, else G)."""
         return self.refine_net if self.use_refine else self.model
 
+    # def _swap_ema_weights(self):
+    #     """Swap active model weights with EMA weights for evaluation."""
+    #     m = self._ema_model()
+    #     self._saved_model_params = [p.data.clone() for p in m.parameters()]
+    #     for p, ema_p in zip(m.parameters(), self.ema_params):
+    #         p.data.copy_(ema_p)
+
+    # def _restore_model_weights(self):
+    #     """Restore active model weights after EMA evaluation."""
+    #     m = self._ema_model()
+    #     for p, saved_p in zip(m.parameters(), self._saved_model_params):
+    #         p.data.copy_(saved_p)
+    #     del self._saved_model_params
+    
     def _swap_ema_weights(self):
         """Swap active model weights with EMA weights for evaluation."""
         m = self._ema_model()
-        self._saved_model_params = [p.data.clone() for p in m.parameters()]
+        # FIX: 克隆到 CPU，避免在 GPU 上同时持有两份模型参数
+        self._saved_model_params = [p.data.clone().cpu() for p in m.parameters()]
         for p, ema_p in zip(m.parameters(), self.ema_params):
             p.data.copy_(ema_p)
 
@@ -645,14 +663,15 @@ class Trainer:
         """Restore active model weights after EMA evaluation."""
         m = self._ema_model()
         for p, saved_p in zip(m.parameters(), self._saved_model_params):
-            p.data.copy_(saved_p)
+            # FIX: 从 CPU 拷贝回 GPU
+            p.data.copy_(saved_p.to(p.device))
         del self._saved_model_params
 
     # ------------------------------------------------------------------
     # Diagnostics
     # ------------------------------------------------------------------
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _log_data_diagnostics(self):
         """Log data statistics from one batch to diagnose HU range issues."""
         logger.info("=" * 60)
@@ -733,7 +752,7 @@ class Trainer:
             logger.warning(f"  [Diagnostics] Failed: {e}")
         logger.info("=" * 60)
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _log_epoch_diagnostics(self, epoch: int):
         """Log model output statistics at end of epoch for debugging.
 
@@ -853,6 +872,21 @@ class Trainer:
         progress = min(1.0, (epoch + 1) / self.gan_warmup_epochs)
         return self.gan_weight * progress
 
+    def _get_effective_r1_gamma(self) -> float:
+        """Compute effective R1 gamma with linear warmup over r1_warmup_steps.
+
+        When R1 is enabled mid-training (e.g., resuming from a checkpoint
+        trained without R1), a sudden large penalty can destroy D's learned
+        features. This warmup linearly ramps gamma from 0 to self.r1_gamma
+        over r1_warmup_steps D-steps.
+        """
+        if self.r1_gamma <= 0:
+            return 0.0
+        if self.r1_warmup_steps <= 0:
+            return self.r1_gamma
+        progress = min(1.0, self.d_step_count / self.r1_warmup_steps)
+        return self.r1_gamma * progress
+
     def _run_d_warmup(self):
         """Pre-train D for d_warmup_steps on frozen G output vs real CTA.
 
@@ -887,7 +921,7 @@ class Trainer:
                     break
 
                 ncct_3c = batch["ncct"].to(self.device)
-                cta_3c = batch["cta"].to(self.device)
+                cta_3c  = batch["cta"].to(self.device)
                 mask_3c = batch["ncct_lung"].to(self.device)
                 ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=True)
 
@@ -933,28 +967,22 @@ class Trainer:
                         degraded_input_d = self.diffaugment_fn(degraded_input_d)
                     degraded_preds = self.discriminator(degraded_input_d)
                     if self.gan_loss_type == "hinge":
-                        d_loss_deg = self.gan_loss_fn(
-                            degraded_preds, target_is_real=False,
-                            for_discriminator=True,
-                        )
+                        d_loss_deg = self.gan_loss_fn(degraded_preds, target_is_real=False, for_discriminator=True,)
                     else:
-                        d_loss_deg = self.gan_loss_fn(
-                            degraded_preds, target_is_real=False,
-                        )
+                        d_loss_deg = self.gan_loss_fn(degraded_preds, target_is_real=False,)
                     d_loss = d_loss + self.d_quality_aug_weight * d_loss_deg
 
                 if apply_r1:
                     r1_penalty = r1_gradient_penalty(real_preds, real_input_d)
                     d_loss = d_loss + (self.r1_gamma / 2.0) * r1_penalty
 
-                self.optimizer_D.zero_grad()
+                self.optimizer_D.zero_grad(set_to_none=True)
                 d_loss.backward()
 
                 # Debug: compute gradient norm before clipping
                 grad_norm_d = torch.nn.utils.clip_grad_norm_(
                     self.discriminator.parameters(),
-                    self.grad_clip_norm_D if self.grad_clip_norm_D > 0 else float('inf'),
-                )
+                    self.grad_clip_norm_D if self.grad_clip_norm_D > 0 else float('inf'),)
                 self.optimizer_D.step()
 
                 # Track statistics (per-step values, not running averages)
@@ -971,8 +999,7 @@ class Trainer:
                         f"    D warmup step {step}/{self.d_warmup_steps}: "
                         f"D_real={d_real_val:.4f}, D_fake={d_fake_val:.4f}, "
                         f"d_loss={d_loss.item():.4f}, grad_norm={grad_norm_d:.4f}, "
-                        f"lr={cur_lr:.6f}"
-                    )
+                        f"lr={cur_lr:.6f}")
 
         logger.info(f"  D warmup complete: D_real_avg={d_real_sum/step:.4f}, "
                      f"D_fake_avg={d_fake_sum/step:.4f}")
@@ -1012,14 +1039,14 @@ class Trainer:
         accum = self.grad_accumulation_steps
 
         # Zero gradients at the start of epoch
-        self.optimizer_G.zero_grad()
+        self.optimizer_G.zero_grad(set_to_none=True)
         if self.use_disc:
-            self.optimizer_D.zero_grad()
+            self.optimizer_D.zero_grad(set_to_none=True)
 
         pbar = tqdm(self.train_loader, desc=f"Epoch {epoch+1}", leave=False)
         for micro_step, batch in enumerate(pbar):
             ncct_3c = batch["ncct"].to(self.device)
-            cta_3c = batch["cta"].to(self.device)
+            cta_3c  = batch["cta"].to(self.device)
             mask_3c = batch["ncct_lung"].to(self.device)
 
             ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=True)
@@ -1087,8 +1114,8 @@ class Trainer:
                 smooth_loss_val = smooth_loss.item()
 
             # GAN loss (generator side) — G wants D to classify fake as real
-            gan_g_val = 0.0
-            feat_match_val = 0.0
+            gan_g_val       = 0.0
+            feat_match_val  = 0.0
             d_real_mean_val = 0.0
             d_fake_mean_val = 0.0
             if self.use_disc:
@@ -1148,7 +1175,8 @@ class Trainer:
                 real_input_d = self._build_d_input(ncct, cta)
 
                 # R1 gradient penalty: requires grad on real input
-                apply_r1 = (self.r1_gamma > 0 and
+                eff_r1_gamma = self._get_effective_r1_gamma()
+                apply_r1 = (eff_r1_gamma > 0 and
                             self.d_step_count % self.r1_interval == 0)
                 if apply_r1:
                     real_input_d.requires_grad_(True)
@@ -1198,10 +1226,10 @@ class Trainer:
                         )
                     d_loss = d_loss + self.d_quality_aug_weight * d_loss_degraded
 
-                # R1 gradient penalty
+                # R1 gradient penalty (with warmup)
                 if apply_r1:
                     r1_penalty = r1_gradient_penalty(real_preds, real_input_d)
-                    d_loss = d_loss + (self.r1_gamma / 2.0) * r1_penalty
+                    d_loss = d_loss + (eff_r1_gamma / 2.0) * r1_penalty
                     r1_val = r1_penalty.item()
 
                 (d_loss / accum).backward()
@@ -1222,11 +1250,11 @@ class Trainer:
 
                 # Optimizer step
                 self.optimizer_G.step()
-                self.optimizer_G.zero_grad()
+                self.optimizer_G.zero_grad(set_to_none=True)
 
                 if self.use_disc:
                     self.optimizer_D.step()
-                    self.optimizer_D.zero_grad()
+                    self.optimizer_D.zero_grad(set_to_none=True)
 
                 # LR scheduler (step-level for cosine warmup)
                 g_sched_type = self.config.refine.lr_scheduler if self.use_refine else cfg.lr_scheduler
@@ -1243,10 +1271,9 @@ class Trainer:
                 n_need = 8 - len(self._train_vis_samples)
                 n_take = min(n_need, ncct.shape[0])
                 self._train_vis_samples.append({
-                    "ncct": ncct[:n_take].detach(),
-                    "pred": pred[:n_take].detach(),
-                    "cta": cta[:n_take].detach(),
-                })
+                    "ncct": ncct[:n_take].detach().cpu(),
+                    "pred": pred[:n_take].detach().cpu(),
+                    "cta": cta[:n_take].detach().cpu(),})
 
             # Logging
             self.global_step += 1
@@ -1315,7 +1342,7 @@ class Trainer:
     # Validation
     # ------------------------------------------------------------------
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _validate(self, epoch: int):
         """Run validation (no D, no augmentation)."""
         self.model.eval()
@@ -1353,10 +1380,9 @@ class Trainer:
                 if n_need > 0:
                     n_take = min(n_need, ncct.shape[0])
                     val_vis_samples.append({
-                        "ncct": ncct[:n_take].detach(),
-                        "pred": pred[:n_take].detach(),
-                        "cta": cta[:n_take].detach(),
-                    })
+                        "ncct": ncct[:n_take].detach().cpu(),
+                        "pred": pred[:n_take].detach().cpu(),
+                        "cta": cta[:n_take].detach().cpu(),})
 
         return tracker, val_vis_samples
 

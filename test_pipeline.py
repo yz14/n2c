@@ -612,6 +612,15 @@ def test_hinge_loss_and_r1():
     # R1 backward
     total = d_loss + 5.0 * r1
     total.backward()
+
+    # --- R1 warmup test ---
+    from config import Config
+    cfg = Config()
+    cfg.discriminator.r1_gamma = 10.0
+    cfg.discriminator.r1_warmup_steps = 100
+    # Verify config field exists
+    assert cfg.discriminator.r1_warmup_steps == 100
+    logger.info(f"  R1 warmup config: r1_warmup_steps={cfg.discriminator.r1_warmup_steps}")
     logger.info("Hinge loss + R1 penalty test PASSED\n")
 
 
@@ -985,8 +994,9 @@ def test_cta_degradation():
     ncct = torch.randn(B, C, H, W).clamp(-1, 1)
     cta = torch.randn(B, C, H, W).clamp(-1, 1)
 
-    degrade = CTADegradation()
-    degraded = degrade(ncct, cta)
+    # Use Mode 1 only for deterministic property checks
+    degrade_m1 = CTADegradation(direct_prob=0.0)
+    degraded = degrade_m1(ncct, cta)
     assert degraded.shape == ncct.shape, "Shape mismatch"
     assert degraded.min() >= -1.0 and degraded.max() <= 1.0, "Values out of [-1, 1]"
 
@@ -997,13 +1007,31 @@ def test_cta_degradation():
     assert diff_from_ncct > 0, "Degraded should differ from NCCT"
     assert diff_from_cta > 0, "Degraded should differ from CTA"
 
-    # Verify alpha=1.0 (exact ncct * |cta|) case
-    degrade_exact = CTADegradation(alpha_range=(1.0, 1.0), blur_prob=0.0, noise_prob=0.0)
+    # Default constructor (mixed modes) should work
+    degrade = CTADegradation()
+    mixed = degrade(ncct, cta)
+    assert mixed.shape == ncct.shape and mixed.min() >= -1.0 and mixed.max() <= 1.0
+
+    # Verify alpha=1.0 (exact ncct * |cta|) case — Mode 1 only (direct_prob=0)
+    degrade_exact = CTADegradation(
+        direct_prob=0.0, alpha_range=(1.0, 1.0), blur_prob=0.0, noise_prob=0.0,
+    )
     exact = degrade_exact(ncct, cta)
     expected = (ncct * cta.abs()).clamp(-1, 1)
     assert torch.allclose(exact, expected, atol=1e-6), \
         "With alpha=1, no blur, no noise: should be exactly ncct * |cta|"
     logger.info("  exact mode (alpha=1, no blur/noise) verified")
+
+    # Test Mode 2 (direct CTA degradation only)
+    degrade_direct = CTADegradation(direct_prob=1.0, blur_prob=1.0, noise_prob=0.0,
+                                     downsample_prob=0.0)
+    direct_out = degrade_direct(ncct, cta)
+    assert direct_out.shape == cta.shape, "Direct mode shape mismatch"
+    assert direct_out.min() >= -1.0 and direct_out.max() <= 1.0
+    # Direct mode should be closer to CTA than to NCCT
+    diff_direct_cta = (direct_out - cta).abs().mean().item()
+    diff_direct_ncct = (direct_out - ncct).abs().mean().item()
+    logger.info(f"  direct mode: diff_cta={diff_direct_cta:.4f}, diff_ncct={diff_direct_ncct:.4f}")
 
     # Multiple calls should give different results (randomness)
     d1 = degrade(ncct, cta)

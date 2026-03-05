@@ -58,18 +58,17 @@ def set_seed(seed: int):
 
 def ensure_splits(cfg: Config) -> tuple:
     """Ensure train/valid/test split files exist."""
-    split_dir = Path(cfg.data.split_dir)
+    split_dir  = Path(cfg.data.split_dir)
     train_file = split_dir / "train.txt"
     valid_file = split_dir / "valid.txt"
-    test_file = split_dir / "test.txt"
+    test_file  = split_dir / "test.txt"
 
     if not all(f.exists() for f in [train_file, valid_file, test_file]):
         logger.info("Split files not found, generating...")
         split_dataset(
             data_dir=cfg.data.data_dir,
             output_dir=str(split_dir),
-            seed=cfg.train.seed,
-        )
+            seed=cfg.train.seed,)
     else:
         logger.info("Using existing split files")
 
@@ -171,7 +170,7 @@ def main():
         cfg.train.pretrained_R = args.pretrained_R
     if args.pretrained_D:
         cfg.train.pretrained_D = args.pretrained_D
-    if hasattr(args, 'pretrained_G2') and args.pretrained_G2:
+    if args.pretrained_G2:
         cfg.train.pretrained_G2 = args.pretrained_G2
     if args.resume:
         cfg.train.resume_checkpoint = args.resume

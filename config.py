@@ -85,6 +85,7 @@ class DiscriminatorConfig:
     gan_loss_type: str = "lsgan"     # GAN loss: "lsgan" or "hinge"
     r1_gamma: float = 10.0           # R1 gradient penalty weight (0=disabled)
     r1_interval: int = 16            # lazy R1 every N D-steps (reduces overhead)
+    r1_warmup_steps: int = 0         # linearly ramp R1 gamma from 0 to r1_gamma over N D-steps (0=instant)
     # --- New: discriminator architecture ---
     disc_type: str = "patchgan"      # "patchgan" (original) or "resblock" (enhanced)
     n_blocks_resD: int = 4           # number of ResBlocks per sub-D (resblock type only)

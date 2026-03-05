@@ -1,638 +1,622 @@
-2026-02-28 20:45:31 [INFO] __main__: Using existing split files
-2026-02-28 20:45:31 [INFO] __main__: Using device: cuda
-2026-02-28 20:45:31 [INFO] data.dataset: Loaded 1044 files from splits/train.txt
-2026-02-28 20:45:31 [INFO] data.dataset: Loaded 100 files from splits/valid.txt
-2026-02-28 20:45:31 [INFO] __main__: Train batches: 261, Val batches: 25
-2026-02-28 20:45:32 [INFO] __main__: Generator (G) parameters: 61.57M
-2026-02-28 20:45:33 [INFO] trainer:   Registration:     OFF
-2026-02-28 20:45:33 [INFO] trainer:   Discriminator:    OFF
-2026-02-28 20:45:33 [INFO] trainer:   Grad clipping:    5.0
-2026-02-28 20:45:33 [INFO] trainer:   Grad accumulation:1 steps
-2026-02-28 20:45:33 [INFO] trainer: Starting training for 200 epochs
-2026-02-28 20:45:33 [INFO] trainer:   Batch size:    4
-2026-02-28 20:45:33 [INFO] trainer:   LR (G):        0.0002
-2026-02-28 20:45:33 [INFO] trainer:   Output dir:    outputs0
-2026-02-28 20:45:33 [INFO] trainer: ============================================================
-2026-02-28 20:45:33 [INFO] trainer: [Diagnostics] Scanning first batch for data statistics...
-2026-02-28 20:47:15 [INFO] trainer:   [Raw 3C] ncct: min=-1.0000, max=1.0000, mean=-0.1242, std=0.5319
-2026-02-28 20:47:15 [INFO] trainer:   [Raw 3C] cta:  min=-1.0000, max=1.0000, mean=-0.0760, std=0.5488
-2026-02-28 20:47:15 [INFO] trainer:   [Raw 3C] mask: min=0.0000, max=2.0000, sum=2259452, frac=0.9577
-2026-02-28 20:47:15 [INFO] trainer:   [Clipping] ncct at min(-1): 1.5%, at max(+1): 0.4%
-2026-02-28 20:47:15 [INFO] trainer:   [Clipping] cta  at min(-1): 0.7%, at max(+1): 1.1%
-2026-02-28 20:47:15 [INFO] trainer:   [NCCT-CTA diff] mean=0.1120, max=1.8984, std=0.1593
-2026-02-28 20:47:15 [INFO] trainer:   [Middle C] ncct shape=[4, 3, 256, 256], cta shape=[4, 3, 256, 256], mask shape=[4, 3, 256, 256]
-2026-02-28 20:47:17 [INFO] trainer:   [G output] pred: min=-0.7616, max=0.7616, mean=-0.0796
-2026-02-28 20:47:17 [INFO] trainer:   [G residual] min=-0.2384, max=0.2384, mean_abs=0.0602
-2026-02-28 20:47:17 [INFO] trainer:   [Config] HU range: [-1024.0, 600.0] (width=1624.0 HU)
-2026-02-28 20:47:17 [INFO] trainer: ============================================================
-2026-02-28 20:56:55 [INFO] trainer: Epoch 1/200 [Train] loss: 0.404724, l1: 0.103940, ssim: 0.300784, lr_G: 0.000052, gnorm_G: 1.910005
-2026-02-28 21:02:21 [INFO] __main__: Using existing split files
-2026-02-28 21:02:21 [INFO] __main__: Using device: cuda
-2026-02-28 21:02:21 [INFO] data.dataset: Loaded 1044 files from splits/train.txt
-2026-02-28 21:02:21 [INFO] data.dataset: Loaded 100 files from splits/valid.txt
-2026-02-28 21:02:21 [INFO] __main__: Train batches: 261, Val batches: 25
-2026-02-28 21:02:22 [INFO] __main__: Generator (G) parameters: 61.57M
-2026-02-28 21:02:23 [INFO] trainer:   Registration:     OFF
-2026-02-28 21:02:23 [INFO] trainer:   Discriminator:    OFF
-2026-02-28 21:02:23 [INFO] trainer:   Grad clipping:    5.0
-2026-02-28 21:02:23 [INFO] trainer:   Grad accumulation:1 steps
-2026-02-28 21:02:23 [INFO] trainer: Starting training for 200 epochs
-2026-02-28 21:02:23 [INFO] trainer:   Batch size:    4
-2026-02-28 21:02:23 [INFO] trainer:   LR (G):        0.0002
-2026-02-28 21:02:23 [INFO] trainer:   Output dir:    outputs0
-2026-02-28 21:02:23 [INFO] trainer: ============================================================
-2026-02-28 21:02:23 [INFO] trainer: [Diagnostics] Scanning first batch for data statistics...
-2026-02-28 21:03:25 [INFO] trainer:   [Raw 3C] ncct: min=-1.0000, max=1.0000, mean=-0.1313, std=0.6698
-2026-02-28 21:03:25 [INFO] trainer:   [Raw 3C] cta:  min=-1.0000, max=1.0000, mean=-0.0916, std=0.7185
-2026-02-28 21:03:25 [INFO] trainer:   [Raw 3C] mask: min=0.0000, max=2.0000, sum=998345, frac=0.4232
-2026-02-28 21:03:25 [INFO] trainer:   [Clipping] ncct at min(-1): 33.0%, at max(+1): 1.5%
-2026-02-28 21:03:25 [INFO] trainer:   [Clipping] cta  at min(-1): 33.0%, at max(+1): 6.8%
-2026-02-28 21:03:25 [WARNING] trainer:   ⚠ 6.8% of CTA voxels are clipped at max! HU range may be too narrow — contrast enhancement signal is lost.
-2026-02-28 21:03:25 [WARNING] trainer:   ⚠ 33.0% of NCCT voxels are clipped at min! HU range may be too narrow — lung detail is lost.
-2026-02-28 21:03:25 [INFO] trainer:   [NCCT-CTA diff] mean=0.1265, max=2.0000, std=0.2010
-2026-02-28 21:03:25 [INFO] trainer:   [Middle C] ncct shape=[4, 3, 256, 256], cta shape=[4, 3, 256, 256], mask shape=[4, 3, 256, 256]
-2026-02-28 21:03:27 [INFO] trainer:   [G output] pred: min=-0.7616, max=0.7616, mean=-0.0678
-2026-02-28 21:03:27 [INFO] trainer:   [G residual] min=-0.2384, max=0.2384, mean_abs=0.1026
-2026-02-28 21:03:27 [INFO] trainer:   [Config] HU range: [-550.0, 250.0] (width=800.0 HU)
-2026-02-28 21:03:27 [WARNING] trainer:   ⚠ HU range width is only 800.0 HU. For NCCT→CTA with lung, recommend at least [-1024, 600] (1624 HU).
-2026-02-28 21:03:27 [INFO] trainer: ============================================================
-2026-02-28 21:12:27 [INFO] trainer: Epoch 1/200 [Train] loss: 0.563209, l1: 0.159995, ssim: 0.403214, lr_G: 0.000052, gnorm_G: 1.707819
-2026-02-28 21:14:02 [INFO] trainer: Epoch 1/200 [Val]   loss: 0.834435, l1: 0.246895, ssim: 0.587540
-2026-02-28 21:14:03 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0001.pt
-2026-02-28 21:14:04 [INFO] trainer:   New best validation loss: 0.834435
-2026-02-28 21:14:05 [INFO] trainer:   Saved visualization grids for epoch 1
-2026-02-28 21:14:48 [INFO] trainer:   [Debug E1] pred range=[-0.999, 0.997], residual_mag=0.0714, l1_vs_cta=0.1912
-2026-02-28 21:14:48 [INFO] trainer:   [Debug E1] lung_l1=0.2311, bg_l1=0.1805
-2026-02-28 21:23:21 [INFO] trainer: Epoch 2/200 [Train] loss: 0.499610, l1: 0.133283, ssim: 0.366326, lr_G: 0.000156, gnorm_G: 1.236814
-2026-02-28 21:24:09 [INFO] trainer: Epoch 2/200 [Val]   loss: 0.777298, l1: 0.212737, ssim: 0.564561
-2026-02-28 21:24:11 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0002.pt
-2026-02-28 21:24:19 [INFO] trainer:   New best validation loss: 0.777298
-2026-02-28 21:24:19 [INFO] trainer:   Saved visualization grids for epoch 2
-2026-02-28 21:25:03 [INFO] trainer:   [Debug E2] pred range=[-1.000, 0.999], residual_mag=0.0820, l1_vs_cta=0.1864
-2026-02-28 21:25:03 [INFO] trainer:   [Debug E2] lung_l1=0.2316, bg_l1=0.1680
-2026-02-28 21:34:26 [INFO] trainer: Epoch 3/200 [Train] loss: 0.480158, l1: 0.128713, ssim: 0.351445, lr_G: 0.000200, gnorm_G: 1.233113
-2026-02-28 21:35:14 [INFO] trainer: Epoch 3/200 [Val]   loss: 0.707429, l1: 0.195602, ssim: 0.511828
-2026-02-28 21:35:15 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0003.pt
-2026-02-28 21:35:25 [INFO] trainer:   New best validation loss: 0.707429
-2026-02-28 21:35:25 [INFO] trainer:   Saved visualization grids for epoch 3
-2026-02-28 21:36:09 [INFO] trainer:   [Debug E3] pred range=[-1.000, 1.000], residual_mag=0.0855, l1_vs_cta=0.1970
-2026-02-28 21:36:09 [INFO] trainer:   [Debug E3] lung_l1=0.2503, bg_l1=0.1958
-2026-02-28 21:45:13 [INFO] trainer: Epoch 4/200 [Train] loss: 0.474197, l1: 0.125376, ssim: 0.348821, lr_G: 0.000200, gnorm_G: 1.195120
-2026-02-28 21:46:01 [INFO] trainer: Epoch 4/200 [Val]   loss: 0.706056, l1: 0.191055, ssim: 0.515002
-2026-02-28 21:46:02 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0004.pt
-2026-02-28 21:46:11 [INFO] trainer:   New best validation loss: 0.706056
-2026-02-28 21:46:11 [INFO] trainer:   Saved visualization grids for epoch 4
-2026-02-28 21:46:55 [INFO] trainer:   [Debug E4] pred range=[-1.000, 0.999], residual_mag=0.0915, l1_vs_cta=0.1735
-2026-02-28 21:46:55 [INFO] trainer:   [Debug E4] lung_l1=0.1965, bg_l1=0.1703
-2026-02-28 21:55:30 [INFO] trainer: Epoch 5/200 [Train] loss: 0.464611, l1: 0.123071, ssim: 0.341541, lr_G: 0.000200, gnorm_G: 1.060602
-2026-02-28 21:56:18 [INFO] trainer: Epoch 5/200 [Val]   loss: 0.663884, l1: 0.176772, ssim: 0.487112
-2026-02-28 21:56:19 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0005.pt
-2026-02-28 21:56:28 [INFO] trainer:   New best validation loss: 0.663884
-2026-02-28 21:56:28 [INFO] trainer:   Saved visualization grids for epoch 5
-2026-02-28 21:57:11 [INFO] trainer:   [Debug E5] pred range=[-1.000, 0.999], residual_mag=0.1005, l1_vs_cta=0.1463
-2026-02-28 21:57:11 [INFO] trainer:   [Debug E5] lung_l1=0.2724, bg_l1=0.1241
-2026-02-28 22:06:01 [INFO] trainer: Epoch 6/200 [Train] loss: 0.464776, l1: 0.120683, ssim: 0.344093, lr_G: 0.000200, gnorm_G: 1.072325
-2026-02-28 22:06:49 [INFO] trainer: Epoch 6/200 [Val]   loss: 0.674571, l1: 0.183816, ssim: 0.490755
-2026-02-28 22:06:49 [INFO] trainer:   Saved visualization grids for epoch 6
-2026-02-28 22:07:33 [INFO] trainer:   [Debug E6] pred range=[-1.000, 1.000], residual_mag=0.0917, l1_vs_cta=0.1911
-2026-02-28 22:07:33 [INFO] trainer:   [Debug E6] lung_l1=0.2539, bg_l1=0.1813
-2026-02-28 22:16:18 [INFO] trainer: Epoch 7/200 [Train] loss: 0.456434, l1: 0.118419, ssim: 0.338015, lr_G: 0.000200, gnorm_G: 1.012686
-2026-02-28 22:17:05 [INFO] trainer: Epoch 7/200 [Val]   loss: 0.660790, l1: 0.179821, ssim: 0.480969
-2026-02-28 22:17:07 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0007.pt
-2026-02-28 22:17:16 [INFO] trainer:   New best validation loss: 0.660790
-2026-02-28 22:17:17 [INFO] trainer:   Saved visualization grids for epoch 7
-2026-02-28 22:18:00 [INFO] trainer:   [Debug E7] pred range=[-1.000, 1.000], residual_mag=0.1079, l1_vs_cta=0.1462
-2026-02-28 22:18:00 [INFO] trainer:   [Debug E7] lung_l1=0.2275, bg_l1=0.1215
-2026-02-28 22:26:51 [INFO] trainer: Epoch 8/200 [Train] loss: 0.460106, l1: 0.119789, ssim: 0.340317, lr_G: 0.000200, gnorm_G: 1.008014
-2026-02-28 22:27:39 [INFO] trainer: Epoch 8/200 [Val]   loss: 0.635329, l1: 0.171777, ssim: 0.463552
-2026-02-28 22:27:40 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0008.pt
-2026-02-28 22:27:49 [INFO] trainer:   New best validation loss: 0.635329
-2026-02-28 22:27:50 [INFO] trainer:   Saved visualization grids for epoch 8
-2026-02-28 22:28:34 [INFO] trainer:   [Debug E8] pred range=[-1.000, 1.000], residual_mag=0.0946, l1_vs_cta=0.1601
-2026-02-28 22:28:34 [INFO] trainer:   [Debug E8] lung_l1=0.2072, bg_l1=0.1488
-2026-02-28 22:37:42 [INFO] trainer: Epoch 9/200 [Train] loss: 0.455393, l1: 0.118256, ssim: 0.337137, lr_G: 0.000199, gnorm_G: 0.974718
-2026-02-28 22:38:30 [INFO] trainer: Epoch 9/200 [Val]   loss: 0.641230, l1: 0.171902, ssim: 0.469327
-2026-02-28 22:38:30 [INFO] trainer:   Saved visualization grids for epoch 9
-2026-02-28 22:39:13 [INFO] trainer:   [Debug E9] pred range=[-1.000, 1.000], residual_mag=0.1090, l1_vs_cta=0.1557
-2026-02-28 22:39:13 [INFO] trainer:   [Debug E9] lung_l1=0.2524, bg_l1=0.1206
-2026-02-28 22:47:49 [INFO] trainer: Epoch 10/200 [Train] loss: 0.452751, l1: 0.117706, ssim: 0.335045, lr_G: 0.000199, gnorm_G: 0.997306
-2026-02-28 22:48:37 [INFO] trainer: Epoch 10/200 [Val]   loss: 0.651602, l1: 0.170343, ssim: 0.481258
-2026-02-28 22:48:37 [INFO] trainer:   Saved visualization grids for epoch 10
-2026-02-28 22:49:20 [INFO] trainer:   [Debug E10] pred range=[-1.000, 0.999], residual_mag=0.0977, l1_vs_cta=0.1592
-2026-02-28 22:49:20 [INFO] trainer:   [Debug E10] lung_l1=0.2407, bg_l1=0.1345
-2026-02-28 22:49:21 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0010.pt
-2026-02-28 22:57:54 [INFO] trainer: Epoch 11/200 [Train] loss: 0.492470, l1: 0.134877, ssim: 0.357592, lr_G: 0.000199, gnorm_G: 1.056411
-2026-02-28 22:58:42 [INFO] trainer: Epoch 11/200 [Val]   loss: 0.662832, l1: 0.184697, ssim: 0.478135
-2026-02-28 22:58:42 [INFO] trainer:   Saved visualization grids for epoch 11
-2026-02-28 22:59:26 [INFO] trainer:   [Debug E11] pred range=[-1.000, 0.999], residual_mag=0.0915, l1_vs_cta=0.1663
-2026-02-28 22:59:26 [INFO] trainer:   [Debug E11] lung_l1=0.2123, bg_l1=0.1529
-2026-02-28 23:08:15 [INFO] trainer: Epoch 12/200 [Train] loss: 0.480959, l1: 0.131379, ssim: 0.349580, lr_G: 0.000199, gnorm_G: 0.991040
-2026-02-28 23:09:03 [INFO] trainer: Epoch 12/200 [Val]   loss: 0.662511, l1: 0.181968, ssim: 0.480543
-2026-02-28 23:09:03 [INFO] trainer:   Saved visualization grids for epoch 12
-2026-02-28 23:09:46 [INFO] trainer:   [Debug E12] pred range=[-1.000, 0.999], residual_mag=0.0882, l1_vs_cta=0.1421
-2026-02-28 23:09:46 [INFO] trainer:   [Debug E12] lung_l1=0.2375, bg_l1=0.1359
-2026-02-28 23:18:31 [INFO] trainer: Epoch 13/200 [Train] loss: 0.477401, l1: 0.128936, ssim: 0.348464, lr_G: 0.000199, gnorm_G: 0.922216
-2026-02-28 23:19:18 [INFO] trainer: Epoch 13/200 [Val]   loss: 0.670032, l1: 0.184117, ssim: 0.485915
-2026-02-28 23:19:18 [INFO] trainer:   Saved visualization grids for epoch 13
-2026-02-28 23:20:02 [INFO] trainer:   [Debug E13] pred range=[-1.000, 0.999], residual_mag=0.1135, l1_vs_cta=0.1555
-2026-02-28 23:20:02 [INFO] trainer:   [Debug E13] lung_l1=0.1900, bg_l1=0.1459
-2026-02-28 23:29:12 [INFO] trainer: Epoch 14/200 [Train] loss: 0.476991, l1: 0.128568, ssim: 0.348424, lr_G: 0.000198, gnorm_G: 0.947034
-2026-02-28 23:30:00 [INFO] trainer: Epoch 14/200 [Val]   loss: 0.676224, l1: 0.188192, ssim: 0.488032
-2026-02-28 23:30:00 [INFO] trainer:   Saved visualization grids for epoch 14
-2026-02-28 23:30:44 [INFO] trainer:   [Debug E14] pred range=[-1.000, 1.000], residual_mag=0.0828, l1_vs_cta=0.1724
-2026-02-28 23:30:44 [INFO] trainer:   [Debug E14] lung_l1=0.2552, bg_l1=0.1647
-2026-02-28 23:39:33 [INFO] trainer: Epoch 15/200 [Train] loss: 0.472912, l1: 0.126181, ssim: 0.346731, lr_G: 0.000198, gnorm_G: 0.904336
-2026-02-28 23:40:21 [INFO] trainer: Epoch 15/200 [Val]   loss: 0.652819, l1: 0.177783, ssim: 0.475037
-2026-02-28 23:40:21 [INFO] trainer:   Saved visualization grids for epoch 15
-2026-02-28 23:41:05 [INFO] trainer:   [Debug E15] pred range=[-1.000, 1.000], residual_mag=0.0876, l1_vs_cta=0.1807
-2026-02-28 23:41:05 [INFO] trainer:   [Debug E15] lung_l1=0.2232, bg_l1=0.1685
-2026-02-28 23:49:46 [INFO] trainer: Epoch 16/200 [Train] loss: 0.466711, l1: 0.125332, ssim: 0.341379, lr_G: 0.000198, gnorm_G: 0.900554
-2026-02-28 23:50:33 [INFO] trainer: Epoch 16/200 [Val]   loss: 0.676090, l1: 0.190001, ssim: 0.486088
-2026-02-28 23:50:34 [INFO] trainer:   Saved visualization grids for epoch 16
-2026-02-28 23:51:17 [INFO] trainer:   [Debug E16] pred range=[-1.000, 1.000], residual_mag=0.1016, l1_vs_cta=0.1621
-2026-02-28 23:51:17 [INFO] trainer:   [Debug E16] lung_l1=0.2500, bg_l1=0.1223
-2026-03-01 00:00:11 [INFO] trainer: Epoch 17/200 [Train] loss: 0.462809, l1: 0.123484, ssim: 0.339325, lr_G: 0.000197, gnorm_G: 0.839999
-2026-03-01 00:00:59 [INFO] trainer: Epoch 17/200 [Val]   loss: 0.662853, l1: 0.184852, ssim: 0.478001
-2026-03-01 00:00:59 [INFO] trainer:   Saved visualization grids for epoch 17
-2026-03-01 00:01:43 [INFO] trainer:   [Debug E17] pred range=[-1.000, 1.000], residual_mag=0.0993, l1_vs_cta=0.1922
-2026-03-01 00:01:43 [INFO] trainer:   [Debug E17] lung_l1=0.1470, bg_l1=0.2004
-2026-03-01 00:10:26 [INFO] trainer: Epoch 18/200 [Train] loss: 0.467826, l1: 0.125198, ssim: 0.342628, lr_G: 0.000197, gnorm_G: 0.905516
-2026-03-01 00:11:13 [INFO] trainer: Epoch 18/200 [Val]   loss: 0.650242, l1: 0.177431, ssim: 0.472811
-2026-03-01 00:11:13 [INFO] trainer:   Saved visualization grids for epoch 18
-2026-03-01 00:11:53 [INFO] trainer:   [Debug E18] pred range=[-1.000, 1.000], residual_mag=0.1065, l1_vs_cta=0.1485
-2026-03-01 00:11:53 [INFO] trainer:   [Debug E18] lung_l1=0.2873, bg_l1=0.1409
-2026-03-01 00:20:47 [INFO] trainer: Epoch 19/200 [Train] loss: 0.466489, l1: 0.125659, ssim: 0.340830, lr_G: 0.000197, gnorm_G: 0.872250
-2026-03-01 00:21:35 [INFO] trainer: Epoch 19/200 [Val]   loss: 0.666027, l1: 0.186840, ssim: 0.479188
-2026-03-01 00:21:35 [INFO] trainer:   Saved visualization grids for epoch 19
-2026-03-01 00:22:15 [INFO] trainer:   [Debug E19] pred range=[-1.000, 1.000], residual_mag=0.0887, l1_vs_cta=0.2416
-2026-03-01 00:22:15 [INFO] trainer:   [Debug E19] lung_l1=0.2322, bg_l1=0.2427
-2026-03-01 00:30:48 [INFO] trainer: Epoch 20/200 [Train] loss: 0.464038, l1: 0.124554, ssim: 0.339484, lr_G: 0.000196, gnorm_G: 0.960500
-2026-03-01 00:31:35 [INFO] trainer: Epoch 20/200 [Val]   loss: 0.645096, l1: 0.181120, ssim: 0.463976
-2026-03-01 00:31:36 [INFO] trainer:   Saved visualization grids for epoch 20
-2026-03-01 00:32:19 [INFO] trainer:   [Debug E20] pred range=[-1.000, 1.000], residual_mag=0.0971, l1_vs_cta=0.2068
-2026-03-01 00:32:19 [INFO] trainer:   [Debug E20] lung_l1=0.1954, bg_l1=0.2097
-2026-03-01 00:32:21 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0020.pt
-2026-03-01 00:41:11 [INFO] trainer: Epoch 21/200 [Train] loss: 0.482244, l1: 0.132062, ssim: 0.350183, lr_G: 0.000196, gnorm_G: 0.917358
-2026-03-01 00:42:04 [INFO] trainer: Epoch 21/200 [Val]   loss: 0.681907, l1: 0.195024, ssim: 0.486882
-2026-03-01 00:42:04 [INFO] trainer:   Saved visualization grids for epoch 21
-2026-03-01 00:42:48 [INFO] trainer:   [Debug E21] pred range=[-1.000, 1.000], residual_mag=0.1136, l1_vs_cta=0.1564
-2026-03-01 00:42:48 [INFO] trainer:   [Debug E21] lung_l1=0.2395, bg_l1=0.1456
-2026-03-01 00:51:39 [INFO] trainer: Epoch 22/200 [Train] loss: 0.484964, l1: 0.133440, ssim: 0.351524, lr_G: 0.000195, gnorm_G: 0.903388
-2026-03-01 00:52:26 [INFO] trainer: Epoch 22/200 [Val]   loss: 0.683382, l1: 0.198492, ssim: 0.484889
-2026-03-01 00:52:26 [INFO] trainer:   Saved visualization grids for epoch 22
-2026-03-01 00:53:10 [INFO] trainer:   [Debug E22] pred range=[-1.000, 1.000], residual_mag=0.0890, l1_vs_cta=0.1679
-2026-03-01 00:53:10 [INFO] trainer:   [Debug E22] lung_l1=0.2470, bg_l1=0.1591
-2026-03-01 01:01:46 [INFO] trainer: Epoch 23/200 [Train] loss: 0.487128, l1: 0.131708, ssim: 0.355420, lr_G: 0.000195, gnorm_G: 0.846079
-2026-03-01 01:02:33 [INFO] trainer: Epoch 23/200 [Val]   loss: 0.673270, l1: 0.192922, ssim: 0.480349
-2026-03-01 01:02:33 [INFO] trainer:   Saved visualization grids for epoch 23
-2026-03-01 01:03:17 [INFO] trainer:   [Debug E23] pred range=[-1.000, 0.999], residual_mag=0.1083, l1_vs_cta=0.1700
-2026-03-01 01:03:17 [INFO] trainer:   [Debug E23] lung_l1=0.3569, bg_l1=0.1369
-2026-03-01 01:11:46 [INFO] trainer: Epoch 24/200 [Train] loss: 0.482345, l1: 0.129756, ssim: 0.352589, lr_G: 0.000194, gnorm_G: 0.858359
-2026-03-01 01:12:34 [INFO] trainer: Epoch 24/200 [Val]   loss: 0.668889, l1: 0.188589, ssim: 0.480300
-2026-03-01 01:12:34 [INFO] trainer:   Saved visualization grids for epoch 24
-2026-03-01 01:13:18 [INFO] trainer:   [Debug E24] pred range=[-1.000, 1.000], residual_mag=0.1047, l1_vs_cta=0.1553
-2026-03-01 01:13:18 [INFO] trainer:   [Debug E24] lung_l1=0.2123, bg_l1=0.1365
-2026-03-01 01:21:53 [INFO] trainer: Epoch 25/200 [Train] loss: 0.482261, l1: 0.130922, ssim: 0.351339, lr_G: 0.000194, gnorm_G: 0.907710
-2026-03-01 01:22:40 [INFO] trainer: Epoch 25/200 [Val]   loss: 0.672537, l1: 0.191962, ssim: 0.480575
-2026-03-01 01:22:41 [INFO] trainer:   Saved visualization grids for epoch 25
-2026-03-01 01:23:24 [INFO] trainer:   [Debug E25] pred range=[-1.000, 0.999], residual_mag=0.1035, l1_vs_cta=0.1570
-2026-03-01 01:23:24 [INFO] trainer:   [Debug E25] lung_l1=0.1237, bg_l1=0.1619
-2026-03-01 01:32:34 [INFO] trainer: Epoch 26/200 [Train] loss: 0.481366, l1: 0.130373, ssim: 0.350993, lr_G: 0.000193, gnorm_G: 0.849193
-2026-03-01 01:33:21 [INFO] trainer: Epoch 26/200 [Val]   loss: 0.680324, l1: 0.191837, ssim: 0.488487
-2026-03-01 01:33:22 [INFO] trainer:   Saved visualization grids for epoch 26
-2026-03-01 01:34:05 [INFO] trainer:   [Debug E26] pred range=[-1.000, 1.000], residual_mag=0.0969, l1_vs_cta=0.1591
-2026-03-01 01:34:05 [INFO] trainer:   [Debug E26] lung_l1=0.3499, bg_l1=0.1188
-2026-03-01 01:42:54 [INFO] trainer: Epoch 27/200 [Train] loss: 0.479446, l1: 0.130692, ssim: 0.348754, lr_G: 0.000192, gnorm_G: 0.774164
-2026-03-01 01:43:41 [INFO] trainer: Epoch 27/200 [Val]   loss: 0.667797, l1: 0.192322, ssim: 0.475475
-2026-03-01 01:43:41 [INFO] trainer:   Saved visualization grids for epoch 27
-2026-03-01 01:44:25 [INFO] trainer:   [Debug E27] pred range=[-1.000, 1.000], residual_mag=0.1008, l1_vs_cta=0.1554
-2026-03-01 01:44:25 [INFO] trainer:   [Debug E27] lung_l1=0.2520, bg_l1=0.1252
-2026-03-01 01:53:23 [INFO] trainer: Epoch 28/200 [Train] loss: 0.476646, l1: 0.128962, ssim: 0.347684, lr_G: 0.000192, gnorm_G: 0.762440
-2026-03-01 01:54:11 [INFO] trainer: Epoch 28/200 [Val]   loss: 0.677833, l1: 0.197734, ssim: 0.480099
-2026-03-01 01:54:11 [INFO] trainer:   Saved visualization grids for epoch 28
-2026-03-01 01:54:55 [INFO] trainer:   [Debug E28] pred range=[-1.000, 1.000], residual_mag=0.1001, l1_vs_cta=0.1431
-2026-03-01 01:54:55 [INFO] trainer:   [Debug E28] lung_l1=0.2180, bg_l1=0.1277
-2026-03-01 02:03:27 [INFO] trainer: Epoch 29/200 [Train] loss: 0.468484, l1: 0.127089, ssim: 0.341396, lr_G: 0.000191, gnorm_G: 0.850265
-2026-03-01 02:04:14 [INFO] trainer: Epoch 29/200 [Val]   loss: 0.664521, l1: 0.185476, ssim: 0.479045
-2026-03-01 02:04:15 [INFO] trainer:   Saved visualization grids for epoch 29
-2026-03-01 02:04:58 [INFO] trainer:   [Debug E29] pred range=[-1.000, 1.000], residual_mag=0.1062, l1_vs_cta=0.1523
-2026-03-01 02:04:58 [INFO] trainer:   [Debug E29] lung_l1=0.2057, bg_l1=0.1381
-2026-03-01 02:13:46 [INFO] trainer: Epoch 30/200 [Train] loss: 0.469000, l1: 0.128670, ssim: 0.340329, lr_G: 0.000191, gnorm_G: 0.778823
-2026-03-01 02:14:34 [INFO] trainer: Epoch 30/200 [Val]   loss: 0.669120, l1: 0.189658, ssim: 0.479463
-2026-03-01 02:14:34 [INFO] trainer:   Saved visualization grids for epoch 30
-2026-03-01 02:15:18 [INFO] trainer:   [Debug E30] pred range=[-1.000, 1.000], residual_mag=0.1045, l1_vs_cta=0.1351
-2026-03-01 02:15:18 [INFO] trainer:   [Debug E30] lung_l1=0.2069, bg_l1=0.1217
-2026-03-01 02:15:19 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0030.pt
-2026-03-01 02:24:06 [INFO] trainer: Epoch 31/200 [Train] loss: 0.471084, l1: 0.126682, ssim: 0.344402, lr_G: 0.000190, gnorm_G: 0.784619
-2026-03-01 02:24:53 [INFO] trainer: Epoch 31/200 [Val]   loss: 0.662180, l1: 0.183622, ssim: 0.478558
-2026-03-01 02:24:54 [INFO] trainer:   Saved visualization grids for epoch 31
-2026-03-01 02:25:37 [INFO] trainer:   [Debug E31] pred range=[-1.000, 1.000], residual_mag=0.0896, l1_vs_cta=0.1601
-2026-03-01 02:25:37 [INFO] trainer:   [Debug E31] lung_l1=0.2046, bg_l1=0.1578
-2026-03-01 02:34:26 [INFO] trainer: Epoch 32/200 [Train] loss: 0.473168, l1: 0.127650, ssim: 0.345518, lr_G: 0.000189, gnorm_G: 0.777662
-2026-03-01 02:35:14 [INFO] trainer: Epoch 32/200 [Val]   loss: 0.666946, l1: 0.187204, ssim: 0.479742
-2026-03-01 02:35:15 [INFO] trainer:   Saved visualization grids for epoch 32
-2026-03-01 02:35:58 [INFO] trainer:   [Debug E32] pred range=[-1.000, 1.000], residual_mag=0.0914, l1_vs_cta=0.1675
-2026-03-01 02:35:58 [INFO] trainer:   [Debug E32] lung_l1=0.1814, bg_l1=0.1658
-2026-03-01 02:44:38 [INFO] trainer: Epoch 33/200 [Train] loss: 0.468134, l1: 0.125849, ssim: 0.342285, lr_G: 0.000188, gnorm_G: 0.712694
-2026-03-01 02:45:25 [INFO] trainer: Epoch 33/200 [Val]   loss: 0.684726, l1: 0.192109, ssim: 0.492617
-2026-03-01 02:45:26 [INFO] trainer:   Saved visualization grids for epoch 33
-2026-03-01 02:46:09 [INFO] trainer:   [Debug E33] pred range=[-1.000, 1.000], residual_mag=0.0979, l1_vs_cta=0.2331
-2026-03-01 02:46:09 [INFO] trainer:   [Debug E33] lung_l1=0.2026, bg_l1=0.2404
-2026-03-01 02:54:53 [INFO] trainer: Epoch 34/200 [Train] loss: 0.470864, l1: 0.126874, ssim: 0.343990, lr_G: 0.000188, gnorm_G: 0.832634
-2026-03-01 02:55:41 [INFO] trainer: Epoch 34/200 [Val]   loss: 0.663731, l1: 0.187025, ssim: 0.476706
-2026-03-01 02:55:41 [INFO] trainer:   Saved visualization grids for epoch 34
-2026-03-01 02:56:25 [INFO] trainer:   [Debug E34] pred range=[-1.000, 1.000], residual_mag=0.1032, l1_vs_cta=0.1562
-2026-03-01 02:56:25 [INFO] trainer:   [Debug E34] lung_l1=0.0836, bg_l1=0.1632
-2026-03-01 03:05:11 [INFO] trainer: Epoch 35/200 [Train] loss: 0.470508, l1: 0.125770, ssim: 0.344738, lr_G: 0.000187, gnorm_G: 0.753599
-2026-03-01 03:05:58 [INFO] trainer: Epoch 35/200 [Val]   loss: 0.690828, l1: 0.192259, ssim: 0.498569
-2026-03-01 03:05:58 [INFO] trainer:   Saved visualization grids for epoch 35
-2026-03-01 03:06:38 [INFO] trainer:   [Debug E35] pred range=[-1.000, 1.000], residual_mag=0.0921, l1_vs_cta=0.1535
-2026-03-01 03:06:38 [INFO] trainer:   [Debug E35] lung_l1=0.1586, bg_l1=0.1527
-2026-03-01 03:15:12 [INFO] trainer: Epoch 36/200 [Train] loss: 0.467418, l1: 0.125136, ssim: 0.342282, lr_G: 0.000186, gnorm_G: 0.787461
-2026-03-01 03:16:00 [INFO] trainer: Epoch 36/200 [Val]   loss: 0.666941, l1: 0.185295, ssim: 0.481646
-2026-03-01 03:16:00 [INFO] trainer:   Saved visualization grids for epoch 36
-2026-03-01 03:16:44 [INFO] trainer:   [Debug E36] pred range=[-1.000, 1.000], residual_mag=0.1175, l1_vs_cta=0.1563
-2026-03-01 03:16:44 [INFO] trainer:   [Debug E36] lung_l1=0.1965, bg_l1=0.1439
-2026-03-01 03:25:20 [INFO] trainer: Epoch 37/200 [Train] loss: 0.468623, l1: 0.126053, ssim: 0.342570, lr_G: 0.000185, gnorm_G: 0.760896
-2026-03-01 03:26:07 [INFO] trainer: Epoch 37/200 [Val]   loss: 0.660523, l1: 0.183361, ssim: 0.477162
-2026-03-01 03:26:08 [INFO] trainer:   Saved visualization grids for epoch 37
-2026-03-01 03:26:51 [INFO] trainer:   [Debug E37] pred range=[-1.000, 1.000], residual_mag=0.1086, l1_vs_cta=0.1388
-2026-03-01 03:26:51 [INFO] trainer:   [Debug E37] lung_l1=0.2006, bg_l1=0.1270
-2026-03-01 03:35:54 [INFO] trainer: Epoch 38/200 [Train] loss: 0.471844, l1: 0.125228, ssim: 0.346616, lr_G: 0.000184, gnorm_G: 0.761637
-2026-03-01 03:36:42 [INFO] trainer: Epoch 38/200 [Val]   loss: 0.680130, l1: 0.189068, ssim: 0.491062
-2026-03-01 03:36:42 [INFO] trainer:   Saved visualization grids for epoch 38
-2026-03-01 03:37:25 [INFO] trainer:   [Debug E38] pred range=[-1.000, 1.000], residual_mag=0.1096, l1_vs_cta=0.1482
-2026-03-01 03:37:25 [INFO] trainer:   [Debug E38] lung_l1=0.2111, bg_l1=0.1340
-2026-03-01 03:46:05 [INFO] trainer: Epoch 39/200 [Train] loss: 0.468408, l1: 0.125714, ssim: 0.342693, lr_G: 0.000184, gnorm_G: 0.682276
-2026-03-01 03:46:53 [INFO] trainer: Epoch 39/200 [Val]   loss: 0.650047, l1: 0.181818, ssim: 0.468229
-2026-03-01 03:46:53 [INFO] trainer:   Saved visualization grids for epoch 39
-2026-03-01 03:47:36 [INFO] trainer:   [Debug E39] pred range=[-1.000, 1.000], residual_mag=0.1147, l1_vs_cta=0.1518
-2026-03-01 03:47:36 [INFO] trainer:   [Debug E39] lung_l1=0.2160, bg_l1=0.1316
-2026-03-01 03:56:43 [INFO] trainer: Epoch 40/200 [Train] loss: 0.470548, l1: 0.125651, ssim: 0.344897, lr_G: 0.000183, gnorm_G: 0.766265
-2026-03-01 03:57:31 [INFO] trainer: Epoch 40/200 [Val]   loss: 0.669982, l1: 0.189283, ssim: 0.480700
-2026-03-01 03:57:31 [INFO] trainer:   Saved visualization grids for epoch 40
-2026-03-01 03:58:14 [INFO] trainer:   [Debug E40] pred range=[-1.000, 1.000], residual_mag=0.0985, l1_vs_cta=0.1520
-2026-03-01 03:58:14 [INFO] trainer:   [Debug E40] lung_l1=0.1996, bg_l1=0.1422
-2026-03-01 03:58:15 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0040.pt
-2026-03-01 04:06:51 [INFO] trainer: Epoch 41/200 [Train] loss: 0.477246, l1: 0.130463, ssim: 0.346783, lr_G: 0.000182, gnorm_G: 0.762130
-2026-03-01 04:07:38 [INFO] trainer: Epoch 41/200 [Val]   loss: 0.685180, l1: 0.192879, ssim: 0.492301
-2026-03-01 04:07:38 [INFO] trainer:   Saved visualization grids for epoch 41
-2026-03-01 04:08:22 [INFO] trainer:   [Debug E41] pred range=[-1.000, 1.000], residual_mag=0.0945, l1_vs_cta=0.1707
-2026-03-01 04:08:22 [INFO] trainer:   [Debug E41] lung_l1=0.3494, bg_l1=0.1492
-2026-03-01 04:16:59 [INFO] trainer: Epoch 42/200 [Train] loss: 0.479683, l1: 0.130530, ssim: 0.349153, lr_G: 0.000181, gnorm_G: 0.737328
-2026-03-01 04:17:46 [INFO] trainer: Epoch 42/200 [Val]   loss: 0.687429, l1: 0.197034, ssim: 0.490396
-2026-03-01 04:17:46 [INFO] trainer:   Saved visualization grids for epoch 42
-2026-03-01 04:18:29 [INFO] trainer:   [Debug E42] pred range=[-1.000, 1.000], residual_mag=0.0927, l1_vs_cta=0.1333
-2026-03-01 04:18:29 [INFO] trainer:   [Debug E42] lung_l1=0.1658, bg_l1=0.1271
-2026-03-01 04:27:17 [INFO] trainer: Epoch 43/200 [Train] loss: 0.478191, l1: 0.130955, ssim: 0.347236, lr_G: 0.000180, gnorm_G: 0.836125
-2026-03-01 04:28:04 [INFO] trainer: Epoch 43/200 [Val]   loss: 0.663199, l1: 0.187446, ssim: 0.475753
-2026-03-01 04:28:05 [INFO] trainer:   Saved visualization grids for epoch 43
-2026-03-01 04:28:48 [INFO] trainer:   [Debug E43] pred range=[-1.000, 1.000], residual_mag=0.0841, l1_vs_cta=0.2013
-2026-03-01 04:28:48 [INFO] trainer:   [Debug E43] lung_l1=0.1443, bg_l1=0.2116
-2026-03-01 04:37:17 [INFO] trainer: Epoch 44/200 [Train] loss: 0.478941, l1: 0.130087, ssim: 0.348853, lr_G: 0.000179, gnorm_G: 0.710200
-2026-03-01 04:38:04 [INFO] trainer: Epoch 44/200 [Val]   loss: 0.655551, l1: 0.186849, ssim: 0.468702
-2026-03-01 04:38:05 [INFO] trainer:   Saved visualization grids for epoch 44
-2026-03-01 04:38:48 [INFO] trainer:   [Debug E44] pred range=[-1.000, 1.000], residual_mag=0.1097, l1_vs_cta=0.1440
-2026-03-01 04:38:48 [INFO] trainer:   [Debug E44] lung_l1=0.1945, bg_l1=0.1302
-2026-03-01 04:48:00 [INFO] trainer: Epoch 45/200 [Train] loss: 0.475932, l1: 0.129681, ssim: 0.346251, lr_G: 0.000178, gnorm_G: 0.789717
-2026-03-01 04:48:47 [INFO] trainer: Epoch 45/200 [Val]   loss: 0.670087, l1: 0.191645, ssim: 0.478442
-2026-03-01 04:48:48 [INFO] trainer:   Saved visualization grids for epoch 45
-2026-03-01 04:49:31 [INFO] trainer:   [Debug E45] pred range=[-1.000, 1.000], residual_mag=0.1097, l1_vs_cta=0.1431
-2026-03-01 04:49:31 [INFO] trainer:   [Debug E45] lung_l1=0.1877, bg_l1=0.1337
-2026-03-01 04:58:05 [INFO] trainer: Epoch 46/200 [Train] loss: 0.475464, l1: 0.128628, ssim: 0.346835, lr_G: 0.000177, gnorm_G: 0.735144
-2026-03-01 04:58:52 [INFO] trainer: Epoch 46/200 [Val]   loss: 0.684854, l1: 0.197343, ssim: 0.487511
-2026-03-01 04:58:53 [INFO] trainer:   Saved visualization grids for epoch 46
-2026-03-01 04:59:36 [INFO] trainer:   [Debug E46] pred range=[-1.000, 1.000], residual_mag=0.1077, l1_vs_cta=0.1394
-2026-03-01 04:59:36 [INFO] trainer:   [Debug E46] lung_l1=0.2278, bg_l1=0.1155
-2026-03-01 05:08:40 [INFO] trainer: Epoch 47/200 [Train] loss: 0.476410, l1: 0.127628, ssim: 0.348782, lr_G: 0.000176, gnorm_G: 0.729165
-2026-03-01 05:09:28 [INFO] trainer: Epoch 47/200 [Val]   loss: 0.657661, l1: 0.184837, ssim: 0.472824
-2026-03-01 05:09:28 [INFO] trainer:   Saved visualization grids for epoch 47
-2026-03-01 05:10:11 [INFO] trainer:   [Debug E47] pred range=[-1.000, 1.000], residual_mag=0.0973, l1_vs_cta=0.1363
-2026-03-01 05:10:11 [INFO] trainer:   [Debug E47] lung_l1=0.1792, bg_l1=0.1301
-2026-03-01 05:18:52 [INFO] trainer: Epoch 48/200 [Train] loss: 0.482181, l1: 0.131215, ssim: 0.350967, lr_G: 0.000175, gnorm_G: 0.748509
-2026-03-01 05:19:39 [INFO] trainer: Epoch 48/200 [Val]   loss: 0.664927, l1: 0.188014, ssim: 0.476913
-2026-03-01 05:19:40 [INFO] trainer:   Saved visualization grids for epoch 48
-2026-03-01 05:20:23 [INFO] trainer:   [Debug E48] pred range=[-1.000, 1.000], residual_mag=0.0950, l1_vs_cta=0.1363
-2026-03-01 05:20:23 [INFO] trainer:   [Debug E48] lung_l1=0.1683, bg_l1=0.1272
-2026-03-01 05:29:09 [INFO] trainer: Epoch 49/200 [Train] loss: 0.475384, l1: 0.128930, ssim: 0.346455, lr_G: 0.000174, gnorm_G: 0.708217
-2026-03-01 05:29:58 [INFO] trainer: Epoch 49/200 [Val]   loss: 0.677818, l1: 0.196742, ssim: 0.481076
-2026-03-01 05:29:58 [INFO] trainer:   Saved visualization grids for epoch 49
-2026-03-01 05:30:42 [INFO] trainer:   [Debug E49] pred range=[-1.000, 1.000], residual_mag=0.0848, l1_vs_cta=0.1494
-2026-03-01 05:30:42 [INFO] trainer:   [Debug E49] lung_l1=0.2204, bg_l1=0.1372
-2026-03-01 05:39:37 [INFO] trainer: Epoch 50/200 [Train] loss: 0.472895, l1: 0.127532, ssim: 0.345363, lr_G: 0.000173, gnorm_G: 0.741281
-2026-03-01 05:40:24 [INFO] trainer: Epoch 50/200 [Val]   loss: 0.680226, l1: 0.194467, ssim: 0.485759
-2026-03-01 05:40:24 [INFO] trainer:   Saved visualization grids for epoch 50
-2026-03-01 05:41:07 [INFO] trainer:   [Debug E50] pred range=[-1.000, 1.000], residual_mag=0.1020, l1_vs_cta=0.1623
-2026-03-01 05:41:07 [INFO] trainer:   [Debug E50] lung_l1=0.2176, bg_l1=0.1451
-2026-03-01 05:41:08 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0050.pt
-2026-03-01 05:49:43 [INFO] trainer: Epoch 51/200 [Train] loss: 0.471786, l1: 0.127935, ssim: 0.343851, lr_G: 0.000172, gnorm_G: 0.721132
-2026-03-01 05:50:31 [INFO] trainer: Epoch 51/200 [Val]   loss: 0.688256, l1: 0.197832, ssim: 0.490425
-2026-03-01 05:50:31 [INFO] trainer:   Saved visualization grids for epoch 51
-2026-03-01 05:51:15 [INFO] trainer:   [Debug E51] pred range=[-1.000, 1.000], residual_mag=0.1069, l1_vs_cta=0.1467
-2026-03-01 05:51:15 [INFO] trainer:   [Debug E51] lung_l1=0.2518, bg_l1=0.1222
-2026-03-01 06:00:00 [INFO] trainer: Epoch 52/200 [Train] loss: 0.475340, l1: 0.129661, ssim: 0.345679, lr_G: 0.000171, gnorm_G: 0.667681
-2026-03-01 06:00:48 [INFO] trainer: Epoch 52/200 [Val]   loss: 0.675260, l1: 0.188989, ssim: 0.486271
-2026-03-01 06:00:48 [INFO] trainer:   Saved visualization grids for epoch 52
-2026-03-01 06:01:31 [INFO] trainer:   [Debug E52] pred range=[-1.000, 1.000], residual_mag=0.1049, l1_vs_cta=0.2013
-2026-03-01 06:01:31 [INFO] trainer:   [Debug E52] lung_l1=0.2040, bg_l1=0.2007
-2026-03-01 06:10:34 [INFO] trainer: Epoch 53/200 [Train] loss: 0.471549, l1: 0.127154, ssim: 0.344395, lr_G: 0.000170, gnorm_G: 0.685156
-2026-03-01 06:11:21 [INFO] trainer: Epoch 53/200 [Val]   loss: 0.669118, l1: 0.184623, ssim: 0.484494
-2026-03-01 06:11:22 [INFO] trainer:   Saved visualization grids for epoch 53
-2026-03-01 06:12:05 [INFO] trainer:   [Debug E53] pred range=[-1.000, 1.000], residual_mag=0.1112, l1_vs_cta=0.1409
-2026-03-01 06:12:05 [INFO] trainer:   [Debug E53] lung_l1=0.1902, bg_l1=0.1250
-2026-03-01 06:20:42 [INFO] trainer: Epoch 54/200 [Train] loss: 0.469039, l1: 0.127278, ssim: 0.341760, lr_G: 0.000168, gnorm_G: 0.676040
-2026-03-01 06:21:29 [INFO] trainer: Epoch 54/200 [Val]   loss: 0.682682, l1: 0.195735, ssim: 0.486947
-2026-03-01 06:21:29 [INFO] trainer:   Saved visualization grids for epoch 54
-2026-03-01 06:22:12 [INFO] trainer:   [Debug E54] pred range=[-1.000, 1.000], residual_mag=0.0933, l1_vs_cta=0.1740
-2026-03-01 06:22:12 [INFO] trainer:   [Debug E54] lung_l1=0.3050, bg_l1=0.1686
-2026-03-01 06:31:06 [INFO] trainer: Epoch 55/200 [Train] loss: 0.470990, l1: 0.125784, ssim: 0.345206, lr_G: 0.000167, gnorm_G: 0.739284
-2026-03-01 06:31:53 [INFO] trainer: Epoch 55/200 [Val]   loss: 0.685832, l1: 0.194954, ssim: 0.490878
-2026-03-01 06:31:54 [INFO] trainer:   Saved visualization grids for epoch 55
-2026-03-01 06:32:37 [INFO] trainer:   [Debug E55] pred range=[-1.000, 1.000], residual_mag=0.1095, l1_vs_cta=0.1442
-2026-03-01 06:32:37 [INFO] trainer:   [Debug E55] lung_l1=0.2005, bg_l1=0.1312
-2026-03-01 06:41:28 [INFO] trainer: Epoch 56/200 [Train] loss: 0.474854, l1: 0.127038, ssim: 0.347816, lr_G: 0.000166, gnorm_G: 0.724776
-2026-03-01 06:42:15 [INFO] trainer: Epoch 56/200 [Val]   loss: 0.664429, l1: 0.189085, ssim: 0.475344
-2026-03-01 06:42:16 [INFO] trainer:   Saved visualization grids for epoch 56
-2026-03-01 06:43:00 [INFO] trainer:   [Debug E56] pred range=[-1.000, 1.000], residual_mag=0.1094, l1_vs_cta=0.1467
-2026-03-01 06:43:00 [INFO] trainer:   [Debug E56] lung_l1=0.3327, bg_l1=0.1212
-2026-03-01 06:51:49 [INFO] trainer: Epoch 57/200 [Train] loss: 0.467496, l1: 0.126493, ssim: 0.341003, lr_G: 0.000165, gnorm_G: 0.715981
-2026-03-01 06:52:36 [INFO] trainer: Epoch 57/200 [Val]   loss: 0.684133, l1: 0.193203, ssim: 0.490930
-2026-03-01 06:52:36 [INFO] trainer:   Saved visualization grids for epoch 57
-2026-03-01 06:53:20 [INFO] trainer:   [Debug E57] pred range=[-1.000, 1.000], residual_mag=0.1019, l1_vs_cta=0.1575
-2026-03-01 06:53:20 [INFO] trainer:   [Debug E57] lung_l1=0.3865, bg_l1=0.1266
-2026-03-01 07:01:53 [INFO] trainer: Epoch 58/200 [Train] loss: 0.466309, l1: 0.125396, ssim: 0.340914, lr_G: 0.000164, gnorm_G: 0.719823
-2026-03-01 07:02:41 [INFO] trainer: Epoch 58/200 [Val]   loss: 0.650923, l1: 0.186220, ssim: 0.464703
-2026-03-01 07:02:41 [INFO] trainer:   Saved visualization grids for epoch 58
-2026-03-01 07:03:24 [INFO] trainer:   [Debug E58] pred range=[-1.000, 1.000], residual_mag=0.0857, l1_vs_cta=0.1581
-2026-03-01 07:03:24 [INFO] trainer:   [Debug E58] lung_l1=0.1676, bg_l1=0.1567
-2026-03-01 07:12:05 [INFO] trainer: Epoch 59/200 [Train] loss: 0.466678, l1: 0.125851, ssim: 0.340826, lr_G: 0.000162, gnorm_G: 0.743150
-2026-03-01 07:12:53 [INFO] trainer: Epoch 59/200 [Val]   loss: 0.665685, l1: 0.187956, ssim: 0.477728
-2026-03-01 07:12:53 [INFO] trainer:   Saved visualization grids for epoch 59
-2026-03-01 07:13:36 [INFO] trainer:   [Debug E59] pred range=[-1.000, 1.000], residual_mag=0.0926, l1_vs_cta=0.1675
-2026-03-01 07:13:36 [INFO] trainer:   [Debug E59] lung_l1=0.2650, bg_l1=0.1623
-2026-03-01 07:22:13 [INFO] trainer: Epoch 60/200 [Train] loss: 0.469025, l1: 0.126470, ssim: 0.342556, lr_G: 0.000161, gnorm_G: 0.709809
-2026-03-01 07:23:01 [INFO] trainer: Epoch 60/200 [Val]   loss: 0.672016, l1: 0.187837, ssim: 0.484178
-2026-03-01 07:23:01 [INFO] trainer:   Saved visualization grids for epoch 60
-2026-03-01 07:23:45 [INFO] trainer:   [Debug E60] pred range=[-1.000, 1.000], residual_mag=0.1127, l1_vs_cta=0.1679
-2026-03-01 07:23:45 [INFO] trainer:   [Debug E60] lung_l1=0.2526, bg_l1=0.1579
-2026-03-01 07:23:46 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0060.pt
-2026-03-01 07:32:39 [INFO] trainer: Epoch 61/200 [Train] loss: 0.468381, l1: 0.124847, ssim: 0.343534, lr_G: 0.000160, gnorm_G: 0.703157
-2026-03-01 07:33:26 [INFO] trainer: Epoch 61/200 [Val]   loss: 0.686448, l1: 0.196571, ssim: 0.489876
-2026-03-01 07:33:26 [INFO] trainer:   Saved visualization grids for epoch 61
-2026-03-01 07:34:09 [INFO] trainer:   [Debug E61] pred range=[-1.000, 1.000], residual_mag=0.1107, l1_vs_cta=0.1487
-2026-03-01 07:34:09 [INFO] trainer:   [Debug E61] lung_l1=0.2411, bg_l1=0.1202
-2026-03-01 07:42:48 [INFO] trainer: Epoch 62/200 [Train] loss: 0.465141, l1: 0.125793, ssim: 0.339348, lr_G: 0.000159, gnorm_G: 0.699787
-2026-03-01 07:43:36 [INFO] trainer: Epoch 62/200 [Val]   loss: 0.671668, l1: 0.191104, ssim: 0.480564
-2026-03-01 07:43:36 [INFO] trainer:   Saved visualization grids for epoch 62
-2026-03-01 07:44:20 [INFO] trainer:   [Debug E62] pred range=[-1.000, 1.000], residual_mag=0.0864, l1_vs_cta=0.1693
-2026-03-01 07:44:20 [INFO] trainer:   [Debug E62] lung_l1=0.2009, bg_l1=0.1660
-2026-03-01 07:53:08 [INFO] trainer: Epoch 63/200 [Train] loss: 0.468993, l1: 0.125311, ssim: 0.343682, lr_G: 0.000157, gnorm_G: 0.699054
-2026-03-01 07:53:56 [INFO] trainer: Epoch 63/200 [Val]   loss: 0.679800, l1: 0.193757, ssim: 0.486042
-2026-03-01 07:53:56 [INFO] trainer:   Saved visualization grids for epoch 63
-2026-03-01 07:54:39 [INFO] trainer:   [Debug E63] pred range=[-1.000, 1.000], residual_mag=0.0996, l1_vs_cta=0.1624
-2026-03-01 07:54:39 [INFO] trainer:   [Debug E63] lung_l1=0.3366, bg_l1=0.1357
-2026-03-01 08:03:44 [INFO] trainer: Epoch 64/200 [Train] loss: 0.464899, l1: 0.125143, ssim: 0.339756, lr_G: 0.000156, gnorm_G: 0.671826
-2026-03-01 08:04:31 [INFO] trainer: Epoch 64/200 [Val]   loss: 0.679960, l1: 0.190968, ssim: 0.488992
-2026-03-01 08:04:31 [INFO] trainer:   Saved visualization grids for epoch 64
-2026-03-01 08:05:15 [INFO] trainer:   [Debug E64] pred range=[-1.000, 1.000], residual_mag=0.1101, l1_vs_cta=0.1620
-2026-03-01 08:05:15 [INFO] trainer:   [Debug E64] lung_l1=0.2102, bg_l1=0.1474
-2026-03-01 08:14:07 [INFO] trainer: Epoch 65/200 [Train] loss: 0.468140, l1: 0.124111, ssim: 0.344029, lr_G: 0.000155, gnorm_G: 0.710947
-2026-03-01 08:14:55 [INFO] trainer: Epoch 65/200 [Val]   loss: 0.687734, l1: 0.190863, ssim: 0.496870
-2026-03-01 08:14:55 [INFO] trainer:   Saved visualization grids for epoch 65
-2026-03-01 08:15:38 [INFO] trainer:   [Debug E65] pred range=[-1.000, 1.000], residual_mag=0.1080, l1_vs_cta=0.1631
-2026-03-01 08:15:38 [INFO] trainer:   [Debug E65] lung_l1=0.3281, bg_l1=0.1347
-2026-03-01 08:24:20 [INFO] trainer: Epoch 66/200 [Train] loss: 0.464481, l1: 0.125636, ssim: 0.338844, lr_G: 0.000153, gnorm_G: 0.655280
-2026-03-01 08:25:07 [INFO] trainer: Epoch 66/200 [Val]   loss: 0.675327, l1: 0.193429, ssim: 0.481898
-2026-03-01 08:25:07 [INFO] trainer:   Saved visualization grids for epoch 66
-2026-03-01 08:25:51 [INFO] trainer:   [Debug E66] pred range=[-1.000, 1.000], residual_mag=0.1063, l1_vs_cta=0.1676
-2026-03-01 08:25:51 [INFO] trainer:   [Debug E66] lung_l1=0.1917, bg_l1=0.1632
-2026-03-01 08:34:41 [INFO] trainer: Epoch 67/200 [Train] loss: 0.466552, l1: 0.125575, ssim: 0.340977, lr_G: 0.000152, gnorm_G: 0.746155
-2026-03-01 08:35:28 [INFO] trainer: Epoch 67/200 [Val]   loss: 0.670081, l1: 0.188702, ssim: 0.481379
-2026-03-01 08:35:28 [INFO] trainer:   Saved visualization grids for epoch 67
-2026-03-01 08:36:12 [INFO] trainer:   [Debug E67] pred range=[-1.000, 1.000], residual_mag=0.0931, l1_vs_cta=0.1705
-2026-03-01 08:36:12 [INFO] trainer:   [Debug E67] lung_l1=0.2028, bg_l1=0.1610
-2026-03-01 08:45:05 [INFO] trainer: Epoch 68/200 [Train] loss: 0.469517, l1: 0.126572, ssim: 0.342945, lr_G: 0.000151, gnorm_G: 0.714366
-2026-03-01 08:45:52 [INFO] trainer: Epoch 68/200 [Val]   loss: 0.665889, l1: 0.185256, ssim: 0.480633
-2026-03-01 08:45:53 [INFO] trainer:   Saved visualization grids for epoch 68
-2026-03-01 08:46:36 [INFO] trainer:   [Debug E68] pred range=[-1.000, 1.000], residual_mag=0.1106, l1_vs_cta=0.1418
-2026-03-01 08:46:36 [INFO] trainer:   [Debug E68] lung_l1=0.1860, bg_l1=0.1304
-2026-03-01 08:55:34 [INFO] trainer: Epoch 69/200 [Train] loss: 0.466965, l1: 0.125741, ssim: 0.341224, lr_G: 0.000149, gnorm_G: 0.687520
-2026-03-01 08:56:21 [INFO] trainer: Epoch 69/200 [Val]   loss: 0.664831, l1: 0.185614, ssim: 0.479218
-2026-03-01 08:56:22 [INFO] trainer:   Saved visualization grids for epoch 69
-2026-03-01 08:57:05 [INFO] trainer:   [Debug E69] pred range=[-1.000, 1.000], residual_mag=0.1196, l1_vs_cta=0.1439
-2026-03-01 08:57:05 [INFO] trainer:   [Debug E69] lung_l1=0.1709, bg_l1=0.1365
-2026-03-01 09:05:49 [INFO] trainer: Epoch 70/200 [Train] loss: 0.464512, l1: 0.123476, ssim: 0.341037, lr_G: 0.000148, gnorm_G: 0.710330
-2026-03-01 09:06:37 [INFO] trainer: Epoch 70/200 [Val]   loss: 0.668667, l1: 0.189590, ssim: 0.479077
-2026-03-01 09:06:37 [INFO] trainer:   Saved visualization grids for epoch 70
-2026-03-01 09:07:17 [INFO] trainer:   [Debug E70] pred range=[-1.000, 1.000], residual_mag=0.0860, l1_vs_cta=0.1998
-2026-03-01 09:07:17 [INFO] trainer:   [Debug E70] lung_l1=0.2930, bg_l1=0.1885
-2026-03-01 09:07:18 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0070.pt
-2026-03-01 09:15:52 [INFO] trainer: Epoch 71/200 [Train] loss: 0.465806, l1: 0.124524, ssim: 0.341282, lr_G: 0.000146, gnorm_G: 0.675439
-2026-03-01 09:16:40 [INFO] trainer: Epoch 71/200 [Val]   loss: 0.681473, l1: 0.190091, ssim: 0.491382
-2026-03-01 09:16:40 [INFO] trainer:   Saved visualization grids for epoch 71
-2026-03-01 09:17:24 [INFO] trainer:   [Debug E71] pred range=[-1.000, 1.000], residual_mag=0.0977, l1_vs_cta=0.1715
-2026-03-01 09:17:24 [INFO] trainer:   [Debug E71] lung_l1=0.2150, bg_l1=0.1608
-2026-03-01 09:25:58 [INFO] trainer: Epoch 72/200 [Train] loss: 0.464845, l1: 0.125136, ssim: 0.339709, lr_G: 0.000145, gnorm_G: 0.695059
-2026-03-01 09:26:45 [INFO] trainer: Epoch 72/200 [Val]   loss: 0.665160, l1: 0.189120, ssim: 0.476040
-2026-03-01 09:26:46 [INFO] trainer:   Saved visualization grids for epoch 72
-2026-03-01 09:27:30 [INFO] trainer:   [Debug E72] pred range=[-1.000, 1.000], residual_mag=0.1009, l1_vs_cta=0.1751
-2026-03-01 09:27:30 [INFO] trainer:   [Debug E72] lung_l1=0.2092, bg_l1=0.1662
-2026-03-01 09:36:23 [INFO] trainer: Epoch 73/200 [Train] loss: 0.467639, l1: 0.124394, ssim: 0.343244, lr_G: 0.000144, gnorm_G: 0.685120
-2026-03-01 09:37:11 [INFO] trainer: Epoch 73/200 [Val]   loss: 0.675049, l1: 0.189322, ssim: 0.485727
-2026-03-01 09:37:11 [INFO] trainer:   Saved visualization grids for epoch 73
-2026-03-01 09:37:55 [INFO] trainer:   [Debug E73] pred range=[-1.000, 1.000], residual_mag=0.1120, l1_vs_cta=0.1463
-2026-03-01 09:37:55 [INFO] trainer:   [Debug E73] lung_l1=0.1687, bg_l1=0.1387
-2026-03-01 09:46:35 [INFO] trainer: Epoch 74/200 [Train] loss: 0.465559, l1: 0.124847, ssim: 0.340712, lr_G: 0.000142, gnorm_G: 0.655513
-2026-03-01 09:47:23 [INFO] trainer: Epoch 74/200 [Val]   loss: 0.662543, l1: 0.192844, ssim: 0.469700
-2026-03-01 09:47:23 [INFO] trainer:   Saved visualization grids for epoch 74
-2026-03-01 09:48:06 [INFO] trainer:   [Debug E74] pred range=[-1.000, 1.000], residual_mag=0.1097, l1_vs_cta=0.1650
-2026-03-01 09:48:06 [INFO] trainer:   [Debug E74] lung_l1=0.1799, bg_l1=0.1607
-2026-03-01 09:57:15 [INFO] trainer: Epoch 75/200 [Train] loss: 0.461289, l1: 0.122247, ssim: 0.339041, lr_G: 0.000141, gnorm_G: 0.658199
-2026-03-01 09:58:03 [INFO] trainer: Epoch 75/200 [Val]   loss: 0.673290, l1: 0.187982, ssim: 0.485308
-2026-03-01 09:58:04 [INFO] trainer:   Saved visualization grids for epoch 75
-2026-03-01 09:58:47 [INFO] trainer:   [Debug E75] pred range=[-1.000, 1.000], residual_mag=0.1055, l1_vs_cta=0.1497
-2026-03-01 09:58:47 [INFO] trainer:   [Debug E75] lung_l1=0.1789, bg_l1=0.1409
-2026-03-01 10:07:33 [INFO] trainer: Epoch 76/200 [Train] loss: 0.463293, l1: 0.124226, ssim: 0.339067, lr_G: 0.000139, gnorm_G: 0.676695
-2026-03-01 10:08:21 [INFO] trainer: Epoch 76/200 [Val]   loss: 0.682348, l1: 0.189590, ssim: 0.492758
-2026-03-01 10:08:22 [INFO] trainer:   Saved visualization grids for epoch 76
-2026-03-01 10:09:01 [INFO] trainer:   [Debug E76] pred range=[-1.000, 1.000], residual_mag=0.1118, l1_vs_cta=0.1540
-2026-03-01 10:09:01 [INFO] trainer:   [Debug E76] lung_l1=0.1845, bg_l1=0.1439
-2026-03-01 10:17:45 [INFO] trainer: Epoch 77/200 [Train] loss: 0.464809, l1: 0.124342, ssim: 0.340467, lr_G: 0.000138, gnorm_G: 0.675605
-2026-03-01 10:18:33 [INFO] trainer: Epoch 77/200 [Val]   loss: 0.673510, l1: 0.189369, ssim: 0.484141
-2026-03-01 10:18:34 [INFO] trainer:   Saved visualization grids for epoch 77
-2026-03-01 10:19:17 [INFO] trainer:   [Debug E77] pred range=[-1.000, 1.000], residual_mag=0.1206, l1_vs_cta=0.1336
-2026-03-01 10:19:17 [INFO] trainer:   [Debug E77] lung_l1=0.1857, bg_l1=0.1237
-2026-03-01 10:28:30 [INFO] trainer: Epoch 78/200 [Train] loss: 0.458461, l1: 0.122088, ssim: 0.336373, lr_G: 0.000136, gnorm_G: 0.634593
-2026-03-01 10:29:18 [INFO] trainer: Epoch 78/200 [Val]   loss: 0.679546, l1: 0.191946, ssim: 0.487600
-2026-03-01 10:29:19 [INFO] trainer:   Saved visualization grids for epoch 78
-2026-03-01 10:30:02 [INFO] trainer:   [Debug E78] pred range=[-1.000, 1.000], residual_mag=0.1024, l1_vs_cta=0.1703
-2026-03-01 10:30:02 [INFO] trainer:   [Debug E78] lung_l1=0.3389, bg_l1=0.1429
-2026-03-01 10:39:02 [INFO] trainer: Epoch 79/200 [Train] loss: 0.463774, l1: 0.123063, ssim: 0.340712, lr_G: 0.000135, gnorm_G: 0.674970
-2026-03-01 10:39:50 [INFO] trainer: Epoch 79/200 [Val]   loss: 0.681794, l1: 0.192129, ssim: 0.489665
-2026-03-01 10:39:50 [INFO] trainer:   Saved visualization grids for epoch 79
-2026-03-01 10:40:34 [INFO] trainer:   [Debug E79] pred range=[-1.000, 1.000], residual_mag=0.0883, l1_vs_cta=0.2015
-2026-03-01 10:40:34 [INFO] trainer:   [Debug E79] lung_l1=0.1450, bg_l1=0.2094
-2026-03-01 10:49:20 [INFO] trainer: Epoch 80/200 [Train] loss: 0.459177, l1: 0.123092, ssim: 0.336084, lr_G: 0.000133, gnorm_G: 0.631887
-2026-03-01 10:50:08 [INFO] trainer: Epoch 80/200 [Val]   loss: 0.678003, l1: 0.192780, ssim: 0.485223
-2026-03-01 10:50:08 [INFO] trainer:   Saved visualization grids for epoch 80
-2026-03-01 10:50:52 [INFO] trainer:   [Debug E80] pred range=[-1.000, 1.000], residual_mag=0.1058, l1_vs_cta=0.1460
-2026-03-01 10:50:52 [INFO] trainer:   [Debug E80] lung_l1=0.1613, bg_l1=0.1414
-2026-03-01 10:50:53 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0080.pt
-2026-03-01 10:59:45 [INFO] trainer: Epoch 81/200 [Train] loss: 0.465896, l1: 0.123866, ssim: 0.342029, lr_G: 0.000132, gnorm_G: 0.606173
-2026-03-01 11:00:32 [INFO] trainer: Epoch 81/200 [Val]   loss: 0.673386, l1: 0.193987, ssim: 0.479399
-2026-03-01 11:00:32 [INFO] trainer:   Saved visualization grids for epoch 81
-2026-03-01 11:01:16 [INFO] trainer:   [Debug E81] pred range=[-1.000, 1.000], residual_mag=0.1075, l1_vs_cta=0.1655
-2026-03-01 11:01:16 [INFO] trainer:   [Debug E81] lung_l1=0.2411, bg_l1=0.1453
-2026-03-01 11:10:09 [INFO] trainer: Epoch 82/200 [Train] loss: 0.458920, l1: 0.121938, ssim: 0.336982, lr_G: 0.000130, gnorm_G: 0.696669
-2026-03-01 11:10:56 [INFO] trainer: Epoch 82/200 [Val]   loss: 0.680032, l1: 0.191038, ssim: 0.488994
-2026-03-01 11:10:57 [INFO] trainer:   Saved visualization grids for epoch 82
-2026-03-01 11:11:41 [INFO] trainer:   [Debug E82] pred range=[-1.000, 1.000], residual_mag=0.1166, l1_vs_cta=0.1462
-2026-03-01 11:11:41 [INFO] trainer:   [Debug E82] lung_l1=0.1910, bg_l1=0.1347
-2026-03-01 11:20:32 [INFO] trainer: Epoch 83/200 [Train] loss: 0.459635, l1: 0.122748, ssim: 0.336887, lr_G: 0.000129, gnorm_G: 0.666816
-2026-03-01 11:21:19 [INFO] trainer: Epoch 83/200 [Val]   loss: 0.675550, l1: 0.191474, ssim: 0.484076
-2026-03-01 11:21:20 [INFO] trainer:   Saved visualization grids for epoch 83
-2026-03-01 11:22:04 [INFO] trainer:   [Debug E83] pred range=[-1.000, 1.000], residual_mag=0.1097, l1_vs_cta=0.1460
-2026-03-01 11:22:04 [INFO] trainer:   [Debug E83] lung_l1=0.2533, bg_l1=0.1182
-2026-03-01 11:30:39 [INFO] trainer: Epoch 84/200 [Train] loss: 0.460283, l1: 0.120654, ssim: 0.339629, lr_G: 0.000127, gnorm_G: 0.676082
-2026-03-01 11:31:27 [INFO] trainer: Epoch 84/200 [Val]   loss: 0.664750, l1: 0.187553, ssim: 0.477197
-2026-03-01 11:31:28 [INFO] trainer:   Saved visualization grids for epoch 84
-2026-03-01 11:32:11 [INFO] trainer:   [Debug E84] pred range=[-1.000, 1.000], residual_mag=0.1058, l1_vs_cta=0.1531
-2026-03-01 11:32:11 [INFO] trainer:   [Debug E84] lung_l1=0.1797, bg_l1=0.1434
-2026-03-01 11:41:07 [INFO] trainer: Epoch 85/200 [Train] loss: 0.461152, l1: 0.122882, ssim: 0.338271, lr_G: 0.000126, gnorm_G: 0.693716
-2026-03-01 11:41:55 [INFO] trainer: Epoch 85/200 [Val]   loss: 0.659762, l1: 0.183067, ssim: 0.476694
-2026-03-01 11:41:55 [INFO] trainer:   Saved visualization grids for epoch 85
-2026-03-01 11:42:35 [INFO] trainer:   [Debug E85] pred range=[-1.000, 1.000], residual_mag=0.1044, l1_vs_cta=0.1315
-2026-03-01 11:42:35 [INFO] trainer:   [Debug E85] lung_l1=0.1611, bg_l1=0.1289
-2026-03-01 11:51:05 [INFO] trainer: Epoch 86/200 [Train] loss: 0.463514, l1: 0.123270, ssim: 0.340245, lr_G: 0.000124, gnorm_G: 0.641809
-2026-03-01 11:51:52 [INFO] trainer: Epoch 86/200 [Val]   loss: 0.660328, l1: 0.182649, ssim: 0.477679
-2026-03-01 11:51:53 [INFO] trainer:   Saved visualization grids for epoch 86
-2026-03-01 11:52:36 [INFO] trainer:   [Debug E86] pred range=[-1.000, 1.000], residual_mag=0.1153, l1_vs_cta=0.1448
-2026-03-01 11:52:36 [INFO] trainer:   [Debug E86] lung_l1=0.1890, bg_l1=0.1238
-2026-03-01 12:01:08 [INFO] trainer: Epoch 87/200 [Train] loss: 0.453860, l1: 0.121128, ssim: 0.332732, lr_G: 0.000123, gnorm_G: 0.618663
-2026-03-01 12:01:55 [INFO] trainer: Epoch 87/200 [Val]   loss: 0.658277, l1: 0.184932, ssim: 0.473345
-2026-03-01 12:01:56 [INFO] trainer:   Saved visualization grids for epoch 87
-2026-03-01 12:02:35 [INFO] trainer:   [Debug E87] pred range=[-1.000, 1.000], residual_mag=0.1013, l1_vs_cta=0.1428
-2026-03-01 12:02:35 [INFO] trainer:   [Debug E87] lung_l1=0.2114, bg_l1=0.1263
-2026-03-01 12:11:31 [INFO] trainer: Epoch 88/200 [Train] loss: 0.456155, l1: 0.121346, ssim: 0.334809, lr_G: 0.000121, gnorm_G: 0.617222
-2026-03-01 12:12:18 [INFO] trainer: Epoch 88/200 [Val]   loss: 0.678574, l1: 0.186627, ssim: 0.491947
-2026-03-01 12:12:18 [INFO] trainer:   Saved visualization grids for epoch 88
-2026-03-01 12:13:02 [INFO] trainer:   [Debug E88] pred range=[-1.000, 1.000], residual_mag=0.1133, l1_vs_cta=0.1446
-2026-03-01 12:13:02 [INFO] trainer:   [Debug E88] lung_l1=0.2206, bg_l1=0.1303
-2026-03-01 12:22:03 [INFO] trainer: Epoch 89/200 [Train] loss: 0.457647, l1: 0.121086, ssim: 0.336562, lr_G: 0.000120, gnorm_G: 0.671848
-2026-03-01 12:22:50 [INFO] trainer: Epoch 89/200 [Val]   loss: 0.706342, l1: 0.208296, ssim: 0.498046
-2026-03-01 12:22:51 [INFO] trainer:   Saved visualization grids for epoch 89
-2026-03-01 12:23:34 [INFO] trainer:   [Debug E89] pred range=[-1.000, 1.000], residual_mag=0.1099, l1_vs_cta=0.1472
-2026-03-01 12:23:34 [INFO] trainer:   [Debug E89] lung_l1=0.2410, bg_l1=0.1266
-2026-03-01 12:32:17 [INFO] trainer: Epoch 90/200 [Train] loss: 0.453394, l1: 0.119682, ssim: 0.333712, lr_G: 0.000118, gnorm_G: 0.641325
-2026-03-01 12:33:05 [INFO] trainer: Epoch 90/200 [Val]   loss: 0.664816, l1: 0.183830, ssim: 0.480987
-2026-03-01 12:33:05 [INFO] trainer:   Saved visualization grids for epoch 90
-2026-03-01 12:33:48 [INFO] trainer:   [Debug E90] pred range=[-1.000, 1.000], residual_mag=0.1082, l1_vs_cta=0.1539
-2026-03-01 12:33:48 [INFO] trainer:   [Debug E90] lung_l1=0.2073, bg_l1=0.1371
-2026-03-01 12:33:50 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0090.pt
-2026-03-01 12:43:05 [INFO] trainer: Epoch 91/200 [Train] loss: 0.457880, l1: 0.121951, ssim: 0.335929, lr_G: 0.000117, gnorm_G: 0.643744
-2026-03-01 12:43:53 [INFO] trainer: Epoch 91/200 [Val]   loss: 0.661106, l1: 0.185569, ssim: 0.475537
-2026-03-01 12:43:54 [INFO] trainer:   Saved visualization grids for epoch 91
-2026-03-01 12:44:37 [INFO] trainer:   [Debug E91] pred range=[-1.000, 1.000], residual_mag=0.0998, l1_vs_cta=0.1388
-2026-03-01 12:44:37 [INFO] trainer:   [Debug E91] lung_l1=0.1708, bg_l1=0.1342
-2026-03-01 12:53:26 [INFO] trainer: Epoch 92/200 [Train] loss: 0.452856, l1: 0.120130, ssim: 0.332727, lr_G: 0.000115, gnorm_G: 0.630826
-2026-03-01 12:54:13 [INFO] trainer: Epoch 92/200 [Val]   loss: 0.673683, l1: 0.188966, ssim: 0.484717
-2026-03-01 12:54:14 [INFO] trainer:   Saved visualization grids for epoch 92
-2026-03-01 12:54:57 [INFO] trainer:   [Debug E92] pred range=[-1.000, 1.000], residual_mag=0.1127, l1_vs_cta=0.1453
-2026-03-01 12:54:57 [INFO] trainer:   [Debug E92] lung_l1=0.2447, bg_l1=0.1248
-2026-03-01 13:03:58 [INFO] trainer: Epoch 93/200 [Train] loss: 0.453296, l1: 0.119257, ssim: 0.334039, lr_G: 0.000113, gnorm_G: 0.607940
-2026-03-01 13:04:46 [INFO] trainer: Epoch 93/200 [Val]   loss: 0.662469, l1: 0.184784, ssim: 0.477685
-2026-03-01 13:04:46 [INFO] trainer:   Saved visualization grids for epoch 93
-2026-03-01 13:05:26 [INFO] trainer:   [Debug E93] pred range=[-1.000, 1.000], residual_mag=0.0881, l1_vs_cta=0.2044
-2026-03-01 13:05:26 [INFO] trainer:   [Debug E93] lung_l1=0.2250, bg_l1=0.2013
-2026-03-01 13:14:05 [INFO] trainer: Epoch 94/200 [Train] loss: 0.465022, l1: 0.122629, ssim: 0.342394, lr_G: 0.000112, gnorm_G: 0.636646
-2026-03-01 13:14:53 [INFO] trainer: Epoch 94/200 [Val]   loss: 0.669482, l1: 0.186662, ssim: 0.482821
-2026-03-01 13:14:53 [INFO] trainer:   Saved visualization grids for epoch 94
-2026-03-01 13:15:36 [INFO] trainer:   [Debug E94] pred range=[-1.000, 1.000], residual_mag=0.1134, l1_vs_cta=0.1617
-2026-03-01 13:15:36 [INFO] trainer:   [Debug E94] lung_l1=0.1915, bg_l1=0.1544
-2026-03-01 13:24:23 [INFO] trainer: Epoch 95/200 [Train] loss: 0.457006, l1: 0.120797, ssim: 0.336209, lr_G: 0.000110, gnorm_G: 0.647813
-2026-03-01 13:25:10 [INFO] trainer: Epoch 95/200 [Val]   loss: 0.646006, l1: 0.182472, ssim: 0.463534
-2026-03-01 13:25:10 [INFO] trainer:   Saved visualization grids for epoch 95
-2026-03-01 13:25:54 [INFO] trainer:   [Debug E95] pred range=[-1.000, 1.000], residual_mag=0.1115, l1_vs_cta=0.1537
-2026-03-01 13:25:54 [INFO] trainer:   [Debug E95] lung_l1=0.2111, bg_l1=0.1370
-2026-03-01 13:35:01 [INFO] trainer: Epoch 96/200 [Train] loss: 0.454096, l1: 0.120108, ssim: 0.333988, lr_G: 0.000109, gnorm_G: 0.642351
-2026-03-01 13:35:49 [INFO] trainer: Epoch 96/200 [Val]   loss: 0.675387, l1: 0.191268, ssim: 0.484119
-2026-03-01 13:35:49 [INFO] trainer:   Saved visualization grids for epoch 96
-2026-03-01 13:36:33 [INFO] trainer:   [Debug E96] pred range=[-1.000, 1.000], residual_mag=0.1134, l1_vs_cta=0.1508
-2026-03-01 13:36:33 [INFO] trainer:   [Debug E96] lung_l1=0.2126, bg_l1=0.1312
-2026-03-01 13:45:45 [INFO] trainer: Epoch 97/200 [Train] loss: 0.457203, l1: 0.120854, ssim: 0.336349, lr_G: 0.000107, gnorm_G: 0.623892
-2026-03-01 13:46:33 [INFO] trainer: Epoch 97/200 [Val]   loss: 0.651575, l1: 0.181370, ssim: 0.470205
-2026-03-01 13:46:33 [INFO] trainer:   Saved visualization grids for epoch 97
-2026-03-01 13:47:17 [INFO] trainer:   [Debug E97] pred range=[-1.000, 1.000], residual_mag=0.1149, l1_vs_cta=0.1432
-2026-03-01 13:47:17 [INFO] trainer:   [Debug E97] lung_l1=0.2288, bg_l1=0.1237
-2026-03-01 13:55:59 [INFO] trainer: Epoch 98/200 [Train] loss: 0.456744, l1: 0.121527, ssim: 0.335217, lr_G: 0.000105, gnorm_G: 0.620371
-2026-03-01 13:56:47 [INFO] trainer: Epoch 98/200 [Val]   loss: 0.648198, l1: 0.185896, ssim: 0.462302
-2026-03-01 13:56:47 [INFO] trainer:   Saved visualization grids for epoch 98
-2026-03-01 13:57:31 [INFO] trainer:   [Debug E98] pred range=[-1.000, 1.000], residual_mag=0.1004, l1_vs_cta=0.1581
-2026-03-01 13:57:31 [INFO] trainer:   [Debug E98] lung_l1=0.2328, bg_l1=0.1498
-2026-03-01 14:06:21 [INFO] trainer: Epoch 99/200 [Train] loss: 0.454759, l1: 0.120610, ssim: 0.334149, lr_G: 0.000104, gnorm_G: 0.610080
-2026-03-01 14:07:09 [INFO] trainer: Epoch 99/200 [Val]   loss: 0.664787, l1: 0.180971, ssim: 0.483816
-2026-03-01 14:07:09 [INFO] trainer:   Saved visualization grids for epoch 99
-2026-03-01 14:07:53 [INFO] trainer:   [Debug E99] pred range=[-1.000, 1.000], residual_mag=0.1088, l1_vs_cta=0.1429
-2026-03-01 14:07:53 [INFO] trainer:   [Debug E99] lung_l1=0.2515, bg_l1=0.1193
-2026-03-01 14:16:29 [INFO] trainer: Epoch 100/200 [Train] loss: 0.447818, l1: 0.117585, ssim: 0.330233, lr_G: 0.000102, gnorm_G: 0.594515
-2026-03-01 14:17:17 [INFO] trainer: Epoch 100/200 [Val]   loss: 0.676225, l1: 0.190128, ssim: 0.486097
-2026-03-01 14:17:18 [INFO] trainer:   Saved visualization grids for epoch 100
-2026-03-01 14:18:01 [INFO] trainer:   [Debug E100] pred range=[-1.000, 1.000], residual_mag=0.0994, l1_vs_cta=0.1367
-2026-03-01 14:18:01 [INFO] trainer:   [Debug E100] lung_l1=0.2033, bg_l1=0.1188
-2026-03-01 14:18:03 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0100.pt
-2026-03-01 14:26:52 [INFO] trainer: Epoch 101/200 [Train] loss: 0.452593, l1: 0.121604, ssim: 0.330990, lr_G: 0.000101, gnorm_G: 0.647357
-2026-03-01 14:27:40 [INFO] trainer: Epoch 101/200 [Val]   loss: 0.705040, l1: 0.203393, ssim: 0.501647
-2026-03-01 14:27:40 [INFO] trainer:   Saved visualization grids for epoch 101
-2026-03-01 14:28:24 [INFO] trainer:   [Debug E101] pred range=[-1.000, 1.000], residual_mag=0.0933, l1_vs_cta=0.1511
-2026-03-01 14:28:24 [INFO] trainer:   [Debug E101] lung_l1=0.2273, bg_l1=0.1364
-2026-03-01 14:37:06 [INFO] trainer: Epoch 102/200 [Train] loss: 0.457120, l1: 0.122119, ssim: 0.335001, lr_G: 0.000099, gnorm_G: 0.655235
-2026-03-01 14:37:54 [INFO] trainer: Epoch 102/200 [Val]   loss: 0.676538, l1: 0.196349, ssim: 0.480189
-2026-03-01 14:37:54 [INFO] trainer:   Saved visualization grids for epoch 102
-2026-03-01 14:38:37 [INFO] trainer:   [Debug E102] pred range=[-1.000, 1.000], residual_mag=0.0975, l1_vs_cta=0.1839
-2026-03-01 14:38:37 [INFO] trainer:   [Debug E102] lung_l1=0.1516, bg_l1=0.1860
-2026-03-01 14:47:37 [INFO] trainer: Epoch 103/200 [Train] loss: 0.457828, l1: 0.122213, ssim: 0.335615, lr_G: 0.000098, gnorm_G: 0.680430
-2026-03-01 14:48:24 [INFO] trainer: Epoch 103/200 [Val]   loss: 0.685540, l1: 0.201449, ssim: 0.484091
-2026-03-01 14:48:25 [INFO] trainer:   Saved visualization grids for epoch 103
-2026-03-01 14:49:08 [INFO] trainer:   [Debug E103] pred range=[-1.000, 1.000], residual_mag=0.1143, l1_vs_cta=0.1496
-2026-03-01 14:49:08 [INFO] trainer:   [Debug E103] lung_l1=0.2015, bg_l1=0.1371
-2026-03-01 14:57:54 [INFO] trainer: Epoch 104/200 [Train] loss: 0.456184, l1: 0.122074, ssim: 0.334110, lr_G: 0.000096, gnorm_G: 0.656476
-2026-03-01 14:58:42 [INFO] trainer: Epoch 104/200 [Val]   loss: 0.678553, l1: 0.194911, ssim: 0.483643
-2026-03-01 14:58:42 [INFO] trainer:   Saved visualization grids for epoch 104
-2026-03-01 14:59:26 [INFO] trainer:   [Debug E104] pred range=[-1.000, 1.000], residual_mag=0.0999, l1_vs_cta=0.1426
-2026-03-01 14:59:26 [INFO] trainer:   [Debug E104] lung_l1=0.2247, bg_l1=0.1319
-2026-03-01 15:08:21 [INFO] trainer: Epoch 105/200 [Train] loss: 0.463666, l1: 0.122956, ssim: 0.340709, lr_G: 0.000094, gnorm_G: 0.692397
-2026-03-01 15:09:08 [INFO] trainer: Epoch 105/200 [Val]   loss: 0.664495, l1: 0.186546, ssim: 0.477948
-2026-03-01 15:09:08 [INFO] trainer:   Saved visualization grids for epoch 105
-2026-03-01 15:09:52 [INFO] trainer:   [Debug E105] pred range=[-1.000, 1.000], residual_mag=0.1130, l1_vs_cta=0.1527
-2026-03-01 15:09:52 [INFO] trainer:   [Debug E105] lung_l1=0.2441, bg_l1=0.1197
-2026-03-01 15:18:47 [INFO] trainer: Epoch 106/200 [Train] loss: 0.456513, l1: 0.120600, ssim: 0.335913, lr_G: 0.000093, gnorm_G: 0.666857
-2026-03-01 15:19:35 [INFO] trainer: Epoch 106/200 [Val]   loss: 0.694059, l1: 0.197298, ssim: 0.496761
-2026-03-01 15:19:35 [INFO] trainer:   Saved visualization grids for epoch 106
-2026-03-01 15:20:18 [INFO] trainer:   [Debug E106] pred range=[-1.000, 1.000], residual_mag=0.1113, l1_vs_cta=0.1338
-2026-03-01 15:20:18 [INFO] trainer:   [Debug E106] lung_l1=0.1567, bg_l1=0.1311
-2026-03-01 15:29:05 [INFO] trainer: Epoch 107/200 [Train] loss: 0.459024, l1: 0.122035, ssim: 0.336989, lr_G: 0.000091, gnorm_G: 0.710694
-2026-03-01 15:29:53 [INFO] trainer: Epoch 107/200 [Val]   loss: 0.661605, l1: 0.179760, ssim: 0.481844
-2026-03-01 15:29:54 [INFO] trainer:   Saved visualization grids for epoch 107
-2026-03-01 15:30:37 [INFO] trainer:   [Debug E107] pred range=[-1.000, 1.000], residual_mag=0.1005, l1_vs_cta=0.2000
-2026-03-01 15:30:37 [INFO] trainer:   [Debug E107] lung_l1=0.2756, bg_l1=0.1906
-2026-03-01 15:39:24 [INFO] trainer: Epoch 108/200 [Train] loss: 0.462462, l1: 0.121881, ssim: 0.340581, lr_G: 0.000090, gnorm_G: 0.676725
-2026-03-01 15:40:12 [INFO] trainer: Epoch 108/200 [Val]   loss: 0.666206, l1: 0.188142, ssim: 0.478064
-2026-03-01 15:40:12 [INFO] trainer:   Saved visualization grids for epoch 108
-2026-03-01 15:40:55 [INFO] trainer:   [Debug E108] pred range=[-1.000, 1.000], residual_mag=0.1141, l1_vs_cta=0.1880
-2026-03-01 15:40:55 [INFO] trainer:   [Debug E108] lung_l1=0.1517, bg_l1=0.1966
-2026-03-01 15:49:40 [INFO] trainer: Epoch 109/200 [Train] loss: 0.460456, l1: 0.122293, ssim: 0.338163, lr_G: 0.000088, gnorm_G: 0.628395
-2026-03-01 15:50:27 [INFO] trainer: Epoch 109/200 [Val]   loss: 0.657799, l1: 0.183408, ssim: 0.474390
-2026-03-01 15:50:27 [INFO] trainer:   Saved visualization grids for epoch 109
-2026-03-01 15:51:11 [INFO] trainer:   [Debug E109] pred range=[-1.000, 1.000], residual_mag=0.0985, l1_vs_cta=0.1545
-2026-03-01 15:51:11 [INFO] trainer:   [Debug E109] lung_l1=0.2294, bg_l1=0.1415
-2026-03-01 15:59:49 [INFO] trainer: Epoch 110/200 [Train] loss: 0.454824, l1: 0.121055, ssim: 0.333769, lr_G: 0.000086, gnorm_G: 0.671372
-2026-03-01 16:00:37 [INFO] trainer: Epoch 110/200 [Val]   loss: 0.676466, l1: 0.191983, ssim: 0.484483
-2026-03-01 16:00:37 [INFO] trainer:   Saved visualization grids for epoch 110
-2026-03-01 16:01:21 [INFO] trainer:   [Debug E110] pred range=[-1.000, 1.000], residual_mag=0.1051, l1_vs_cta=0.1646
-2026-03-01 16:01:21 [INFO] trainer:   [Debug E110] lung_l1=0.2496, bg_l1=0.1464
-2026-03-01 16:01:22 [INFO] trainer:   Saved checkpoint: outputs0/checkpoint_epoch0110.pt
-2026-03-01 16:10:04 [INFO] trainer: Epoch 111/200 [Train] loss: 0.461012, l1: 0.120711, ssim: 0.340302, lr_G: 0.000085, gnorm_G: 0.693186
-2026-03-01 16:10:51 [INFO] trainer: Epoch 111/200 [Val]   loss: 0.662151, l1: 0.189506, ssim: 0.472645
-2026-03-01 16:10:52 [INFO] trainer:   Saved visualization grids for epoch 111
-2026-03-01 16:11:35 [INFO] trainer:   [Debug E111] pred range=[-1.000, 1.000], residual_mag=0.0956, l1_vs_cta=0.2041
-2026-03-01 16:11:35 [INFO] trainer:   [Debug E111] lung_l1=0.2997, bg_l1=0.1889
+2026-03-03 17:19:26 [INFO] __main__: Using existing split files
+2026-03-03 17:19:26 [INFO] __main__: Using device: cuda
+2026-03-03 17:19:26 [INFO] data.dataset: Loaded 2083 files from splits/train.txt
+2026-03-03 17:19:26 [INFO] data.dataset: Loaded 100 files from splits/valid.txt
+2026-03-03 17:19:26 [INFO] __main__: Train batches: 1041, Val batches: 50
+2026-03-03 17:19:26 [INFO] __main__: Generator (G) parameters: 61.58M
+2026-03-03 17:19:27 [INFO] __main__: Discriminator (D) [patchgan] parameters: 5.55M (init=normal_0.02)
+2026-03-03 17:19:27 [INFO] __main__:   D input channels: 12 (cond_mode=none)
+2026-03-03 17:19:27 [INFO] __main__:   GAN loss: lsgan, R1: gamma=0.0 interval=16
+2026-03-03 17:19:28 [INFO] trainer:   DiffAugment:      color,translation
+2026-03-03 17:20:11 [INFO] __main__: Using existing split files
+2026-03-03 17:20:11 [INFO] __main__: Using device: cuda
+2026-03-03 17:20:11 [INFO] data.dataset: Loaded 2083 files from splits/train.txt
+2026-03-03 17:20:11 [INFO] data.dataset: Loaded 100 files from splits/valid.txt
+2026-03-03 17:20:11 [INFO] __main__: Train batches: 1041, Val batches: 50
+2026-03-03 17:20:12 [INFO] __main__: Generator (G) parameters: 61.58M
+2026-03-03 17:20:12 [INFO] __main__: Discriminator (D) [patchgan] parameters: 5.55M (init=normal_0.02)
+2026-03-03 17:20:12 [INFO] __main__:   D input channels: 12 (cond_mode=none)
+2026-03-03 17:20:12 [INFO] __main__:   GAN loss: lsgan, R1: gamma=0.0 interval=16
+2026-03-03 17:20:13 [INFO] trainer:   DiffAugment:      color,translation
+2026-03-03 17:21:11 [INFO] __main__: Using existing split files
+2026-03-03 17:21:11 [INFO] __main__: Using device: cuda
+2026-03-03 17:21:11 [INFO] data.dataset: Loaded 2083 files from splits/train.txt
+2026-03-03 17:21:11 [INFO] data.dataset: Loaded 100 files from splits/valid.txt
+2026-03-03 17:21:11 [INFO] __main__: Train batches: 1041, Val batches: 50
+2026-03-03 17:21:11 [INFO] __main__: Generator (G) parameters: 61.58M
+2026-03-03 17:21:11 [INFO] __main__: Discriminator (D) [patchgan] parameters: 5.55M (init=normal_0.02)
+2026-03-03 17:21:11 [INFO] __main__:   D input channels: 12 (cond_mode=none)
+2026-03-03 17:21:11 [INFO] __main__:   GAN loss: lsgan, R1: gamma=0.0 interval=16
+2026-03-03 17:21:13 [INFO] trainer:   DiffAugment:      color,translation
+2026-03-03 17:21:13 [INFO] trainer:   D quality aug:    blur,noise,downsample (prob=0.5, weight=0.5)
+2026-03-03 17:21:13 [INFO] trainer:   Frequency loss:   weight=0.2
+2026-03-03 17:21:13 [INFO] trainer:   CTA degradation:  prob=0.2 (CTADegradation(alpha_range=(0.7, 1.3), blur_prob=0.7, noise_prob=0.5))
+2026-03-03 17:21:13 [INFO] models.nn_utils: Loading pretrained weights from: /data0/yzhen/a_test_model/v0/outputs_phase1_g/checkpoint_epoch0010.pt
+2026-03-03 17:21:14 [INFO] models.nn_utils:   Extracted component: 'model_state_dict'
+2026-03-03 17:21:14 [INFO] models.nn_utils:   Loaded 290/290 parameter tensors
+2026-03-03 17:21:14 [INFO] trainer:   Skip warmup: G LR starts at full value
+2026-03-03 17:21:14 [INFO] trainer:   Lung weight schedule: [(999, 20.0)]
+2026-03-03 17:21:14 [INFO] trainer:   Refine (G2):      OFF
+2026-03-03 17:21:14 [INFO] trainer:   Registration:     OFF
+2026-03-03 17:21:14 [INFO] trainer:   Discriminator:    ON
+2026-03-03 17:21:14 [INFO] trainer:   Grad clipping:    5.0
+2026-03-03 17:21:14 [INFO] trainer:   Grad accumulation:8 steps
+2026-03-03 17:21:14 [INFO] trainer:   D cond mode:      none
+2026-03-03 17:21:14 [INFO] trainer:   GAN loss type:    lsgan
+2026-03-03 17:21:14 [INFO] trainer:   Label smoothing:  0.0
+2026-03-03 17:21:14 [INFO] trainer:   R1 gamma:         0.0 (interval=16)
+2026-03-03 17:21:14 [INFO] trainer:   D LR scheduler:   cosine
+2026-03-03 17:21:14 [INFO] trainer:   D type:           patchgan
+2026-03-03 17:21:14 [INFO] trainer: Starting training for 100 epochs
+2026-03-03 17:21:14 [INFO] trainer:   Batch size:    2
+2026-03-03 17:21:14 [INFO] trainer:   LR (G):        0.0002
+2026-03-03 17:21:14 [INFO] trainer:   Output dir:    outputs_phase2_g_d
+2026-03-03 17:21:14 [INFO] trainer:   D warmup: pre-training D for 500 steps (G frozen, D_lr=0.0004)...
+2026-03-03 17:22:36 [INFO] trainer:     D warmup step 100/500: D_real=0.3719, D_fake=0.3574, d_loss=0.6975, grad_norm=4.8364, lr=0.000400
+2026-03-03 17:23:29 [INFO] trainer:     D warmup step 200/500: D_real=0.3849, D_fake=0.3719, d_loss=0.6930, grad_norm=7.5574, lr=0.000400
+2026-03-03 17:24:33 [INFO] trainer:     D warmup step 300/500: D_real=0.4663, D_fake=0.4521, d_loss=0.5086, grad_norm=5.6096, lr=0.000400
+2026-03-03 17:25:32 [INFO] trainer:     D warmup step 400/500: D_real=0.3120, D_fake=0.3105, d_loss=0.5888, grad_norm=8.1562, lr=0.000400
+2026-03-03 17:26:39 [INFO] trainer:     D warmup step 500/500: D_real=0.2559, D_fake=0.2446, d_loss=0.6411, grad_norm=10.8841, lr=0.000400
+2026-03-03 17:26:57 [INFO] trainer:   D warmup complete: D_real_avg=0.4149, D_fake_avg=0.4102
+2026-03-03 17:26:57 [INFO] trainer:   Epoch 1: lung_weight=20.0
+2026-03-03 17:38:16 [INFO] trainer: Epoch 1/100 [Train] loss: 0.359057, l1: 0.139154, ssim: 0.219902, lr_G: 0.000200, freq: 0.021322, gan_g: 0.772799, fm: 0.366759, d_loss: 0.604904, lr_D: 0.000400, D_real: 0.413442, D_fake: 0.386639, w_recon: 0.359057, w_gan: 0.015456, w_fm: 0.366759, eff_gan_w: 0.020000, gnorm_G: 1.020321, gnorm_D: 5.837975
+2026-03-03 17:38:52 [INFO] trainer: Epoch 1/100 [Val]   loss: 0.492779, l1: 0.178025, ssim: 0.314754
+2026-03-03 17:38:53 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0001.pt
+2026-03-03 17:38:54 [INFO] trainer:   New best validation loss: 0.492779
+2026-03-03 17:38:55 [INFO] trainer:   Saved visualization grids for epoch 1
+2026-03-03 17:39:24 [INFO] trainer:   [Debug E1] pred range=[-1.000, 1.000], residual_mag=0.1140, l1_vs_cta=0.1711
+2026-03-03 17:39:24 [WARNING] trainer:   [Debug E1] ⚠ Output saturation: at+1=1.9%, at-1=39.0%
+2026-03-03 17:39:24 [INFO] trainer:   [Debug E1] sharpness: pred_hf=0.0703, cta_hf=0.1128, ratio=0.623 (blurry)
+2026-03-03 17:39:24 [INFO] trainer:   [Debug E1] lung_l1=0.2172, bg_l1=0.1573
+2026-03-03 17:50:52 [INFO] trainer: Epoch 2/100 [Train] loss: 0.357841, l1: 0.138426, ssim: 0.219415, lr_G: 0.000200, freq: 0.021269, gan_g: 0.777451, fm: 0.369644, d_loss: 0.596435, lr_D: 0.000400, D_real: 0.418914, D_fake: 0.384847, w_recon: 0.357841, w_gan: 0.031098, w_fm: 0.369644, eff_gan_w: 0.040000, gnorm_G: 1.060332, gnorm_D: 4.830299
+2026-03-03 17:51:28 [INFO] trainer: Epoch 2/100 [Val]   loss: 0.477488, l1: 0.170940, ssim: 0.306548
+2026-03-03 17:51:29 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0002.pt
+2026-03-03 17:51:34 [INFO] trainer:   New best validation loss: 0.477488
+2026-03-03 17:51:34 [INFO] trainer:   Saved visualization grids for epoch 2
+2026-03-03 17:52:02 [INFO] trainer:   [Debug E2] pred range=[-1.000, 1.000], residual_mag=0.1348, l1_vs_cta=0.2455
+2026-03-03 17:52:02 [WARNING] trainer:   [Debug E2] ⚠ Output saturation: at+1=4.1%, at-1=38.6%
+2026-03-03 17:52:02 [INFO] trainer:   [Debug E2] sharpness: pred_hf=0.0714, cta_hf=0.1122, ratio=0.637 (blurry)
+2026-03-03 17:52:02 [INFO] trainer:   [Debug E2] lung_l1=0.2871, bg_l1=0.2340
+2026-03-03 18:03:38 [INFO] trainer: Epoch 3/100 [Train] loss: 0.356946, l1: 0.137783, ssim: 0.219162, lr_G: 0.000200, freq: 0.021113, gan_g: 0.759598, fm: 0.366887, d_loss: 0.613653, lr_D: 0.000399, D_real: 0.413054, D_fake: 0.393015, w_recon: 0.356946, w_gan: 0.045576, w_fm: 0.366887, eff_gan_w: 0.060000, gnorm_G: 0.997558, gnorm_D: 5.180308
+2026-03-03 18:04:13 [INFO] trainer: Epoch 3/100 [Val]   loss: 0.474381, l1: 0.174656, ssim: 0.299724
+2026-03-03 18:04:15 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0003.pt
+2026-03-03 18:04:21 [INFO] trainer:   New best validation loss: 0.474381
+2026-03-03 18:04:21 [INFO] trainer:   Saved visualization grids for epoch 3
+2026-03-03 18:04:51 [INFO] trainer:   [Debug E3] pred range=[-1.000, 1.000], residual_mag=0.1354, l1_vs_cta=0.1788
+2026-03-03 18:04:51 [WARNING] trainer:   [Debug E3] ⚠ Output saturation: at+1=2.2%, at-1=28.4%
+2026-03-03 18:04:51 [INFO] trainer:   [Debug E3] sharpness: pred_hf=0.0652, cta_hf=0.1060, ratio=0.615 (blurry)
+2026-03-03 18:04:51 [INFO] trainer:   [Debug E3] lung_l1=0.2392, bg_l1=0.1683
+2026-03-03 18:16:23 [INFO] trainer: Epoch 4/100 [Train] loss: 0.354326, l1: 0.137524, ssim: 0.216802, lr_G: 0.000199, freq: 0.021096, gan_g: 0.745943, fm: 0.363825, d_loss: 0.606194, lr_D: 0.000399, D_real: 0.410494, D_fake: 0.396390, w_recon: 0.354326, w_gan: 0.059675, w_fm: 0.363825, eff_gan_w: 0.080000, gnorm_G: 0.893654, gnorm_D: 4.551509
+2026-03-03 18:16:58 [INFO] trainer: Epoch 4/100 [Val]   loss: 0.485713, l1: 0.176503, ssim: 0.309210
+2026-03-03 18:16:59 [INFO] trainer:   Saved visualization grids for epoch 4
+2026-03-03 18:17:28 [INFO] trainer:   [Debug E4] pred range=[-1.000, 1.000], residual_mag=0.1234, l1_vs_cta=0.2741
+2026-03-03 18:17:28 [WARNING] trainer:   [Debug E4] ⚠ Output saturation: at+1=1.3%, at-1=38.0%
+2026-03-03 18:17:28 [INFO] trainer:   [Debug E4] sharpness: pred_hf=0.0642, cta_hf=0.1368, ratio=0.469 (blurry)
+2026-03-03 18:17:28 [INFO] trainer:   [Debug E4] lung_l1=0.2911, bg_l1=0.2706
+2026-03-03 18:28:38 [INFO] trainer: Epoch 5/100 [Train] loss: 0.351513, l1: 0.136778, ssim: 0.214735, lr_G: 0.000199, freq: 0.021180, gan_g: 0.749840, fm: 0.368092, d_loss: 0.614269, lr_D: 0.000398, D_real: 0.405056, D_fake: 0.394865, w_recon: 0.351513, w_gan: 0.074984, w_fm: 0.368092, eff_gan_w: 0.100000, gnorm_G: 0.823742, gnorm_D: 4.623906
+2026-03-03 18:29:13 [INFO] trainer: Epoch 5/100 [Val]   loss: 0.494829, l1: 0.181015, ssim: 0.313814
+2026-03-03 18:29:13 [INFO] trainer:   Saved visualization grids for epoch 5
+2026-03-03 18:29:41 [INFO] trainer:   [Debug E5] pred range=[-1.000, 1.000], residual_mag=0.1244, l1_vs_cta=0.1791
+2026-03-03 18:29:41 [WARNING] trainer:   [Debug E5] ⚠ Output saturation: at+1=2.1%, at-1=38.9%
+2026-03-03 18:29:41 [INFO] trainer:   [Debug E5] sharpness: pred_hf=0.0719, cta_hf=0.1153, ratio=0.624 (blurry)
+2026-03-03 18:29:41 [INFO] trainer:   [Debug E5] lung_l1=0.2552, bg_l1=0.1547
+2026-03-03 18:40:47 [INFO] trainer: Epoch 6/100 [Train] loss: 0.351211, l1: 0.136847, ssim: 0.214364, lr_G: 0.000198, freq: 0.021011, gan_g: 0.735759, fm: 0.356786, d_loss: 0.609843, lr_D: 0.000397, D_real: 0.406353, D_fake: 0.399919, w_recon: 0.351211, w_gan: 0.088291, w_fm: 0.356786, eff_gan_w: 0.120000, gnorm_G: 0.845843, gnorm_D: 4.450070
+2026-03-03 18:41:23 [INFO] trainer: Epoch 6/100 [Val]   loss: 0.477271, l1: 0.176364, ssim: 0.300907
+2026-03-03 18:41:23 [INFO] trainer:   Saved visualization grids for epoch 6
+2026-03-03 18:41:53 [INFO] trainer:   [Debug E6] pred range=[-1.000, 1.000], residual_mag=0.1249, l1_vs_cta=0.1829
+2026-03-03 18:41:53 [WARNING] trainer:   [Debug E6] ⚠ Output saturation: at+1=2.6%, at-1=38.9%
+2026-03-03 18:41:53 [INFO] trainer:   [Debug E6] sharpness: pred_hf=0.0720, cta_hf=0.1152, ratio=0.626 (blurry)
+2026-03-03 18:41:53 [INFO] trainer:   [Debug E6] lung_l1=0.2525, bg_l1=0.1602
+2026-03-03 18:53:01 [INFO] trainer: Epoch 7/100 [Train] loss: 0.355035, l1: 0.138041, ssim: 0.216994, lr_G: 0.000198, freq: 0.020969, gan_g: 0.739550, fm: 0.358244, d_loss: 0.610636, lr_D: 0.000396, D_real: 0.403709, D_fake: 0.398086, w_recon: 0.355035, w_gan: 0.103537, w_fm: 0.358244, eff_gan_w: 0.140000, gnorm_G: 0.833323, gnorm_D: 4.071081
+2026-03-03 18:53:37 [INFO] trainer: Epoch 7/100 [Val]   loss: 0.476358, l1: 0.175116, ssim: 0.301242
+2026-03-03 18:53:37 [INFO] trainer:   Saved visualization grids for epoch 7
+2026-03-03 18:54:07 [INFO] trainer:   [Debug E7] pred range=[-1.000, 1.000], residual_mag=0.1222, l1_vs_cta=0.1985
+2026-03-03 18:54:07 [WARNING] trainer:   [Debug E7] ⚠ Output saturation: at+1=2.5%, at-1=39.7%
+2026-03-03 18:54:07 [INFO] trainer:   [Debug E7] sharpness: pred_hf=0.0662, cta_hf=0.1089, ratio=0.607 (blurry)
+2026-03-03 18:54:07 [INFO] trainer:   [Debug E7] lung_l1=0.2390, bg_l1=0.1902
+2026-03-03 19:05:20 [INFO] trainer: Epoch 8/100 [Train] loss: 0.354870, l1: 0.138264, ssim: 0.216605, lr_G: 0.000197, freq: 0.020980, gan_g: 0.726911, fm: 0.361321, d_loss: 0.606469, lr_D: 0.000394, D_real: 0.407854, D_fake: 0.402806, w_recon: 0.354870, w_gan: 0.116306, w_fm: 0.361321, eff_gan_w: 0.160000, gnorm_G: 0.799589, gnorm_D: 4.353673
+2026-03-03 19:05:56 [INFO] trainer: Epoch 8/100 [Val]   loss: 0.488965, l1: 0.181269, ssim: 0.307696
+2026-03-03 19:05:56 [INFO] trainer:   Saved visualization grids for epoch 8
+2026-03-03 19:06:26 [INFO] trainer:   [Debug E8] pred range=[-1.000, 1.000], residual_mag=0.1212, l1_vs_cta=0.2078
+2026-03-03 19:06:26 [WARNING] trainer:   [Debug E8] ⚠ Output saturation: at+1=1.5%, at-1=38.7%
+2026-03-03 19:06:26 [INFO] trainer:   [Debug E8] sharpness: pred_hf=0.0752, cta_hf=0.1112, ratio=0.676 (blurry)
+2026-03-03 19:06:26 [INFO] trainer:   [Debug E8] lung_l1=0.2684, bg_l1=0.1889
+2026-03-03 19:17:50 [INFO] trainer: Epoch 9/100 [Train] loss: 0.351054, l1: 0.136278, ssim: 0.214777, lr_G: 0.000196, freq: 0.020848, gan_g: 0.725027, fm: 0.359896, d_loss: 0.604200, lr_D: 0.000393, D_real: 0.407259, D_fake: 0.404012, w_recon: 0.351054, w_gan: 0.130505, w_fm: 0.359896, eff_gan_w: 0.180000, gnorm_G: 0.714213, gnorm_D: 4.148261
+2026-03-03 19:18:27 [INFO] trainer: Epoch 9/100 [Val]   loss: 0.490847, l1: 0.179889, ssim: 0.310958
+2026-03-03 19:18:27 [INFO] trainer:   Saved visualization grids for epoch 9
+2026-03-03 19:18:56 [INFO] trainer:   [Debug E9] pred range=[-1.000, 1.000], residual_mag=0.1184, l1_vs_cta=0.2619
+2026-03-03 19:18:56 [WARNING] trainer:   [Debug E9] ⚠ Output saturation: at+1=1.1%, at-1=38.5%
+2026-03-03 19:18:56 [INFO] trainer:   [Debug E9] sharpness: pred_hf=0.0611, cta_hf=0.1303, ratio=0.469 (blurry)
+2026-03-03 19:18:56 [INFO] trainer:   [Debug E9] lung_l1=0.2854, bg_l1=0.2585
+2026-03-03 19:30:06 [INFO] trainer: Epoch 10/100 [Train] loss: 0.350645, l1: 0.134803, ssim: 0.215842, lr_G: 0.000196, freq: 0.020869, gan_g: 0.718219, fm: 0.362620, d_loss: 0.608150, lr_D: 0.000391, D_real: 0.411531, D_fake: 0.408481, w_recon: 0.350645, w_gan: 0.143644, w_fm: 0.362620, eff_gan_w: 0.200000, gnorm_G: 0.695043, gnorm_D: 4.167966
+2026-03-03 19:30:42 [INFO] trainer: Epoch 10/100 [Val]   loss: 0.477759, l1: 0.176986, ssim: 0.300773
+2026-03-03 19:30:43 [INFO] trainer:   Saved visualization grids for epoch 10
+2026-03-03 19:31:12 [INFO] trainer:   [Debug E10] pred range=[-1.000, 1.000], residual_mag=0.1350, l1_vs_cta=0.1988
+2026-03-03 19:31:12 [WARNING] trainer:   [Debug E10] ⚠ Output saturation: at+1=4.9%, at-1=38.4%
+2026-03-03 19:31:12 [INFO] trainer:   [Debug E10] sharpness: pred_hf=0.0802, cta_hf=0.1130, ratio=0.710 (ok)
+2026-03-03 19:31:12 [INFO] trainer:   [Debug E10] lung_l1=0.2883, bg_l1=0.1595
+2026-03-03 19:31:13 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0010.pt
+2026-03-03 19:31:13 [INFO] trainer:   Epoch 11: lung_weight=20.0
+2026-03-03 19:42:19 [INFO] trainer: Epoch 11/100 [Train] loss: 0.357285, l1: 0.139295, ssim: 0.217991, lr_G: 0.000195, freq: 0.020981, gan_g: 0.724007, fm: 0.362328, d_loss: 0.603452, lr_D: 0.000389, D_real: 0.406974, D_fake: 0.404142, w_recon: 0.357285, w_gan: 0.144801, w_fm: 0.362328, eff_gan_w: 0.200000, gnorm_G: 0.754625, gnorm_D: 4.187222
+2026-03-03 19:42:55 [INFO] trainer: Epoch 11/100 [Val]   loss: 0.482288, l1: 0.174829, ssim: 0.307459
+2026-03-03 19:42:56 [INFO] trainer:   Saved visualization grids for epoch 11
+2026-03-03 19:43:25 [INFO] trainer:   [Debug E11] pred range=[-1.000, 1.000], residual_mag=0.1228, l1_vs_cta=0.2459
+2026-03-03 19:43:25 [WARNING] trainer:   [Debug E11] ⚠ Output saturation: at+1=0.6%, at-1=29.3%
+2026-03-03 19:43:25 [INFO] trainer:   [Debug E11] sharpness: pred_hf=0.0609, cta_hf=0.1095, ratio=0.556 (blurry)
+2026-03-03 19:43:25 [INFO] trainer:   [Debug E11] lung_l1=0.2663, bg_l1=0.2450
+2026-03-03 19:54:46 [INFO] trainer: Epoch 12/100 [Train] loss: 0.357827, l1: 0.138612, ssim: 0.219215, lr_G: 0.000193, freq: 0.020942, gan_g: 0.716570, fm: 0.362266, d_loss: 0.600764, lr_D: 0.000387, D_real: 0.413625, D_fake: 0.408658, w_recon: 0.357827, w_gan: 0.143314, w_fm: 0.362266, eff_gan_w: 0.200000, gnorm_G: 0.690204, gnorm_D: 4.396149
+2026-03-03 19:55:22 [INFO] trainer: Epoch 12/100 [Val]   loss: 0.471936, l1: 0.167574, ssim: 0.304362
+2026-03-03 19:55:24 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0012.pt
+2026-03-03 19:55:31 [INFO] trainer:   New best validation loss: 0.471936
+2026-03-03 19:55:32 [INFO] trainer:   Saved visualization grids for epoch 12
+2026-03-03 19:56:02 [INFO] trainer:   [Debug E12] pred range=[-1.000, 1.000], residual_mag=0.1036, l1_vs_cta=0.2235
+2026-03-03 19:56:02 [WARNING] trainer:   [Debug E12] ⚠ Output saturation: at+1=1.2%, at-1=40.7%
+2026-03-03 19:56:02 [INFO] trainer:   [Debug E12] sharpness: pred_hf=0.0721, cta_hf=0.1071, ratio=0.674 (blurry)
+2026-03-03 19:56:02 [INFO] trainer:   [Debug E12] lung_l1=0.2607, bg_l1=0.2177
+2026-03-03 20:07:24 [INFO] trainer: Epoch 13/100 [Train] loss: 0.356736, l1: 0.138082, ssim: 0.218653, lr_G: 0.000192, freq: 0.020938, gan_g: 0.716675, fm: 0.366011, d_loss: 0.599029, lr_D: 0.000385, D_real: 0.413002, D_fake: 0.408072, w_recon: 0.356736, w_gan: 0.143335, w_fm: 0.366011, eff_gan_w: 0.200000, gnorm_G: 0.676941, gnorm_D: 3.968826
+2026-03-03 20:07:59 [INFO] trainer: Epoch 13/100 [Val]   loss: 0.480918, l1: 0.174857, ssim: 0.306061
+2026-03-03 20:08:00 [INFO] trainer:   Saved visualization grids for epoch 13
+2026-03-03 20:08:29 [INFO] trainer:   [Debug E13] pred range=[-1.000, 1.000], residual_mag=0.1188, l1_vs_cta=0.2372
+2026-03-03 20:08:29 [WARNING] trainer:   [Debug E13] ⚠ Output saturation: at+1=2.5%, at-1=40.1%
+2026-03-03 20:08:29 [INFO] trainer:   [Debug E13] sharpness: pred_hf=0.0798, cta_hf=0.1118, ratio=0.714 (ok)
+2026-03-03 20:08:29 [INFO] trainer:   [Debug E13] lung_l1=0.2847, bg_l1=0.2235
+2026-03-03 20:19:39 [INFO] trainer: Epoch 14/100 [Train] loss: 0.353600, l1: 0.136808, ssim: 0.216791, lr_G: 0.000191, freq: 0.020792, gan_g: 0.713129, fm: 0.363462, d_loss: 0.597726, lr_D: 0.000382, D_real: 0.415970, D_fake: 0.410188, w_recon: 0.353600, w_gan: 0.142626, w_fm: 0.363462, eff_gan_w: 0.200000, gnorm_G: 0.727922, gnorm_D: 4.281817
+2026-03-03 20:20:15 [INFO] trainer: Epoch 14/100 [Val]   loss: 0.478154, l1: 0.178619, ssim: 0.299535
+2026-03-03 20:20:15 [INFO] trainer:   Saved visualization grids for epoch 14
+2026-03-03 20:20:45 [INFO] trainer:   [Debug E14] pred range=[-1.000, 1.000], residual_mag=0.1262, l1_vs_cta=0.1885
+2026-03-03 20:20:45 [WARNING] trainer:   [Debug E14] ⚠ Output saturation: at+1=1.0%, at-1=27.4%
+2026-03-03 20:20:45 [INFO] trainer:   [Debug E14] sharpness: pred_hf=0.0673, cta_hf=0.1019, ratio=0.661 (blurry)
+2026-03-03 20:20:45 [INFO] trainer:   [Debug E14] lung_l1=0.2641, bg_l1=0.1814
+2026-03-03 20:31:53 [INFO] trainer: Epoch 15/100 [Train] loss: 0.358755, l1: 0.139257, ssim: 0.219498, lr_G: 0.000190, freq: 0.020653, gan_g: 0.714924, fm: 0.364523, d_loss: 0.595372, lr_D: 0.000379, D_real: 0.416206, D_fake: 0.409647, w_recon: 0.358755, w_gan: 0.142985, w_fm: 0.364523, eff_gan_w: 0.200000, gnorm_G: 0.674466, gnorm_D: 3.642861
+2026-03-03 20:32:29 [INFO] trainer: Epoch 15/100 [Val]   loss: 0.477015, l1: 0.175387, ssim: 0.301628
+2026-03-03 20:32:30 [INFO] trainer:   Saved visualization grids for epoch 15
+2026-03-03 20:32:59 [INFO] trainer:   [Debug E15] pred range=[-1.000, 1.000], residual_mag=0.1393, l1_vs_cta=0.1869
+2026-03-03 20:32:59 [WARNING] trainer:   [Debug E15] ⚠ Output saturation: at+1=5.0%, at-1=37.7%
+2026-03-03 20:32:59 [INFO] trainer:   [Debug E15] sharpness: pred_hf=0.0831, cta_hf=0.1151, ratio=0.722 (ok)
+2026-03-03 20:32:59 [INFO] trainer:   [Debug E15] lung_l1=0.2390, bg_l1=0.1627
+2026-03-03 20:44:08 [INFO] trainer: Epoch 16/100 [Train] loss: 0.357784, l1: 0.137914, ssim: 0.219870, lr_G: 0.000188, freq: 0.020857, gan_g: 0.708775, fm: 0.361790, d_loss: 0.592313, lr_D: 0.000376, D_real: 0.419036, D_fake: 0.411743, w_recon: 0.357784, w_gan: 0.141755, w_fm: 0.361790, eff_gan_w: 0.200000, gnorm_G: 0.711343, gnorm_D: 4.153687
+2026-03-03 20:44:44 [INFO] trainer: Epoch 16/100 [Val]   loss: 0.490889, l1: 0.173522, ssim: 0.317367
+2026-03-03 20:44:45 [INFO] trainer:   Saved visualization grids for epoch 16
+2026-03-03 20:45:14 [INFO] trainer:   [Debug E16] pred range=[-1.000, 1.000], residual_mag=0.1263, l1_vs_cta=0.1933
+2026-03-03 20:45:14 [WARNING] trainer:   [Debug E16] ⚠ Output saturation: at+1=4.8%, at-1=39.2%
+2026-03-03 20:45:14 [INFO] trainer:   [Debug E16] sharpness: pred_hf=0.0812, cta_hf=0.1124, ratio=0.722 (ok)
+2026-03-03 20:45:14 [INFO] trainer:   [Debug E16] lung_l1=0.2833, bg_l1=0.1609
+2026-03-03 20:56:37 [INFO] trainer: Epoch 17/100 [Train] loss: 0.356142, l1: 0.137301, ssim: 0.218841, lr_G: 0.000187, freq: 0.020861, gan_g: 0.697240, fm: 0.369473, d_loss: 0.590125, lr_D: 0.000373, D_real: 0.423982, D_fake: 0.417209, w_recon: 0.356142, w_gan: 0.139448, w_fm: 0.369473, eff_gan_w: 0.200000, gnorm_G: 0.636965, gnorm_D: 3.649806
+2026-03-03 20:57:12 [INFO] trainer: Epoch 17/100 [Val]   loss: 0.476613, l1: 0.176798, ssim: 0.299815
+2026-03-03 20:57:13 [INFO] trainer:   Saved visualization grids for epoch 17
+2026-03-03 20:57:43 [INFO] trainer:   [Debug E17] pred range=[-1.000, 1.000], residual_mag=0.1263, l1_vs_cta=0.2087
+2026-03-03 20:57:43 [WARNING] trainer:   [Debug E17] ⚠ Output saturation: at+1=3.4%, at-1=39.0%
+2026-03-03 20:57:43 [INFO] trainer:   [Debug E17] sharpness: pred_hf=0.0826, cta_hf=0.1110, ratio=0.744 (ok)
+2026-03-03 20:57:43 [INFO] trainer:   [Debug E17] lung_l1=0.2668, bg_l1=0.1900
+2026-03-03 21:09:02 [INFO] trainer: Epoch 18/100 [Train] loss: 0.360325, l1: 0.138716, ssim: 0.221609, lr_G: 0.000185, freq: 0.020753, gan_g: 0.706036, fm: 0.367303, d_loss: 0.588934, lr_D: 0.000370, D_real: 0.420046, D_fake: 0.412377, w_recon: 0.360325, w_gan: 0.141207, w_fm: 0.367303, eff_gan_w: 0.200000, gnorm_G: 0.701754, gnorm_D: 3.003404
+2026-03-03 21:09:38 [INFO] trainer: Epoch 18/100 [Val]   loss: 0.505055, l1: 0.187872, ssim: 0.317183
+2026-03-03 21:09:39 [INFO] trainer:   Saved visualization grids for epoch 18
+2026-03-03 21:10:08 [INFO] trainer:   [Debug E18] pred range=[-1.000, 1.000], residual_mag=0.1289, l1_vs_cta=0.2166
+2026-03-03 21:10:08 [WARNING] trainer:   [Debug E18] ⚠ Output saturation: at+1=1.7%, at-1=22.1%
+2026-03-03 21:10:08 [INFO] trainer:   [Debug E18] sharpness: pred_hf=0.0883, cta_hf=0.1089, ratio=0.811 (ok)
+2026-03-03 21:10:08 [INFO] trainer:   [Debug E18] lung_l1=0.2665, bg_l1=0.1995
+2026-03-03 21:21:20 [INFO] trainer: Epoch 19/100 [Train] loss: 0.354596, l1: 0.136836, ssim: 0.217760, lr_G: 0.000183, freq: 0.020914, gan_g: 0.699726, fm: 0.367545, d_loss: 0.588181, lr_D: 0.000367, D_real: 0.422830, D_fake: 0.415788, w_recon: 0.354596, w_gan: 0.139945, w_fm: 0.367545, eff_gan_w: 0.200000, gnorm_G: 0.651667, gnorm_D: 3.495631
+2026-03-03 21:21:56 [INFO] trainer: Epoch 19/100 [Val]   loss: 0.484277, l1: 0.177575, ssim: 0.306702
+2026-03-03 21:21:57 [INFO] trainer:   Saved visualization grids for epoch 19
+2026-03-03 21:22:26 [INFO] trainer:   [Debug E19] pred range=[-1.000, 1.000], residual_mag=0.1029, l1_vs_cta=0.2282
+2026-03-03 21:22:26 [WARNING] trainer:   [Debug E19] ⚠ Output saturation: at+1=2.1%, at-1=37.0%
+2026-03-03 21:22:26 [INFO] trainer:   [Debug E19] sharpness: pred_hf=0.0876, cta_hf=0.1032, ratio=0.849 (ok)
+2026-03-03 21:22:26 [INFO] trainer:   [Debug E19] lung_l1=0.2703, bg_l1=0.2224
+2026-03-03 21:33:56 [INFO] trainer: Epoch 20/100 [Train] loss: 0.357901, l1: 0.137700, ssim: 0.220201, lr_G: 0.000182, freq: 0.020738, gan_g: 0.691413, fm: 0.369187, d_loss: 0.586718, lr_D: 0.000363, D_real: 0.427117, D_fake: 0.419494, w_recon: 0.357901, w_gan: 0.138283, w_fm: 0.369187, eff_gan_w: 0.200000, gnorm_G: 0.599311, gnorm_D: 3.504442
+2026-03-03 21:34:32 [INFO] trainer: Epoch 20/100 [Val]   loss: 0.499527, l1: 0.181830, ssim: 0.317697
+2026-03-03 21:34:33 [INFO] trainer:   Saved visualization grids for epoch 20
+2026-03-03 21:35:02 [INFO] trainer:   [Debug E20] pred range=[-1.000, 1.000], residual_mag=0.1269, l1_vs_cta=0.1878
+2026-03-03 21:35:02 [WARNING] trainer:   [Debug E20] ⚠ Output saturation: at+1=1.7%, at-1=26.2%
+2026-03-03 21:35:02 [INFO] trainer:   [Debug E20] sharpness: pred_hf=0.0772, cta_hf=0.1160, ratio=0.666 (blurry)
+2026-03-03 21:35:02 [INFO] trainer:   [Debug E20] lung_l1=0.3053, bg_l1=0.1654
+2026-03-03 21:35:04 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0020.pt
+2026-03-03 21:35:04 [INFO] trainer:   Epoch 21: lung_weight=20.0
+2026-03-03 21:46:19 [INFO] trainer: Epoch 21/100 [Train] loss: 0.359436, l1: 0.138239, ssim: 0.221197, lr_G: 0.000180, freq: 0.020825, gan_g: 0.698601, fm: 0.371108, d_loss: 0.587339, lr_D: 0.000359, D_real: 0.426326, D_fake: 0.417449, w_recon: 0.359436, w_gan: 0.139720, w_fm: 0.371108, eff_gan_w: 0.200000, gnorm_G: 0.650666, gnorm_D: 3.934746
+2026-03-03 21:46:55 [INFO] trainer: Epoch 21/100 [Val]   loss: 0.486863, l1: 0.176262, ssim: 0.310600
+2026-03-03 21:46:56 [INFO] trainer:   Saved visualization grids for epoch 21
+2026-03-03 21:47:25 [INFO] trainer:   [Debug E21] pred range=[-1.000, 1.000], residual_mag=0.1413, l1_vs_cta=0.3045
+2026-03-03 21:47:25 [WARNING] trainer:   [Debug E21] ⚠ Output saturation: at+1=3.5%, at-1=37.4%
+2026-03-03 21:47:25 [INFO] trainer:   [Debug E21] sharpness: pred_hf=0.0797, cta_hf=0.1346, ratio=0.593 (blurry)
+2026-03-03 21:47:25 [INFO] trainer:   [Debug E21] lung_l1=0.2933, bg_l1=0.3061
+2026-03-03 21:58:52 [INFO] trainer: Epoch 22/100 [Train] loss: 0.360099, l1: 0.137575, ssim: 0.222523, lr_G: 0.000178, freq: 0.020773, gan_g: 0.695235, fm: 0.365920, d_loss: 0.584746, lr_D: 0.000355, D_real: 0.424521, D_fake: 0.418048, w_recon: 0.360099, w_gan: 0.139047, w_fm: 0.365920, eff_gan_w: 0.200000, gnorm_G: 0.639791, gnorm_D: 3.448875
+2026-03-03 21:59:28 [INFO] trainer: Epoch 22/100 [Val]   loss: 0.499631, l1: 0.175003, ssim: 0.324627
+2026-03-03 21:59:29 [INFO] trainer:   Saved visualization grids for epoch 22
+2026-03-03 21:59:59 [INFO] trainer:   [Debug E22] pred range=[-1.000, 1.000], residual_mag=0.1271, l1_vs_cta=0.1960
+2026-03-03 21:59:59 [WARNING] trainer:   [Debug E22] ⚠ Output saturation: at+1=4.6%, at-1=37.3%
+2026-03-03 21:59:59 [INFO] trainer:   [Debug E22] sharpness: pred_hf=0.0821, cta_hf=0.1096, ratio=0.749 (ok)
+2026-03-03 21:59:59 [INFO] trainer:   [Debug E22] lung_l1=0.2491, bg_l1=0.1713
+2026-03-03 22:11:22 [INFO] trainer: Epoch 23/100 [Train] loss: 0.360038, l1: 0.137706, ssim: 0.222332, lr_G: 0.000176, freq: 0.020889, gan_g: 0.698760, fm: 0.368120, d_loss: 0.583798, lr_D: 0.000351, D_real: 0.424751, D_fake: 0.417662, w_recon: 0.360038, w_gan: 0.139752, w_fm: 0.368120, eff_gan_w: 0.200000, gnorm_G: 0.584377, gnorm_D: 3.682349
+2026-03-03 22:11:57 [INFO] trainer: Epoch 23/100 [Val]   loss: 0.496208, l1: 0.182988, ssim: 0.313220
+2026-03-03 22:11:58 [INFO] trainer:   Saved visualization grids for epoch 23
+2026-03-03 22:12:27 [INFO] trainer:   [Debug E23] pred range=[-1.000, 1.000], residual_mag=0.1150, l1_vs_cta=0.1804
+2026-03-03 22:12:27 [WARNING] trainer:   [Debug E23] ⚠ Output saturation: at+1=2.3%, at-1=30.6%
+2026-03-03 22:12:27 [INFO] trainer:   [Debug E23] sharpness: pred_hf=0.0799, cta_hf=0.1079, ratio=0.740 (ok)
+2026-03-03 22:12:27 [INFO] trainer:   [Debug E23] lung_l1=0.2985, bg_l1=0.1634
+2026-03-03 22:23:49 [INFO] trainer: Epoch 24/100 [Train] loss: 0.355567, l1: 0.136029, ssim: 0.219538, lr_G: 0.000174, freq: 0.020895, gan_g: 0.689276, fm: 0.366543, d_loss: 0.578785, lr_D: 0.000347, D_real: 0.429273, D_fake: 0.420239, w_recon: 0.355567, w_gan: 0.137855, w_fm: 0.366543, eff_gan_w: 0.200000, gnorm_G: 0.602774, gnorm_D: 3.179091
+2026-03-03 22:24:25 [INFO] trainer: Epoch 24/100 [Val]   loss: 0.495640, l1: 0.181314, ssim: 0.314326
+2026-03-03 22:24:25 [INFO] trainer:   Saved visualization grids for epoch 24
+2026-03-03 22:24:55 [INFO] trainer:   [Debug E24] pred range=[-1.000, 1.000], residual_mag=0.1122, l1_vs_cta=0.2798
+2026-03-03 22:24:55 [WARNING] trainer:   [Debug E24] ⚠ Output saturation: at+1=2.1%, at-1=37.6%
+2026-03-03 22:24:55 [INFO] trainer:   [Debug E24] sharpness: pred_hf=0.0744, cta_hf=0.1354, ratio=0.550 (blurry)
+2026-03-03 22:24:55 [INFO] trainer:   [Debug E24] lung_l1=0.2721, bg_l1=0.2804
+2026-03-03 22:36:13 [INFO] trainer: Epoch 25/100 [Train] loss: 0.361221, l1: 0.138202, ssim: 0.223019, lr_G: 0.000171, freq: 0.020961, gan_g: 0.689093, fm: 0.370554, d_loss: 0.582536, lr_D: 0.000343, D_real: 0.429143, D_fake: 0.420767, w_recon: 0.361221, w_gan: 0.137819, w_fm: 0.370554, eff_gan_w: 0.200000, gnorm_G: 0.688573, gnorm_D: 3.407421
+2026-03-03 22:36:49 [INFO] trainer: Epoch 25/100 [Val]   loss: 0.492291, l1: 0.181428, ssim: 0.310862
+2026-03-03 22:36:49 [INFO] trainer:   Saved visualization grids for epoch 25
+2026-03-03 22:37:19 [INFO] trainer:   [Debug E25] pred range=[-1.000, 1.000], residual_mag=0.1089, l1_vs_cta=0.1847
+2026-03-03 22:37:19 [WARNING] trainer:   [Debug E25] ⚠ Output saturation: at+1=2.5%, at-1=31.6%
+2026-03-03 22:37:19 [INFO] trainer:   [Debug E25] sharpness: pred_hf=0.0787, cta_hf=0.1039, ratio=0.758 (ok)
+2026-03-03 22:37:19 [INFO] trainer:   [Debug E25] lung_l1=0.2152, bg_l1=0.1799
+2026-03-03 22:48:54 [INFO] trainer: Epoch 26/100 [Train] loss: 0.360625, l1: 0.138090, ssim: 0.222535, lr_G: 0.000169, freq: 0.020943, gan_g: 0.695235, fm: 0.368978, d_loss: 0.584312, lr_D: 0.000338, D_real: 0.428688, D_fake: 0.418681, w_recon: 0.360625, w_gan: 0.139047, w_fm: 0.368978, eff_gan_w: 0.200000, gnorm_G: 0.629646, gnorm_D: 3.417595
+2026-03-03 22:49:30 [INFO] trainer: Epoch 26/100 [Val]   loss: 0.482891, l1: 0.178223, ssim: 0.304668
+2026-03-03 22:49:30 [INFO] trainer:   Saved visualization grids for epoch 26
+2026-03-03 22:50:01 [INFO] trainer:   [Debug E26] pred range=[-1.000, 1.000], residual_mag=0.1128, l1_vs_cta=0.2283
+2026-03-03 22:50:01 [WARNING] trainer:   [Debug E26] ⚠ Output saturation: at+1=1.7%, at-1=33.0%
+2026-03-03 22:50:01 [INFO] trainer:   [Debug E26] sharpness: pred_hf=0.0901, cta_hf=0.1051, ratio=0.857 (ok)
+2026-03-03 22:50:01 [INFO] trainer:   [Debug E26] lung_l1=0.2291, bg_l1=0.2279
+2026-03-03 23:01:07 [INFO] trainer: Epoch 27/100 [Train] loss: 0.358526, l1: 0.136796, ssim: 0.221731, lr_G: 0.000167, freq: 0.020926, gan_g: 0.684758, fm: 0.369896, d_loss: 0.580136, lr_D: 0.000334, D_real: 0.426663, D_fake: 0.423071, w_recon: 0.358526, w_gan: 0.136952, w_fm: 0.369896, eff_gan_w: 0.200000, gnorm_G: 0.615390, gnorm_D: 3.511480
+2026-03-03 23:01:43 [INFO] trainer: Epoch 27/100 [Val]   loss: 0.494601, l1: 0.180273, ssim: 0.314328
+2026-03-03 23:01:43 [INFO] trainer:   Saved visualization grids for epoch 27
+2026-03-03 23:02:13 [INFO] trainer:   [Debug E27] pred range=[-1.000, 1.000], residual_mag=0.1078, l1_vs_cta=0.1776
+2026-03-03 23:02:13 [WARNING] trainer:   [Debug E27] ⚠ Output saturation: at+1=1.7%, at-1=27.6%
+2026-03-03 23:02:13 [INFO] trainer:   [Debug E27] sharpness: pred_hf=0.0854, cta_hf=0.1115, ratio=0.766 (ok)
+2026-03-03 23:02:13 [INFO] trainer:   [Debug E27] lung_l1=0.3022, bg_l1=0.1692
+2026-03-03 23:13:22 [INFO] trainer: Epoch 28/100 [Train] loss: 0.363637, l1: 0.139035, ssim: 0.224602, lr_G: 0.000164, freq: 0.020829, gan_g: 0.678672, fm: 0.370067, d_loss: 0.579249, lr_D: 0.000329, D_real: 0.434876, D_fake: 0.426340, w_recon: 0.363637, w_gan: 0.135734, w_fm: 0.370067, eff_gan_w: 0.200000, gnorm_G: 0.584952, gnorm_D: 3.402173
+2026-03-03 23:13:58 [INFO] trainer: Epoch 28/100 [Val]   loss: 0.502283, l1: 0.186285, ssim: 0.315998
+2026-03-03 23:13:59 [INFO] trainer:   Saved visualization grids for epoch 28
+2026-03-03 23:14:28 [INFO] trainer:   [Debug E28] pred range=[-1.000, 1.000], residual_mag=0.1197, l1_vs_cta=0.1935
+2026-03-03 23:14:28 [WARNING] trainer:   [Debug E28] ⚠ Output saturation: at+1=4.6%, at-1=37.6%
+2026-03-03 23:14:28 [INFO] trainer:   [Debug E28] sharpness: pred_hf=0.0897, cta_hf=0.1119, ratio=0.802 (ok)
+2026-03-03 23:14:28 [INFO] trainer:   [Debug E28] lung_l1=0.2334, bg_l1=0.1747
+2026-03-03 23:25:51 [INFO] trainer: Epoch 29/100 [Train] loss: 0.358964, l1: 0.136628, ssim: 0.222336, lr_G: 0.000162, freq: 0.020914, gan_g: 0.682388, fm: 0.370226, d_loss: 0.580173, lr_D: 0.000324, D_real: 0.431155, D_fake: 0.424378, w_recon: 0.358964, w_gan: 0.136478, w_fm: 0.370226, eff_gan_w: 0.200000, gnorm_G: 0.642721, gnorm_D: 3.242074
+2026-03-03 23:26:27 [INFO] trainer: Epoch 29/100 [Val]   loss: 0.485993, l1: 0.173016, ssim: 0.312977
+2026-03-03 23:26:27 [INFO] trainer:   Saved visualization grids for epoch 29
+2026-03-03 23:26:56 [INFO] trainer:   [Debug E29] pred range=[-1.000, 1.000], residual_mag=0.1099, l1_vs_cta=0.1814
+2026-03-03 23:26:56 [WARNING] trainer:   [Debug E29] ⚠ Output saturation: at+1=3.4%, at-1=39.4%
+2026-03-03 23:26:56 [INFO] trainer:   [Debug E29] sharpness: pred_hf=0.0910, cta_hf=0.1125, ratio=0.809 (ok)
+2026-03-03 23:26:56 [INFO] trainer:   [Debug E29] lung_l1=0.2320, bg_l1=0.1663
+2026-03-03 23:38:26 [INFO] trainer: Epoch 30/100 [Train] loss: 0.360978, l1: 0.138074, ssim: 0.222905, lr_G: 0.000159, freq: 0.021004, gan_g: 0.666477, fm: 0.371544, d_loss: 0.576498, lr_D: 0.000319, D_real: 0.435895, D_fake: 0.430552, w_recon: 0.360978, w_gan: 0.133295, w_fm: 0.371544, eff_gan_w: 0.200000, gnorm_G: 0.573721, gnorm_D: 3.402580
+2026-03-03 23:39:02 [INFO] trainer: Epoch 30/100 [Val]   loss: 0.497102, l1: 0.181711, ssim: 0.315392
+2026-03-03 23:39:03 [INFO] trainer:   Saved visualization grids for epoch 30
+2026-03-03 23:39:32 [INFO] trainer:   [Debug E30] pred range=[-1.000, 1.000], residual_mag=0.1359, l1_vs_cta=0.2048
+2026-03-03 23:39:32 [WARNING] trainer:   [Debug E30] ⚠ Output saturation: at+1=5.4%, at-1=37.4%
+2026-03-03 23:39:32 [INFO] trainer:   [Debug E30] sharpness: pred_hf=0.0887, cta_hf=0.1137, ratio=0.780 (ok)
+2026-03-03 23:39:32 [INFO] trainer:   [Debug E30] lung_l1=0.2789, bg_l1=0.1787
+2026-03-03 23:39:33 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0030.pt
+2026-03-03 23:39:33 [INFO] trainer:   Epoch 31: lung_weight=20.0
+2026-03-03 23:51:02 [INFO] trainer: Epoch 31/100 [Train] loss: 0.360766, l1: 0.137547, ssim: 0.223219, lr_G: 0.000157, freq: 0.020923, gan_g: 0.660619, fm: 0.367313, d_loss: 0.567282, lr_D: 0.000314, D_real: 0.437637, D_fake: 0.432586, w_recon: 0.360766, w_gan: 0.132124, w_fm: 0.367313, eff_gan_w: 0.200000, gnorm_G: 0.530303, gnorm_D: 2.822121
+2026-03-03 23:51:38 [INFO] trainer: Epoch 31/100 [Val]   loss: 0.491746, l1: 0.179051, ssim: 0.312694
+2026-03-03 23:51:38 [INFO] trainer:   Saved visualization grids for epoch 31
+2026-03-03 23:52:08 [INFO] trainer:   [Debug E31] pred range=[-1.000, 1.000], residual_mag=0.1318, l1_vs_cta=0.1925
+2026-03-03 23:52:08 [WARNING] trainer:   [Debug E31] ⚠ Output saturation: at+1=4.0%, at-1=29.2%
+2026-03-03 23:52:08 [INFO] trainer:   [Debug E31] sharpness: pred_hf=0.0847, cta_hf=0.1074, ratio=0.789 (ok)
+2026-03-03 23:52:08 [INFO] trainer:   [Debug E31] lung_l1=0.2397, bg_l1=0.1842
+2026-03-04 00:03:40 [INFO] trainer: Epoch 32/100 [Train] loss: 0.363127, l1: 0.138512, ssim: 0.224615, lr_G: 0.000154, freq: 0.020842, gan_g: 0.672062, fm: 0.366467, d_loss: 0.570926, lr_D: 0.000309, D_real: 0.439078, D_fake: 0.428682, w_recon: 0.363127, w_gan: 0.134412, w_fm: 0.366467, eff_gan_w: 0.200000, gnorm_G: 0.588567, gnorm_D: 3.055064
+2026-03-04 00:04:16 [INFO] trainer: Epoch 32/100 [Val]   loss: 0.488086, l1: 0.179557, ssim: 0.308528
+2026-03-04 00:04:16 [INFO] trainer:   Saved visualization grids for epoch 32
+2026-03-04 00:04:46 [INFO] trainer:   [Debug E32] pred range=[-1.000, 1.000], residual_mag=0.1199, l1_vs_cta=0.2041
+2026-03-04 00:04:46 [WARNING] trainer:   [Debug E32] ⚠ Output saturation: at+1=3.3%, at-1=33.1%
+2026-03-04 00:04:46 [INFO] trainer:   [Debug E32] sharpness: pred_hf=0.0951, cta_hf=0.1112, ratio=0.855 (ok)
+2026-03-04 00:04:46 [INFO] trainer:   [Debug E32] lung_l1=0.2300, bg_l1=0.1901
+2026-03-04 00:15:57 [INFO] trainer: Epoch 33/100 [Train] loss: 0.361429, l1: 0.137515, ssim: 0.223915, lr_G: 0.000152, freq: 0.020900, gan_g: 0.664803, fm: 0.367170, d_loss: 0.569443, lr_D: 0.000303, D_real: 0.440771, D_fake: 0.431118, w_recon: 0.361429, w_gan: 0.132961, w_fm: 0.367170, eff_gan_w: 0.200000, gnorm_G: 0.665154, gnorm_D: 2.931350
+2026-03-04 00:16:32 [INFO] trainer: Epoch 33/100 [Val]   loss: 0.495640, l1: 0.181404, ssim: 0.314236
+2026-03-04 00:16:33 [INFO] trainer:   Saved visualization grids for epoch 33
+2026-03-04 00:17:02 [INFO] trainer:   [Debug E33] pred range=[-1.000, 1.000], residual_mag=0.1157, l1_vs_cta=0.2172
+2026-03-04 00:17:02 [WARNING] trainer:   [Debug E33] ⚠ Output saturation: at+1=3.3%, at-1=36.8%
+2026-03-04 00:17:02 [INFO] trainer:   [Debug E33] sharpness: pred_hf=0.0944, cta_hf=0.1099, ratio=0.859 (ok)
+2026-03-04 00:17:02 [INFO] trainer:   [Debug E33] lung_l1=0.2625, bg_l1=0.2021
+2026-03-04 00:28:17 [INFO] trainer: Epoch 34/100 [Train] loss: 0.362127, l1: 0.137532, ssim: 0.224595, lr_G: 0.000149, freq: 0.020802, gan_g: 0.653888, fm: 0.369859, d_loss: 0.567893, lr_D: 0.000298, D_real: 0.439339, D_fake: 0.435693, w_recon: 0.362127, w_gan: 0.130778, w_fm: 0.369859, eff_gan_w: 0.200000, gnorm_G: 0.573959, gnorm_D: 3.016336
+2026-03-04 00:28:53 [INFO] trainer: Epoch 34/100 [Val]   loss: 0.491686, l1: 0.178695, ssim: 0.312992
+2026-03-04 00:28:54 [INFO] trainer:   Saved visualization grids for epoch 34
+2026-03-04 00:29:24 [INFO] trainer:   [Debug E34] pred range=[-1.000, 1.000], residual_mag=0.1167, l1_vs_cta=0.1950
+2026-03-04 00:29:24 [WARNING] trainer:   [Debug E34] ⚠ Output saturation: at+1=3.4%, at-1=38.8%
+2026-03-04 00:29:24 [INFO] trainer:   [Debug E34] sharpness: pred_hf=0.0804, cta_hf=0.1083, ratio=0.743 (ok)
+2026-03-04 00:29:24 [INFO] trainer:   [Debug E34] lung_l1=0.2355, bg_l1=0.1861
+2026-03-04 00:40:43 [INFO] trainer: Epoch 35/100 [Train] loss: 0.359168, l1: 0.136842, ssim: 0.222326, lr_G: 0.000146, freq: 0.020765, gan_g: 0.663840, fm: 0.367637, d_loss: 0.567675, lr_D: 0.000292, D_real: 0.443420, D_fake: 0.432303, w_recon: 0.359168, w_gan: 0.132768, w_fm: 0.367637, eff_gan_w: 0.200000, gnorm_G: 0.563053, gnorm_D: 2.882243
+2026-03-04 00:41:19 [INFO] trainer: Epoch 35/100 [Val]   loss: 0.483842, l1: 0.177386, ssim: 0.306456
+2026-03-04 00:41:19 [INFO] trainer:   Saved visualization grids for epoch 35
+2026-03-04 00:41:48 [INFO] trainer:   [Debug E35] pred range=[-1.000, 1.000], residual_mag=0.1321, l1_vs_cta=0.1826
+2026-03-04 00:41:48 [WARNING] trainer:   [Debug E35] ⚠ Output saturation: at+1=5.7%, at-1=35.1%
+2026-03-04 00:41:48 [INFO] trainer:   [Debug E35] sharpness: pred_hf=0.0895, cta_hf=0.1102, ratio=0.813 (ok)
+2026-03-04 00:41:48 [INFO] trainer:   [Debug E35] lung_l1=0.2337, bg_l1=0.1646
+2026-03-04 00:53:19 [INFO] trainer: Epoch 36/100 [Train] loss: 0.362061, l1: 0.137485, ssim: 0.224576, lr_G: 0.000143, freq: 0.021075, gan_g: 0.661210, fm: 0.368574, d_loss: 0.566201, lr_D: 0.000286, D_real: 0.441914, D_fake: 0.432839, w_recon: 0.362061, w_gan: 0.132242, w_fm: 0.368574, eff_gan_w: 0.200000, gnorm_G: 0.595070, gnorm_D: 2.740831
+2026-03-04 00:53:55 [INFO] trainer: Epoch 36/100 [Val]   loss: 0.487317, l1: 0.176865, ssim: 0.310452
+2026-03-04 00:53:55 [INFO] trainer:   Saved visualization grids for epoch 36
+2026-03-04 00:54:24 [INFO] trainer:   [Debug E36] pred range=[-1.000, 1.000], residual_mag=0.1260, l1_vs_cta=0.1983
+2026-03-04 00:54:24 [WARNING] trainer:   [Debug E36] ⚠ Output saturation: at+1=5.0%, at-1=38.3%
+2026-03-04 00:54:24 [INFO] trainer:   [Debug E36] sharpness: pred_hf=0.0995, cta_hf=0.1124, ratio=0.885 (ok)
+2026-03-04 00:54:24 [INFO] trainer:   [Debug E36] lung_l1=0.2673, bg_l1=0.1685
+2026-03-04 01:05:39 [INFO] trainer: Epoch 37/100 [Train] loss: 0.359624, l1: 0.137026, ssim: 0.222598, lr_G: 0.000140, freq: 0.020989, gan_g: 0.660540, fm: 0.371473, d_loss: 0.566125, lr_D: 0.000281, D_real: 0.438296, D_fake: 0.433084, w_recon: 0.359624, w_gan: 0.132108, w_fm: 0.371473, eff_gan_w: 0.200000, gnorm_G: 0.546725, gnorm_D: 2.616420
+2026-03-04 01:06:15 [INFO] trainer: Epoch 37/100 [Val]   loss: 0.499658, l1: 0.179425, ssim: 0.320233
+2026-03-04 01:06:16 [INFO] trainer:   Saved visualization grids for epoch 37
+2026-03-04 01:06:45 [INFO] trainer:   [Debug E37] pred range=[-1.000, 1.000], residual_mag=0.1055, l1_vs_cta=0.1915
+2026-03-04 01:06:45 [WARNING] trainer:   [Debug E37] ⚠ Output saturation: at+1=1.7%, at-1=27.3%
+2026-03-04 01:06:45 [INFO] trainer:   [Debug E37] sharpness: pred_hf=0.0907, cta_hf=0.1090, ratio=0.832 (ok)
+2026-03-04 01:06:45 [INFO] trainer:   [Debug E37] lung_l1=0.3450, bg_l1=0.1806
+2026-03-04 01:18:10 [INFO] trainer: Epoch 38/100 [Train] loss: 0.365833, l1: 0.138887, ssim: 0.226946, lr_G: 0.000137, freq: 0.021073, gan_g: 0.647212, fm: 0.370105, d_loss: 0.566733, lr_D: 0.000275, D_real: 0.449153, D_fake: 0.439918, w_recon: 0.365833, w_gan: 0.129442, w_fm: 0.370105, eff_gan_w: 0.200000, gnorm_G: 0.571296, gnorm_D: 3.034125
+2026-03-04 01:18:46 [INFO] trainer: Epoch 38/100 [Val]   loss: 0.502117, l1: 0.176698, ssim: 0.325419
+2026-03-04 01:18:46 [INFO] trainer:   Saved visualization grids for epoch 38
+2026-03-04 01:19:15 [INFO] trainer:   [Debug E38] pred range=[-1.000, 1.000], residual_mag=0.1308, l1_vs_cta=0.2000
+2026-03-04 01:19:15 [WARNING] trainer:   [Debug E38] ⚠ Output saturation: at+1=3.0%, at-1=28.2%
+2026-03-04 01:19:15 [INFO] trainer:   [Debug E38] sharpness: pred_hf=0.0831, cta_hf=0.1097, ratio=0.758 (ok)
+2026-03-04 01:19:15 [INFO] trainer:   [Debug E38] lung_l1=0.2459, bg_l1=0.1869
+2026-03-04 01:30:24 [INFO] trainer: Epoch 39/100 [Train] loss: 0.359152, l1: 0.135201, ssim: 0.223951, lr_G: 0.000134, freq: 0.020763, gan_g: 0.655526, fm: 0.365525, d_loss: 0.562260, lr_D: 0.000269, D_real: 0.444048, D_fake: 0.434490, w_recon: 0.359152, w_gan: 0.131105, w_fm: 0.365525, eff_gan_w: 0.200000, gnorm_G: 0.494156, gnorm_D: 2.948749
+2026-03-04 01:31:00 [INFO] trainer: Epoch 39/100 [Val]   loss: 0.496496, l1: 0.179938, ssim: 0.316558
+2026-03-04 01:31:00 [INFO] trainer:   Saved visualization grids for epoch 39
+2026-03-04 01:31:29 [INFO] trainer:   [Debug E39] pred range=[-1.000, 1.000], residual_mag=0.1253, l1_vs_cta=0.1878
+2026-03-04 01:31:30 [WARNING] trainer:   [Debug E39] ⚠ Output saturation: at+1=4.7%, at-1=28.3%
+2026-03-04 01:31:30 [INFO] trainer:   [Debug E39] sharpness: pred_hf=0.0854, cta_hf=0.1109, ratio=0.770 (ok)
+2026-03-04 01:31:30 [INFO] trainer:   [Debug E39] lung_l1=0.2918, bg_l1=0.1657
+2026-03-04 01:42:46 [INFO] trainer: Epoch 40/100 [Train] loss: 0.360574, l1: 0.136986, ssim: 0.223588, lr_G: 0.000132, freq: 0.021122, gan_g: 0.644440, fm: 0.366768, d_loss: 0.563217, lr_D: 0.000263, D_real: 0.447441, D_fake: 0.439846, w_recon: 0.360574, w_gan: 0.128888, w_fm: 0.366768, eff_gan_w: 0.200000, gnorm_G: 0.535902, gnorm_D: 2.834851
+2026-03-04 01:43:21 [INFO] trainer: Epoch 40/100 [Val]   loss: 0.499205, l1: 0.175019, ssim: 0.324186
+2026-03-04 01:43:22 [INFO] trainer:   Saved visualization grids for epoch 40
+2026-03-04 01:43:51 [INFO] trainer:   [Debug E40] pred range=[-1.000, 1.000], residual_mag=0.1193, l1_vs_cta=0.1918
+2026-03-04 01:43:51 [WARNING] trainer:   [Debug E40] ⚠ Output saturation: at+1=6.7%, at-1=39.5%
+2026-03-04 01:43:51 [INFO] trainer:   [Debug E40] sharpness: pred_hf=0.0916, cta_hf=0.1123, ratio=0.815 (ok)
+2026-03-04 01:43:51 [INFO] trainer:   [Debug E40] lung_l1=0.2585, bg_l1=0.1713
+2026-03-04 01:43:52 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0040.pt
+2026-03-04 01:43:52 [INFO] trainer:   Epoch 41: lung_weight=20.0
+2026-03-04 01:55:23 [INFO] trainer: Epoch 41/100 [Train] loss: 0.356362, l1: 0.134962, ssim: 0.221400, lr_G: 0.000128, freq: 0.020798, gan_g: 0.657393, fm: 0.366211, d_loss: 0.570966, lr_D: 0.000257, D_real: 0.443122, D_fake: 0.434816, w_recon: 0.356362, w_gan: 0.131479, w_fm: 0.366211, eff_gan_w: 0.200000, gnorm_G: 0.497693, gnorm_D: 3.015240
+2026-03-04 01:55:58 [INFO] trainer: Epoch 41/100 [Val]   loss: 0.493480, l1: 0.178018, ssim: 0.315462
+2026-03-04 01:55:59 [INFO] trainer:   Saved visualization grids for epoch 41
+2026-03-04 01:56:28 [INFO] trainer:   [Debug E41] pred range=[-1.000, 1.000], residual_mag=0.1075, l1_vs_cta=0.2357
+2026-03-04 01:56:28 [WARNING] trainer:   [Debug E41] ⚠ Output saturation: at+1=3.2%, at-1=39.9%
+2026-03-04 01:56:28 [INFO] trainer:   [Debug E41] sharpness: pred_hf=0.0852, cta_hf=0.1117, ratio=0.763 (ok)
+2026-03-04 01:56:28 [INFO] trainer:   [Debug E41] lung_l1=0.3066, bg_l1=0.2226
+2026-03-04 02:08:02 [INFO] trainer: Epoch 42/100 [Train] loss: 0.362347, l1: 0.136994, ssim: 0.225353, lr_G: 0.000125, freq: 0.020863, gan_g: 0.640768, fm: 0.366713, d_loss: 0.556764, lr_D: 0.000251, D_real: 0.449810, D_fake: 0.441210, w_recon: 0.362347, w_gan: 0.128154, w_fm: 0.366713, eff_gan_w: 0.200000, gnorm_G: 0.553329, gnorm_D: 2.513695
+2026-03-04 02:08:38 [INFO] trainer: Epoch 42/100 [Val]   loss: 0.486737, l1: 0.174701, ssim: 0.312035
+2026-03-04 02:08:38 [INFO] trainer:   Saved visualization grids for epoch 42
+2026-03-04 02:09:08 [INFO] trainer:   [Debug E42] pred range=[-1.000, 1.000], residual_mag=0.1230, l1_vs_cta=0.1796
+2026-03-04 02:09:08 [WARNING] trainer:   [Debug E42] ⚠ Output saturation: at+1=4.6%, at-1=25.9%
+2026-03-04 02:09:08 [INFO] trainer:   [Debug E42] sharpness: pred_hf=0.0858, cta_hf=0.1012, ratio=0.848 (ok)
+2026-03-04 02:09:08 [INFO] trainer:   [Debug E42] lung_l1=0.1683, bg_l1=0.1820
+2026-03-04 02:20:15 [INFO] trainer: Epoch 43/100 [Train] loss: 0.358463, l1: 0.135827, ssim: 0.222636, lr_G: 0.000122, freq: 0.020960, gan_g: 0.648086, fm: 0.367467, d_loss: 0.561484, lr_D: 0.000245, D_real: 0.447473, D_fake: 0.438232, w_recon: 0.358463, w_gan: 0.129617, w_fm: 0.367467, eff_gan_w: 0.200000, gnorm_G: 0.479463, gnorm_D: 2.425920
+2026-03-04 02:20:51 [INFO] trainer: Epoch 43/100 [Val]   loss: 0.489102, l1: 0.174924, ssim: 0.314178
+2026-03-04 02:20:51 [INFO] trainer:   Saved visualization grids for epoch 43
+2026-03-04 02:21:20 [INFO] trainer:   [Debug E43] pred range=[-1.000, 1.000], residual_mag=0.1177, l1_vs_cta=0.2030
+2026-03-04 02:21:20 [WARNING] trainer:   [Debug E43] ⚠ Output saturation: at+1=3.1%, at-1=35.1%
+2026-03-04 02:21:20 [INFO] trainer:   [Debug E43] sharpness: pred_hf=0.0888, cta_hf=0.1054, ratio=0.843 (ok)
+2026-03-04 02:21:20 [INFO] trainer:   [Debug E43] lung_l1=0.2506, bg_l1=0.1936
+2026-03-04 02:32:49 [INFO] trainer: Epoch 44/100 [Train] loss: 0.356893, l1: 0.134396, ssim: 0.222497, lr_G: 0.000119, freq: 0.020844, gan_g: 0.653875, fm: 0.361785, d_loss: 0.561076, lr_D: 0.000239, D_real: 0.446250, D_fake: 0.435632, w_recon: 0.356893, w_gan: 0.130775, w_fm: 0.361785, eff_gan_w: 0.200000, gnorm_G: 0.527725, gnorm_D: 2.657956
+2026-03-04 02:33:25 [INFO] trainer: Epoch 44/100 [Val]   loss: 0.488331, l1: 0.173821, ssim: 0.314511
+2026-03-04 02:33:25 [INFO] trainer:   Saved visualization grids for epoch 44
+2026-03-04 02:33:54 [INFO] trainer:   [Debug E44] pred range=[-1.000, 1.000], residual_mag=0.1280, l1_vs_cta=0.1775
+2026-03-04 02:33:54 [WARNING] trainer:   [Debug E44] ⚠ Output saturation: at+1=3.4%, at-1=28.8%
+2026-03-04 02:33:54 [INFO] trainer:   [Debug E44] sharpness: pred_hf=0.0864, cta_hf=0.1125, ratio=0.768 (ok)
+2026-03-04 02:33:54 [INFO] trainer:   [Debug E44] lung_l1=0.2568, bg_l1=0.1533
+2026-03-04 02:45:23 [INFO] trainer: Epoch 45/100 [Train] loss: 0.358690, l1: 0.135105, ssim: 0.223585, lr_G: 0.000116, freq: 0.020910, gan_g: 0.635325, fm: 0.367724, d_loss: 0.558855, lr_D: 0.000232, D_real: 0.451181, D_fake: 0.443881, w_recon: 0.358690, w_gan: 0.127065, w_fm: 0.367724, eff_gan_w: 0.200000, gnorm_G: 0.567510, gnorm_D: 2.745657
+2026-03-04 02:45:58 [INFO] trainer: Epoch 45/100 [Val]   loss: 0.502560, l1: 0.181793, ssim: 0.320768
+2026-03-04 02:45:59 [INFO] trainer:   Saved visualization grids for epoch 45
+2026-03-04 02:46:28 [INFO] trainer:   [Debug E45] pred range=[-1.000, 1.000], residual_mag=0.1227, l1_vs_cta=0.1890
+2026-03-04 02:46:28 [WARNING] trainer:   [Debug E45] ⚠ Output saturation: at+1=2.2%, at-1=29.3%
+2026-03-04 02:46:28 [INFO] trainer:   [Debug E45] sharpness: pred_hf=0.0842, cta_hf=0.1097, ratio=0.768 (ok)
+2026-03-04 02:46:28 [INFO] trainer:   [Debug E45] lung_l1=0.2770, bg_l1=0.1832
+2026-03-04 02:57:51 [INFO] trainer: Epoch 46/100 [Train] loss: 0.357332, l1: 0.134808, ssim: 0.222524, lr_G: 0.000113, freq: 0.020759, gan_g: 0.634303, fm: 0.363902, d_loss: 0.559651, lr_D: 0.000226, D_real: 0.455433, D_fake: 0.444744, w_recon: 0.357332, w_gan: 0.126861, w_fm: 0.363902, eff_gan_w: 0.200000, gnorm_G: 0.463899, gnorm_D: 2.552391
+2026-03-04 02:58:27 [INFO] trainer: Epoch 46/100 [Val]   loss: 0.487663, l1: 0.172258, ssim: 0.315405
+2026-03-04 02:58:27 [INFO] trainer:   Saved visualization grids for epoch 46
+2026-03-04 02:58:56 [INFO] trainer:   [Debug E46] pred range=[-1.000, 1.000], residual_mag=0.1217, l1_vs_cta=0.2008
+2026-03-04 02:58:56 [WARNING] trainer:   [Debug E46] ⚠ Output saturation: at+1=3.3%, at-1=29.5%
+2026-03-04 02:58:56 [INFO] trainer:   [Debug E46] sharpness: pred_hf=0.0911, cta_hf=0.1089, ratio=0.836 (ok)
+2026-03-04 02:58:56 [INFO] trainer:   [Debug E46] lung_l1=0.2763, bg_l1=0.1952
+2026-03-04 03:10:04 [INFO] trainer: Epoch 47/100 [Train] loss: 0.355942, l1: 0.134731, ssim: 0.221212, lr_G: 0.000110, freq: 0.020832, gan_g: 0.643941, fm: 0.361551, d_loss: 0.561095, lr_D: 0.000220, D_real: 0.449547, D_fake: 0.440034, w_recon: 0.355942, w_gan: 0.128788, w_fm: 0.361551, eff_gan_w: 0.200000, gnorm_G: 0.525717, gnorm_D: 2.340934
+2026-03-04 03:10:39 [INFO] trainer: Epoch 47/100 [Val]   loss: 0.508753, l1: 0.187556, ssim: 0.321197
+2026-03-04 03:10:40 [INFO] trainer:   Saved visualization grids for epoch 47
+2026-03-04 03:11:09 [INFO] trainer:   [Debug E47] pred range=[-1.000, 1.000], residual_mag=0.1209, l1_vs_cta=0.1858
+2026-03-04 03:11:09 [WARNING] trainer:   [Debug E47] ⚠ Output saturation: at+1=4.1%, at-1=37.8%
+2026-03-04 03:11:09 [INFO] trainer:   [Debug E47] sharpness: pred_hf=0.0832, cta_hf=0.1119, ratio=0.743 (ok)
+2026-03-04 03:11:09 [INFO] trainer:   [Debug E47] lung_l1=0.2238, bg_l1=0.1754
+2026-03-04 03:22:34 [INFO] trainer: Epoch 48/100 [Train] loss: 0.356383, l1: 0.134055, ssim: 0.222328, lr_G: 0.000107, freq: 0.020754, gan_g: 0.629592, fm: 0.364944, d_loss: 0.555676, lr_D: 0.000213, D_real: 0.453844, D_fake: 0.446576, w_recon: 0.356383, w_gan: 0.125918, w_fm: 0.364944, eff_gan_w: 0.200000, gnorm_G: 0.514900, gnorm_D: 2.431558
+2026-03-04 03:23:10 [INFO] trainer: Epoch 48/100 [Val]   loss: 0.486480, l1: 0.172491, ssim: 0.313989
+2026-03-04 03:23:10 [INFO] trainer:   Saved visualization grids for epoch 48
+2026-03-04 03:23:39 [INFO] trainer:   [Debug E48] pred range=[-1.000, 1.000], residual_mag=0.1201, l1_vs_cta=0.2001
+2026-03-04 03:23:39 [WARNING] trainer:   [Debug E48] ⚠ Output saturation: at+1=1.7%, at-1=24.4%
+2026-03-04 03:23:39 [INFO] trainer:   [Debug E48] sharpness: pred_hf=0.0893, cta_hf=0.1057, ratio=0.845 (ok)
+2026-03-04 03:23:39 [INFO] trainer:   [Debug E48] lung_l1=0.2919, bg_l1=0.1979
+2026-03-04 03:34:58 [INFO] trainer: Epoch 49/100 [Train] loss: 0.363927, l1: 0.136836, ssim: 0.227091, lr_G: 0.000104, freq: 0.021013, gan_g: 0.644916, fm: 0.367545, d_loss: 0.557835, lr_D: 0.000207, D_real: 0.450211, D_fake: 0.439292, w_recon: 0.363927, w_gan: 0.128983, w_fm: 0.367545, eff_gan_w: 0.200000, gnorm_G: 0.483731, gnorm_D: 2.845250
+2026-03-04 03:35:34 [INFO] trainer: Epoch 49/100 [Val]   loss: 0.492960, l1: 0.179053, ssim: 0.313907
+2026-03-04 03:35:34 [INFO] trainer:   Saved visualization grids for epoch 49
+2026-03-04 03:36:04 [INFO] trainer:   [Debug E49] pred range=[-1.000, 1.000], residual_mag=0.1064, l1_vs_cta=0.2544
+2026-03-04 03:36:04 [WARNING] trainer:   [Debug E49] ⚠ Output saturation: at+1=2.8%, at-1=38.2%
+2026-03-04 03:36:04 [INFO] trainer:   [Debug E49] sharpness: pred_hf=0.0898, cta_hf=0.1181, ratio=0.760 (ok)
+2026-03-04 03:36:04 [INFO] trainer:   [Debug E49] lung_l1=0.3035, bg_l1=0.2468
+2026-03-04 03:47:28 [INFO] trainer: Epoch 50/100 [Train] loss: 0.360780, l1: 0.135450, ssim: 0.225329, lr_G: 0.000100, freq: 0.020876, gan_g: 0.648720, fm: 0.365881, d_loss: 0.557951, lr_D: 0.000201, D_real: 0.446980, D_fake: 0.437172, w_recon: 0.360780, w_gan: 0.129744, w_fm: 0.365881, eff_gan_w: 0.200000, gnorm_G: 0.498342, gnorm_D: 2.245480
+2026-03-04 03:48:03 [INFO] trainer: Epoch 50/100 [Val]   loss: 0.510976, l1: 0.178138, ssim: 0.332838
+2026-03-04 03:48:04 [INFO] trainer:   Saved visualization grids for epoch 50
+2026-03-04 03:48:33 [INFO] trainer:   [Debug E50] pred range=[-1.000, 1.000], residual_mag=0.1130, l1_vs_cta=0.2423
+2026-03-04 03:48:33 [WARNING] trainer:   [Debug E50] ⚠ Output saturation: at+1=4.4%, at-1=37.8%
+2026-03-04 03:48:33 [INFO] trainer:   [Debug E50] sharpness: pred_hf=0.0876, cta_hf=0.1126, ratio=0.778 (ok)
+2026-03-04 03:48:33 [INFO] trainer:   [Debug E50] lung_l1=0.2901, bg_l1=0.2317
+2026-03-04 03:48:34 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0050.pt
+2026-03-04 03:48:34 [INFO] trainer:   Epoch 51: lung_weight=20.0
+2026-03-04 03:59:48 [INFO] trainer: Epoch 51/100 [Train] loss: 0.356010, l1: 0.133590, ssim: 0.222420, lr_G: 0.000097, freq: 0.020743, gan_g: 0.640661, fm: 0.362785, d_loss: 0.552759, lr_D: 0.000194, D_real: 0.454697, D_fake: 0.440568, w_recon: 0.356010, w_gan: 0.128132, w_fm: 0.362785, eff_gan_w: 0.200000, gnorm_G: 0.479911, gnorm_D: 2.558806
+2026-03-04 04:00:24 [INFO] trainer: Epoch 51/100 [Val]   loss: 0.502031, l1: 0.175058, ssim: 0.326973
+2026-03-04 04:00:24 [INFO] trainer:   Saved visualization grids for epoch 51
+2026-03-04 04:00:53 [INFO] trainer:   [Debug E51] pred range=[-1.000, 1.000], residual_mag=0.1197, l1_vs_cta=0.1911
+2026-03-04 04:00:53 [WARNING] trainer:   [Debug E51] ⚠ Output saturation: at+1=6.3%, at-1=36.0%
+2026-03-04 04:00:53 [INFO] trainer:   [Debug E51] sharpness: pred_hf=0.0833, cta_hf=0.1068, ratio=0.780 (ok)
+2026-03-04 04:00:53 [INFO] trainer:   [Debug E51] lung_l1=0.2195, bg_l1=0.1826
+2026-03-04 04:12:33 [INFO] trainer: Epoch 52/100 [Train] loss: 0.355091, l1: 0.133255, ssim: 0.221836, lr_G: 0.000094, freq: 0.020620, gan_g: 0.621644, fm: 0.361558, d_loss: 0.547130, lr_D: 0.000188, D_real: 0.459441, D_fake: 0.448771, w_recon: 0.355091, w_gan: 0.124329, w_fm: 0.361558, eff_gan_w: 0.200000, gnorm_G: 0.480137, gnorm_D: 1.952984
+2026-03-04 04:13:09 [INFO] trainer: Epoch 52/100 [Val]   loss: 0.498826, l1: 0.175732, ssim: 0.323094
+2026-03-04 04:13:09 [INFO] trainer:   Saved visualization grids for epoch 52
+2026-03-04 04:13:39 [INFO] trainer:   [Debug E52] pred range=[-1.000, 1.000], residual_mag=0.1133, l1_vs_cta=0.1981
+2026-03-04 04:13:39 [WARNING] trainer:   [Debug E52] ⚠ Output saturation: at+1=2.3%, at-1=25.9%
+2026-03-04 04:13:39 [INFO] trainer:   [Debug E52] sharpness: pred_hf=0.0830, cta_hf=0.1085, ratio=0.765 (ok)
+2026-03-04 04:13:39 [INFO] trainer:   [Debug E52] lung_l1=0.3157, bg_l1=0.1921
+2026-03-04 04:24:47 [INFO] trainer: Epoch 53/100 [Train] loss: 0.359231, l1: 0.135035, ssim: 0.224196, lr_G: 0.000091, freq: 0.020848, gan_g: 0.643149, fm: 0.364184, d_loss: 0.553414, lr_D: 0.000182, D_real: 0.451998, D_fake: 0.439192, w_recon: 0.359231, w_gan: 0.128630, w_fm: 0.364184, eff_gan_w: 0.200000, gnorm_G: 0.457654, gnorm_D: 2.166571
+2026-03-04 04:25:22 [INFO] trainer: Epoch 53/100 [Val]   loss: 0.499813, l1: 0.180816, ssim: 0.318997
+2026-03-04 04:25:23 [INFO] trainer:   Saved visualization grids for epoch 53
+2026-03-04 04:25:52 [INFO] trainer:   [Debug E53] pred range=[-1.000, 1.000], residual_mag=0.1204, l1_vs_cta=0.1909
+2026-03-04 04:25:52 [WARNING] trainer:   [Debug E53] ⚠ Output saturation: at+1=5.5%, at-1=38.7%
+2026-03-04 04:25:52 [INFO] trainer:   [Debug E53] sharpness: pred_hf=0.0902, cta_hf=0.1128, ratio=0.799 (ok)
+2026-03-04 04:25:52 [INFO] trainer:   [Debug E53] lung_l1=0.2583, bg_l1=0.1730
+2026-03-04 04:37:23 [INFO] trainer: Epoch 54/100 [Train] loss: 0.357136, l1: 0.134282, ssim: 0.222854, lr_G: 0.000088, freq: 0.020744, gan_g: 0.630459, fm: 0.359834, d_loss: 0.548047, lr_D: 0.000176, D_real: 0.453684, D_fake: 0.445076, w_recon: 0.357136, w_gan: 0.126092, w_fm: 0.359834, eff_gan_w: 0.200000, gnorm_G: 0.494049, gnorm_D: 2.082498
+2026-03-04 04:37:58 [INFO] trainer: Epoch 54/100 [Val]   loss: 0.495098, l1: 0.176522, ssim: 0.318576
+2026-03-04 04:37:59 [INFO] trainer:   Saved visualization grids for epoch 54
+2026-03-04 04:38:28 [INFO] trainer:   [Debug E54] pred range=[-1.000, 1.000], residual_mag=0.1137, l1_vs_cta=0.2348
+2026-03-04 04:38:28 [WARNING] trainer:   [Debug E54] ⚠ Output saturation: at+1=2.6%, at-1=36.0%
+2026-03-04 04:38:28 [INFO] trainer:   [Debug E54] sharpness: pred_hf=0.0892, cta_hf=0.1015, ratio=0.878 (ok)
+2026-03-04 04:38:28 [INFO] trainer:   [Debug E54] lung_l1=0.2757, bg_l1=0.2296
+2026-03-04 04:49:54 [INFO] trainer: Epoch 55/100 [Train] loss: 0.354404, l1: 0.132948, ssim: 0.221456, lr_G: 0.000085, freq: 0.020845, gan_g: 0.630550, fm: 0.359647, d_loss: 0.550165, lr_D: 0.000169, D_real: 0.454897, D_fake: 0.445213, w_recon: 0.354404, w_gan: 0.126110, w_fm: 0.359647, eff_gan_w: 0.200000, gnorm_G: 0.460289, gnorm_D: 2.181276
+2026-03-04 04:50:29 [INFO] trainer: Epoch 55/100 [Val]   loss: 0.498829, l1: 0.181300, ssim: 0.317529
+2026-03-04 04:50:30 [INFO] trainer:   Saved visualization grids for epoch 55
+2026-03-04 04:50:59 [INFO] trainer:   [Debug E55] pred range=[-1.000, 1.000], residual_mag=0.1292, l1_vs_cta=0.1762
+2026-03-04 04:50:59 [WARNING] trainer:   [Debug E55] ⚠ Output saturation: at+1=2.8%, at-1=33.5%
+2026-03-04 04:50:59 [INFO] trainer:   [Debug E55] sharpness: pred_hf=0.0804, cta_hf=0.1049, ratio=0.767 (ok)
+2026-03-04 04:50:59 [INFO] trainer:   [Debug E55] lung_l1=0.2248, bg_l1=0.1581
+2026-03-04 05:02:15 [INFO] trainer: Epoch 56/100 [Train] loss: 0.353681, l1: 0.131924, ssim: 0.221757, lr_G: 0.000082, freq: 0.020894, gan_g: 0.633911, fm: 0.361362, d_loss: 0.558150, lr_D: 0.000163, D_real: 0.451054, D_fake: 0.443721, w_recon: 0.353681, w_gan: 0.126782, w_fm: 0.361362, eff_gan_w: 0.200000, gnorm_G: 0.469524, gnorm_D: 2.319431
+2026-03-04 05:02:50 [INFO] trainer: Epoch 56/100 [Val]   loss: 0.505050, l1: 0.187462, ssim: 0.317587
+2026-03-04 05:02:51 [INFO] trainer:   Saved visualization grids for epoch 56
+2026-03-04 05:03:20 [INFO] trainer:   [Debug E56] pred range=[-1.000, 1.000], residual_mag=0.1184, l1_vs_cta=0.1971
+2026-03-04 05:03:20 [WARNING] trainer:   [Debug E56] ⚠ Output saturation: at+1=1.7%, at-1=24.9%
+2026-03-04 05:03:20 [INFO] trainer:   [Debug E56] sharpness: pred_hf=0.0864, cta_hf=0.1063, ratio=0.813 (ok)
+2026-03-04 05:03:20 [INFO] trainer:   [Debug E56] lung_l1=0.3220, bg_l1=0.1926
+2026-03-04 05:14:45 [INFO] trainer: Epoch 57/100 [Train] loss: 0.353231, l1: 0.132404, ssim: 0.220828, lr_G: 0.000078, freq: 0.020700, gan_g: 0.645970, fm: 0.364681, d_loss: 0.552846, lr_D: 0.000157, D_real: 0.449983, D_fake: 0.438861, w_recon: 0.353231, w_gan: 0.129194, w_fm: 0.364681, eff_gan_w: 0.200000, gnorm_G: 0.408143, gnorm_D: 2.335981
+2026-03-04 05:15:21 [INFO] trainer: Epoch 57/100 [Val]   loss: 0.503642, l1: 0.178599, ssim: 0.325044
+2026-03-04 05:15:21 [INFO] trainer:   Saved visualization grids for epoch 57
+2026-03-04 05:15:51 [INFO] trainer:   [Debug E57] pred range=[-1.000, 1.000], residual_mag=0.1087, l1_vs_cta=0.1850
+2026-03-04 05:15:51 [WARNING] trainer:   [Debug E57] ⚠ Output saturation: at+1=4.1%, at-1=37.3%
+2026-03-04 05:15:51 [INFO] trainer:   [Debug E57] sharpness: pred_hf=0.0967, cta_hf=0.1162, ratio=0.832 (ok)
+2026-03-04 05:15:51 [INFO] trainer:   [Debug E57] lung_l1=0.2381, bg_l1=0.1669
+2026-03-04 05:27:27 [INFO] trainer: Epoch 58/100 [Train] loss: 0.354647, l1: 0.131574, ssim: 0.223074, lr_G: 0.000075, freq: 0.020723, gan_g: 0.632816, fm: 0.360248, d_loss: 0.553373, lr_D: 0.000151, D_real: 0.456397, D_fake: 0.443579, w_recon: 0.354647, w_gan: 0.126563, w_fm: 0.360248, eff_gan_w: 0.200000, gnorm_G: 0.422586, gnorm_D: 2.021559
+2026-03-04 05:28:03 [INFO] trainer: Epoch 58/100 [Val]   loss: 0.504761, l1: 0.176950, ssim: 0.327811
+2026-03-04 05:28:03 [INFO] trainer:   Saved visualization grids for epoch 58
+2026-03-04 05:28:33 [INFO] trainer:   [Debug E58] pred range=[-1.000, 1.000], residual_mag=0.1204, l1_vs_cta=0.2235
+2026-03-04 05:28:33 [WARNING] trainer:   [Debug E58] ⚠ Output saturation: at+1=1.7%, at-1=28.6%
+2026-03-04 05:28:33 [INFO] trainer:   [Debug E58] sharpness: pred_hf=0.0832, cta_hf=0.1050, ratio=0.793 (ok)
+2026-03-04 05:28:33 [INFO] trainer:   [Debug E58] lung_l1=0.2516, bg_l1=0.2189
+2026-03-04 05:39:39 [INFO] trainer: Epoch 59/100 [Train] loss: 0.356708, l1: 0.133100, ssim: 0.223607, lr_G: 0.000072, freq: 0.020563, gan_g: 0.625901, fm: 0.361902, d_loss: 0.544154, lr_D: 0.000145, D_real: 0.459879, D_fake: 0.447447, w_recon: 0.356708, w_gan: 0.125180, w_fm: 0.361902, eff_gan_w: 0.200000, gnorm_G: 0.520113, gnorm_D: 2.077171
+2026-03-04 05:40:15 [INFO] trainer: Epoch 59/100 [Val]   loss: 0.517598, l1: 0.191870, ssim: 0.325728
+2026-03-04 05:40:15 [INFO] trainer:   Saved visualization grids for epoch 59
+2026-03-04 05:40:45 [INFO] trainer:   [Debug E59] pred range=[-1.000, 1.000], residual_mag=0.1284, l1_vs_cta=0.2129
+2026-03-04 05:40:45 [WARNING] trainer:   [Debug E59] ⚠ Output saturation: at+1=6.1%, at-1=35.3%
+2026-03-04 05:40:45 [INFO] trainer:   [Debug E59] sharpness: pred_hf=0.0901, cta_hf=0.1022, ratio=0.882 (ok)
+2026-03-04 05:40:45 [INFO] trainer:   [Debug E59] lung_l1=0.2265, bg_l1=0.2110
+2026-03-04 05:52:04 [INFO] trainer: Epoch 60/100 [Train] loss: 0.354474, l1: 0.132347, ssim: 0.222127, lr_G: 0.000069, freq: 0.020520, gan_g: 0.622725, fm: 0.360495, d_loss: 0.541306, lr_D: 0.000138, D_real: 0.459907, D_fake: 0.447763, w_recon: 0.354474, w_gan: 0.124545, w_fm: 0.360495, eff_gan_w: 0.200000, gnorm_G: 0.464194, gnorm_D: 1.833585
+2026-03-04 05:52:39 [INFO] trainer: Epoch 60/100 [Val]   loss: 0.502399, l1: 0.174562, ssim: 0.327837
+2026-03-04 05:52:39 [INFO] trainer:   Saved visualization grids for epoch 60
+2026-03-04 05:53:08 [INFO] trainer:   [Debug E60] pred range=[-1.000, 1.000], residual_mag=0.1436, l1_vs_cta=0.1917
+2026-03-04 05:53:08 [WARNING] trainer:   [Debug E60] ⚠ Output saturation: at+1=3.5%, at-1=27.1%
+2026-03-04 05:53:08 [INFO] trainer:   [Debug E60] sharpness: pred_hf=0.0920, cta_hf=0.1149, ratio=0.800 (ok)
+2026-03-04 05:53:08 [INFO] trainer:   [Debug E60] lung_l1=0.2904, bg_l1=0.1730
+2026-03-04 05:53:10 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0060.pt
+2026-03-04 05:53:10 [INFO] trainer:   Epoch 61: lung_weight=20.0
+2026-03-04 06:04:07 [INFO] trainer: Epoch 61/100 [Train] loss: 0.358644, l1: 0.132858, ssim: 0.225786, lr_G: 0.000066, freq: 0.020770, gan_g: 0.622266, fm: 0.360484, d_loss: 0.548776, lr_D: 0.000132, D_real: 0.457769, D_fake: 0.448256, w_recon: 0.358644, w_gan: 0.124453, w_fm: 0.360484, eff_gan_w: 0.200000, gnorm_G: 0.416730, gnorm_D: 1.995479
+2026-03-04 06:04:43 [INFO] trainer: Epoch 61/100 [Val]   loss: 0.504188, l1: 0.179083, ssim: 0.325105
+2026-03-04 06:04:44 [INFO] trainer:   Saved visualization grids for epoch 61
+2026-03-04 06:05:13 [INFO] trainer:   [Debug E61] pred range=[-1.000, 1.000], residual_mag=0.1185, l1_vs_cta=0.1886
+2026-03-04 06:05:13 [WARNING] trainer:   [Debug E61] ⚠ Output saturation: at+1=4.7%, at-1=38.9%
+2026-03-04 06:05:13 [INFO] trainer:   [Debug E61] sharpness: pred_hf=0.1025, cta_hf=0.1133, ratio=0.905 (ok)
+2026-03-04 06:05:13 [INFO] trainer:   [Debug E61] lung_l1=0.2681, bg_l1=0.1600
+2026-03-04 06:16:39 [INFO] trainer: Epoch 62/100 [Train] loss: 0.350888, l1: 0.131019, ssim: 0.219869, lr_G: 0.000063, freq: 0.020719, gan_g: 0.628330, fm: 0.362743, d_loss: 0.549508, lr_D: 0.000127, D_real: 0.456729, D_fake: 0.445577, w_recon: 0.350888, w_gan: 0.125666, w_fm: 0.362743, eff_gan_w: 0.200000, gnorm_G: 0.456314, gnorm_D: 1.889248
+2026-03-04 06:17:14 [INFO] trainer: Epoch 62/100 [Val]   loss: 0.513574, l1: 0.189004, ssim: 0.324570
+2026-03-04 06:17:15 [INFO] trainer:   Saved visualization grids for epoch 62
+2026-03-04 06:17:44 [INFO] trainer:   [Debug E62] pred range=[-1.000, 1.000], residual_mag=0.1294, l1_vs_cta=0.2090
+2026-03-04 06:17:44 [WARNING] trainer:   [Debug E62] ⚠ Output saturation: at+1=5.2%, at-1=30.3%
+2026-03-04 06:17:44 [INFO] trainer:   [Debug E62] sharpness: pred_hf=0.0931, cta_hf=0.1098, ratio=0.848 (ok)
+2026-03-04 06:17:44 [INFO] trainer:   [Debug E62] lung_l1=0.2209, bg_l1=0.2039
+2026-03-04 06:29:27 [INFO] trainer: Epoch 63/100 [Train] loss: 0.351945, l1: 0.130446, ssim: 0.221500, lr_G: 0.000060, freq: 0.020383, gan_g: 0.621466, fm: 0.360839, d_loss: 0.543089, lr_D: 0.000121, D_real: 0.462234, D_fake: 0.448175, w_recon: 0.351945, w_gan: 0.124293, w_fm: 0.360839, eff_gan_w: 0.200000, gnorm_G: 0.443609, gnorm_D: 1.878278
+2026-03-04 06:30:02 [INFO] trainer: Epoch 63/100 [Val]   loss: 0.509401, l1: 0.181927, ssim: 0.327474
+2026-03-04 06:30:03 [INFO] trainer:   Saved visualization grids for epoch 63
+2026-03-04 06:30:32 [INFO] trainer:   [Debug E63] pred range=[-1.000, 1.000], residual_mag=0.1343, l1_vs_cta=0.1888
+2026-03-04 06:30:32 [WARNING] trainer:   [Debug E63] ⚠ Output saturation: at+1=5.6%, at-1=36.1%
+2026-03-04 06:30:33 [INFO] trainer:   [Debug E63] sharpness: pred_hf=0.0945, cta_hf=0.1172, ratio=0.807 (ok)
+2026-03-04 06:30:33 [INFO] trainer:   [Debug E63] lung_l1=0.2412, bg_l1=0.1665
+2026-03-04 06:42:01 [INFO] trainer: Epoch 64/100 [Train] loss: 0.351895, l1: 0.131895, ssim: 0.220000, lr_G: 0.000057, freq: 0.020999, gan_g: 0.636866, fm: 0.360389, d_loss: 0.550008, lr_D: 0.000115, D_real: 0.454232, D_fake: 0.442725, w_recon: 0.351895, w_gan: 0.127373, w_fm: 0.360389, eff_gan_w: 0.200000, gnorm_G: 0.440449, gnorm_D: 1.911128
+2026-03-04 06:42:36 [INFO] trainer: Epoch 64/100 [Val]   loss: 0.502675, l1: 0.179186, ssim: 0.323489
+2026-03-04 06:42:37 [INFO] trainer:   Saved visualization grids for epoch 64
+2026-03-04 06:43:06 [INFO] trainer:   [Debug E64] pred range=[-1.000, 1.000], residual_mag=0.1344, l1_vs_cta=0.1814
+2026-03-04 06:43:06 [WARNING] trainer:   [Debug E64] ⚠ Output saturation: at+1=6.3%, at-1=35.1%
+2026-03-04 06:43:06 [INFO] trainer:   [Debug E64] sharpness: pred_hf=0.0824, cta_hf=0.1115, ratio=0.738 (ok)
+2026-03-04 06:43:06 [INFO] trainer:   [Debug E64] lung_l1=0.2261, bg_l1=0.1643
+2026-03-04 06:54:20 [INFO] trainer: Epoch 65/100 [Train] loss: 0.356880, l1: 0.134333, ssim: 0.222547, lr_G: 0.000055, freq: 0.020546, gan_g: 0.623098, fm: 0.358966, d_loss: 0.544308, lr_D: 0.000109, D_real: 0.463107, D_fake: 0.447907, w_recon: 0.356880, w_gan: 0.124620, w_fm: 0.358966, eff_gan_w: 0.200000, gnorm_G: 0.385005, gnorm_D: 1.748525
+2026-03-04 06:54:56 [INFO] trainer: Epoch 65/100 [Val]   loss: 0.500021, l1: 0.180806, ssim: 0.319216
+2026-03-04 06:54:56 [INFO] trainer:   Saved visualization grids for epoch 65
+2026-03-04 06:55:26 [INFO] trainer:   [Debug E65] pred range=[-1.000, 1.000], residual_mag=0.1171, l1_vs_cta=0.1996
+2026-03-04 06:55:26 [WARNING] trainer:   [Debug E65] ⚠ Output saturation: at+1=4.9%, at-1=37.7%
+2026-03-04 06:55:26 [INFO] trainer:   [Debug E65] sharpness: pred_hf=0.0904, cta_hf=0.1075, ratio=0.841 (ok)
+2026-03-04 06:55:26 [INFO] trainer:   [Debug E65] lung_l1=0.2384, bg_l1=0.1916
+2026-03-04 07:06:35 [INFO] trainer: Epoch 66/100 [Train] loss: 0.350362, l1: 0.130735, ssim: 0.219626, lr_G: 0.000052, freq: 0.020605, gan_g: 0.620562, fm: 0.354410, d_loss: 0.545188, lr_D: 0.000104, D_real: 0.460730, D_fake: 0.449122, w_recon: 0.350362, w_gan: 0.124112, w_fm: 0.354410, eff_gan_w: 0.200000, gnorm_G: 0.436577, gnorm_D: 1.895465
+2026-03-04 07:07:10 [INFO] trainer: Epoch 66/100 [Val]   loss: 0.509675, l1: 0.186784, ssim: 0.322891
+2026-03-04 07:07:11 [INFO] trainer:   Saved visualization grids for epoch 66
+2026-03-04 07:07:40 [INFO] trainer:   [Debug E66] pred range=[-1.000, 1.000], residual_mag=0.1306, l1_vs_cta=0.1884
+2026-03-04 07:07:40 [WARNING] trainer:   [Debug E66] ⚠ Output saturation: at+1=5.0%, at-1=40.2%
+2026-03-04 07:07:40 [INFO] trainer:   [Debug E66] sharpness: pred_hf=0.0958, cta_hf=0.1116, ratio=0.858 (ok)
+2026-03-04 07:07:40 [INFO] trainer:   [Debug E66] lung_l1=0.2571, bg_l1=0.1645
+2026-03-04 07:19:10 [INFO] trainer: Epoch 67/100 [Train] loss: 0.354344, l1: 0.131678, ssim: 0.222665, lr_G: 0.000049, freq: 0.020719, gan_g: 0.633240, fm: 0.357772, d_loss: 0.546910, lr_D: 0.000098, D_real: 0.456247, D_fake: 0.442723, w_recon: 0.354344, w_gan: 0.126648, w_fm: 0.357772, eff_gan_w: 0.200000, gnorm_G: 0.429129, gnorm_D: 1.872241
+2026-03-04 07:19:46 [INFO] trainer: Epoch 67/100 [Val]   loss: 0.506972, l1: 0.185137, ssim: 0.321835
+2026-03-04 07:19:46 [INFO] trainer:   Saved visualization grids for epoch 67
+2026-03-04 07:20:16 [INFO] trainer:   [Debug E67] pred range=[-1.000, 1.000], residual_mag=0.1432, l1_vs_cta=0.1848
+2026-03-04 07:20:16 [WARNING] trainer:   [Debug E67] ⚠ Output saturation: at+1=4.3%, at-1=37.6%
+2026-03-04 07:20:16 [INFO] trainer:   [Debug E67] sharpness: pred_hf=0.0898, cta_hf=0.1152, ratio=0.779 (ok)
+2026-03-04 07:20:16 [INFO] trainer:   [Debug E67] lung_l1=0.2370, bg_l1=0.1648
+2026-03-04 07:31:17 [INFO] trainer: Epoch 68/100 [Train] loss: 0.350774, l1: 0.130863, ssim: 0.219911, lr_G: 0.000046, freq: 0.020432, gan_g: 0.623307, fm: 0.358929, d_loss: 0.545069, lr_D: 0.000093, D_real: 0.457559, D_fake: 0.446445, w_recon: 0.350774, w_gan: 0.124661, w_fm: 0.358929, eff_gan_w: 0.200000, gnorm_G: 0.398263, gnorm_D: 1.585500
+2026-03-04 07:31:53 [INFO] trainer: Epoch 68/100 [Val]   loss: 0.501571, l1: 0.180765, ssim: 0.320806
+2026-03-04 07:31:53 [INFO] trainer:   Saved visualization grids for epoch 68
+2026-03-04 07:32:22 [INFO] trainer:   [Debug E68] pred range=[-1.000, 1.000], residual_mag=0.1085, l1_vs_cta=0.2291
+2026-03-04 07:32:22 [WARNING] trainer:   [Debug E68] ⚠ Output saturation: at+1=3.0%, at-1=39.3%
+2026-03-04 07:32:22 [INFO] trainer:   [Debug E68] sharpness: pred_hf=0.0909, cta_hf=0.1101, ratio=0.825 (ok)
+2026-03-04 07:32:22 [INFO] trainer:   [Debug E68] lung_l1=0.3000, bg_l1=0.2163
+2026-03-04 07:43:46 [INFO] trainer: Epoch 69/100 [Train] loss: 0.349097, l1: 0.129756, ssim: 0.219341, lr_G: 0.000044, freq: 0.020429, gan_g: 0.610973, fm: 0.360554, d_loss: 0.541913, lr_D: 0.000087, D_real: 0.465745, D_fake: 0.452640, w_recon: 0.349097, w_gan: 0.122195, w_fm: 0.360554, eff_gan_w: 0.200000, gnorm_G: 0.392346, gnorm_D: 1.739729
+2026-03-04 07:44:21 [INFO] trainer: Epoch 69/100 [Val]   loss: 0.511914, l1: 0.182137, ssim: 0.329778
+2026-03-04 07:44:22 [INFO] trainer:   Saved visualization grids for epoch 69
+2026-03-04 07:44:51 [INFO] trainer:   [Debug E69] pred range=[-1.000, 1.000], residual_mag=0.1272, l1_vs_cta=0.1781
+2026-03-04 07:44:51 [WARNING] trainer:   [Debug E69] ⚠ Output saturation: at+1=3.9%, at-1=37.8%
+2026-03-04 07:44:51 [INFO] trainer:   [Debug E69] sharpness: pred_hf=0.0901, cta_hf=0.1153, ratio=0.782 (ok)
+2026-03-04 07:44:51 [INFO] trainer:   [Debug E69] lung_l1=0.2517, bg_l1=0.1554
+2026-03-04 07:55:52 [INFO] trainer: Epoch 70/100 [Train] loss: 0.353176, l1: 0.131647, ssim: 0.221529, lr_G: 0.000041, freq: 0.020591, gan_g: 0.612264, fm: 0.359307, d_loss: 0.539295, lr_D: 0.000082, D_real: 0.464645, D_fake: 0.451723, w_recon: 0.353176, w_gan: 0.122453, w_fm: 0.359307, eff_gan_w: 0.200000, gnorm_G: 0.413593, gnorm_D: 1.583856
+2026-03-04 07:56:28 [INFO] trainer: Epoch 70/100 [Val]   loss: 0.498345, l1: 0.174650, ssim: 0.323694
+2026-03-04 07:56:28 [INFO] trainer:   Saved visualization grids for epoch 70
+2026-03-04 07:56:58 [INFO] trainer:   [Debug E70] pred range=[-1.000, 1.000], residual_mag=0.1089, l1_vs_cta=0.2246
+2026-03-04 07:56:58 [WARNING] trainer:   [Debug E70] ⚠ Output saturation: at+1=2.7%, at-1=39.9%
+2026-03-04 07:56:58 [INFO] trainer:   [Debug E70] sharpness: pred_hf=0.0828, cta_hf=0.1051, ratio=0.788 (ok)
+2026-03-04 07:56:58 [INFO] trainer:   [Debug E70] lung_l1=0.2790, bg_l1=0.2166
+2026-03-04 07:56:59 [INFO] trainer:   Saved checkpoint: outputs_phase2_g_d/checkpoint_epoch0070.pt
+2026-03-04 07:56:59 [INFO] trainer:   Epoch 71: lung_weight=20.0
+2026-03-04 08:08:18 [INFO] trainer: Epoch 71/100 [Train] loss: 0.353477, l1: 0.131088, ssim: 0.222389, lr_G: 0.000039, freq: 0.020534, gan_g: 0.613512, fm: 0.359515, d_loss: 0.539794, lr_D: 0.000077, D_real: 0.465625, D_fake: 0.450880, w_recon: 0.353477, w_gan: 0.122702, w_fm: 0.359515, eff_gan_w: 0.200000, gnorm_G: 0.421737, gnorm_D: 1.530782
+2026-03-04 08:08:53 [INFO] trainer: Epoch 71/100 [Val]   loss: 0.500663, l1: 0.180674, ssim: 0.319989
+2026-03-04 08:08:54 [INFO] trainer:   Saved visualization grids for epoch 71
+2026-03-04 08:09:23 [INFO] trainer:   [Debug E71] pred range=[-1.000, 1.000], residual_mag=0.1320, l1_vs_cta=0.1960
+2026-03-04 08:09:23 [WARNING] trainer:   [Debug E71] ⚠ Output saturation: at+1=5.0%, at-1=35.0%
+2026-03-04 08:09:23 [INFO] trainer:   [Debug E71] sharpness: pred_hf=0.0858, cta_hf=0.1061, ratio=0.809 (ok)
+2026-03-04 08:09:23 [INFO] trainer:   [Debug E71] lung_l1=0.2484, bg_l1=0.1827
+2026-03-04 08:20:51 [INFO] trainer: Epoch 72/100 [Train] loss: 0.348715, l1: 0.129287, ssim: 0.219427, lr_G: 0.000036, freq: 0.020481, gan_g: 0.614608, fm: 0.357527, d_loss: 0.541242, lr_D: 0.000072, D_real: 0.461774, D_fake: 0.450353, w_recon: 0.348715, w_gan: 0.122922, w_fm: 0.357527, eff_gan_w: 0.200000, gnorm_G: 0.404751, gnorm_D: 1.571902
+2026-03-04 08:21:27 [INFO] trainer: Epoch 72/100 [Val]   loss: 0.497646, l1: 0.173935, ssim: 0.323711
+2026-03-04 08:21:27 [INFO] trainer:   Saved visualization grids for epoch 72
+2026-03-04 08:21:57 [INFO] trainer:   [Debug E72] pred range=[-1.000, 1.000], residual_mag=0.1280, l1_vs_cta=0.2242
+2026-03-04 08:21:57 [WARNING] trainer:   [Debug E72] ⚠ Output saturation: at+1=3.8%, at-1=38.7%
+2026-03-04 08:21:57 [INFO] trainer:   [Debug E72] sharpness: pred_hf=0.0938, cta_hf=0.1113, ratio=0.843 (ok)
+2026-03-04 08:21:57 [INFO] trainer:   [Debug E72] lung_l1=0.2669, bg_l1=0.2108
+2026-03-04 08:33:25 [INFO] trainer: Epoch 73/100 [Train] loss: 0.348882, l1: 0.129895, ssim: 0.218987, lr_G: 0.000034, freq: 0.020551, gan_g: 0.604384, fm: 0.360271, d_loss: 0.535677, lr_D: 0.000068, D_real: 0.465825, D_fake: 0.454732, w_recon: 0.348882, w_gan: 0.120877, w_fm: 0.360271, eff_gan_w: 0.200000, gnorm_G: 0.362491, gnorm_D: 1.445675
+2026-03-04 08:34:00 [INFO] trainer: Epoch 73/100 [Val]   loss: 0.499493, l1: 0.178057, ssim: 0.321436
+2026-03-04 08:34:01 [INFO] trainer:   Saved visualization grids for epoch 73
+2026-03-04 08:34:31 [INFO] trainer:   [Debug E73] pred range=[-1.000, 1.000], residual_mag=0.1117, l1_vs_cta=0.2324
+2026-03-04 08:34:31 [WARNING] trainer:   [Debug E73] ⚠ Output saturation: at+1=3.0%, at-1=34.5%
+2026-03-04 08:34:31 [INFO] trainer:   [Debug E73] sharpness: pred_hf=0.0921, cta_hf=0.0978, ratio=0.941 (ok)
+2026-03-04 08:34:31 [INFO] trainer:   [Debug E73] lung_l1=0.2305, bg_l1=0.2326
+2026-03-04 08:45:46 [INFO] trainer: Epoch 74/100 [Train] loss: 0.350157, l1: 0.130724, ssim: 0.219433, lr_G: 0.000031, freq: 0.020383, gan_g: 0.608611, fm: 0.358986, d_loss: 0.532772, lr_D: 0.000063, D_real: 0.471803, D_fake: 0.453122, w_recon: 0.350157, w_gan: 0.121722, w_fm: 0.358986, eff_gan_w: 0.200000, gnorm_G: 0.385087, gnorm_D: 1.468754
+2026-03-04 08:46:21 [INFO] trainer: Epoch 74/100 [Val]   loss: 0.490204, l1: 0.170647, ssim: 0.319557
+2026-03-04 08:46:22 [INFO] trainer:   Saved visualization grids for epoch 74
+2026-03-04 08:46:51 [INFO] trainer:   [Debug E74] pred range=[-1.000, 1.000], residual_mag=0.1292, l1_vs_cta=0.1869
+2026-03-04 08:46:51 [WARNING] trainer:   [Debug E74] ⚠ Output saturation: at+1=4.9%, at-1=38.4%
+2026-03-04 08:46:51 [INFO] trainer:   [Debug E74] sharpness: pred_hf=0.0953, cta_hf=0.1119, ratio=0.852 (ok)
+2026-03-04 08:46:51 [INFO] trainer:   [Debug E74] lung_l1=0.2473, bg_l1=0.1674
+2026-03-04 08:58:02 [INFO] trainer: Epoch 75/100 [Train] loss: 0.346471, l1: 0.128608, ssim: 0.217863, lr_G: 0.000029, freq: 0.020437, gan_g: 0.604572, fm: 0.357296, d_loss: 0.534698, lr_D: 0.000058, D_real: 0.467854, D_fake: 0.455496, w_recon: 0.346471, w_gan: 0.120914, w_fm: 0.357296, eff_gan_w: 0.200000, gnorm_G: 0.350065, gnorm_D: 1.504186
+2026-03-04 08:58:37 [INFO] trainer: Epoch 75/100 [Val]   loss: 0.505541, l1: 0.179510, ssim: 0.326031
+2026-03-04 08:58:38 [INFO] trainer:   Saved visualization grids for epoch 75
+2026-03-04 08:59:07 [INFO] trainer:   [Debug E75] pred range=[-1.000, 1.000], residual_mag=0.1272, l1_vs_cta=0.1855
+2026-03-04 08:59:07 [WARNING] trainer:   [Debug E75] ⚠ Output saturation: at+1=4.4%, at-1=28.0%
+2026-03-04 08:59:07 [INFO] trainer:   [Debug E75] sharpness: pred_hf=0.0905, cta_hf=0.1035, ratio=0.874 (ok)
+2026-03-04 08:59:07 [INFO] trainer:   [Debug E75] lung_l1=0.2295, bg_l1=0.1782
+2026-03-04 09:10:21 [INFO] trainer: Epoch 76/100 [Train] loss: 0.354203, l1: 0.130976, ssim: 0.223227, lr_G: 0.000027, freq: 0.020413, gan_g: 0.613293, fm: 0.359902, d_loss: 0.538057, lr_D: 0.000054, D_real: 0.465022, D_fake: 0.450922, w_recon: 0.354203, w_gan: 0.122659, w_fm: 0.359902, eff_gan_w: 0.200000, gnorm_G: 0.401882, gnorm_D: 1.356457
+2026-03-04 09:10:57 [INFO] trainer: Epoch 76/100 [Val]   loss: 0.500159, l1: 0.181227, ssim: 0.318932
+2026-03-04 09:10:58 [INFO] trainer:   Saved visualization grids for epoch 76
+2026-03-04 09:11:27 [INFO] trainer:   [Debug E76] pred range=[-1.000, 1.000], residual_mag=0.1358, l1_vs_cta=0.2773
+2026-03-04 09:11:27 [WARNING] trainer:   [Debug E76] ⚠ Output saturation: at+1=2.5%, at-1=35.9%
+2026-03-04 09:11:27 [INFO] trainer:   [Debug E76] sharpness: pred_hf=0.0823, cta_hf=0.1354, ratio=0.608 (blurry)
+2026-03-04 09:11:27 [INFO] trainer:   [Debug E76] lung_l1=0.2659, bg_l1=0.2783
+2026-03-04 09:22:55 [INFO] trainer: Epoch 77/100 [Train] loss: 0.348542, l1: 0.128896, ssim: 0.219646, lr_G: 0.000025, freq: 0.020282, gan_g: 0.611888, fm: 0.359646, d_loss: 0.536496, lr_D: 0.000050, D_real: 0.465645, D_fake: 0.451212, w_recon: 0.348542, w_gan: 0.122378, w_fm: 0.359646, eff_gan_w: 0.200000, gnorm_G: 0.388439, gnorm_D: 1.362134
+2026-03-04 09:23:30 [INFO] trainer: Epoch 77/100 [Val]   loss: 0.508687, l1: 0.182544, ssim: 0.326143
+2026-03-04 09:23:31 [INFO] trainer:   Saved visualization grids for epoch 77
+2026-03-04 09:24:00 [INFO] trainer:   [Debug E77] pred range=[-1.000, 1.000], residual_mag=0.1288, l1_vs_cta=0.2313
+2026-03-04 09:24:00 [WARNING] trainer:   [Debug E77] ⚠ Output saturation: at+1=3.5%, at-1=40.1%
+2026-03-04 09:24:00 [INFO] trainer:   [Debug E77] sharpness: pred_hf=0.0909, cta_hf=0.1098, ratio=0.828 (ok)
+2026-03-04 09:24:00 [INFO] trainer:   [Debug E77] lung_l1=0.2844, bg_l1=0.2192
