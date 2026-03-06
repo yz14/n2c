@@ -105,13 +105,35 @@ def load_pretrained_vae(cfg: LDMConfig, vae_path: str, device: torch.device) -> 
     # Support both full checkpoint and raw state dict
     if "vae_state_dict" in state:
         vae_sd = state["vae_state_dict"]
+
+        # Prefer EMA weights if available (typically better quality)
+        if "ema_params" in state and isinstance(state["ema_params"], list):
+            logger.info("  Using EMA weights from VAE checkpoint")
+            ema_params = state["ema_params"]
+            param_names = [name for name, _ in vae.named_parameters()]
+            if len(ema_params) == len(param_names):
+                for name, ema_p in zip(param_names, ema_params):
+                    vae_sd[name] = ema_p
+            else:
+                logger.warning(
+                    f"  EMA param count ({len(ema_params)}) != model param count "
+                    f"({len(param_names)}). Falling back to raw weights."
+                )
     elif "ema_params" in state and isinstance(state["ema_params"], list):
-        # Load EMA weights if available (better quality)
-        logger.info("  Using EMA weights from VAE checkpoint")
+        # Legacy format: only EMA params stored without vae_state_dict
+        logger.info("  Using EMA weights from VAE checkpoint (legacy format)")
         ema_params = state["ema_params"]
         vae_sd = vae.state_dict()
-        for (name, _), ema_p in zip(vae.named_parameters(), ema_params):
-            vae_sd[name] = ema_p
+        param_names = [name for name, _ in vae.named_parameters()]
+        if len(ema_params) == len(param_names):
+            for name, ema_p in zip(param_names, ema_params):
+                vae_sd[name] = ema_p
+        else:
+            logger.warning(
+                f"  EMA param count ({len(ema_params)}) != model param count "
+                f"({len(param_names)}). Cannot load EMA weights."
+            )
+            raise ValueError("EMA param count mismatch and no vae_state_dict found.")
     else:
         vae_sd = state
 

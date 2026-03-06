@@ -30,13 +30,13 @@
 - **完成后**：总结本轮成果，说明后续计划（如有）  
 
 
-测试环境为**py310**  
+## 测试环境为**py310**  
 
 
-**任务**： ncct合成ctpa，D:\codes\work-projects\ncct2cpta\train.py这里是训练入口。方案1：采用生成器G+精修网络G2+配准网络R+判别器D的方案。数据：对同一个样本的两次扫描进行配准，大约配准到90%的样子。G是必须先训练的，训练目前效果正常，也就是平扫的肺血管基本都增强了，只是生成的图像比较模糊，看起来像被平滑过。方案2：采用D:\codes\work-projects\ncct2cpta\ldm里面的方案。  
+**任务**： ncct合成ctpa，D:\codes\work-projects\ncct2cpta\train.py这里是训练入口。数据：对同一个样本的两次扫描进行配准，大约配准到90%的样子。方案1：采用生成器G+精修网络G2+配准网络R+判别器D的方案。G是必须先训练的，训练目前效果正常，也就是平扫的肺血管基本都增强了，只是生成的图像比较模糊，看起来像被平滑过。方案2：采用D:\codes\work-projects\ncct2cpta\ldm里面的方案，改方案参考方案1和D:\codes\work-projects\ncct2cpta\ref_models\pix2pixHD，D:\codes\work-projects\ncct2cpta\ref_models\guided-diffusion来训练vae，参考D:\codes\work-projects\ncct2cpta\ref_models\guided-diffusion来训练diffusion。D:\codes\work-projects\ncct2cpta\ldm\train_vae.py和train_diffusion.py是训练入口。  
 
 # TODO  
-1. 请仔细分析vae这块代码，a. 训练vae的时候确实把D冻结了吗，训练D的时候确实把vae冻结了吗。b. 训练D的时候需要加入更多的负样本吗，像方案1那样，类似加入降质的CTA和降质的ncct。c. vae的判别器支持了预训练吗，例如先用降质的CTA和降质的ncct和真实的ncct和cta先预训练判别器，然后再一起训练。d. 我训练了一版vae，见D:\codes\work-projects\ncct2cpta\outputs\config0.yaml配置和对应日志，主观看起来效果还行，vae输出变得清晰，但是也没有非常的清晰，所以我不确定有没有代码的错误，训练逻辑的错误等等。  
-2. 我在vae基础上训练diffusion，见D:\codes\work-projects\ncct2cpta\outputs\config1.yaml配置和对应的日志。训练结果目前仍然看起来很杂乱，请检查代码是否正确，训练逻辑是否正确。  
-3. vae和diffusion的训练是否有高质量提升效果的策略，工程，技巧等等加入。  
-4. 如果有修改，记得同步更新D:\codes\work-projects\ncct2cpta\configs\ldm_default.yaml。  
+1. 请全面，细致，认真的分析和审查vae这块代码，保证全流程代码正确无误，算法正确实现，训练逻辑正确等等。我训练了一版vae，见D:\codes\work-projects\ncct2cpta\outputs\config0.yaml配置和对应日志。  
+2. 请全面，细致，认真的分析和审查diffusion这块代码，保证全流程代码正确无误，算法正确实现，训练逻辑正确等等。我在vae基础上训练diffusion，见D:\codes\work-projects\ncct2cpta\outputs\config1.yaml配置和对应的日志。  
+3. vae和diffusion的训练是否有高质量提升效果的策略，工程，技巧等等加入（不要局限于医学图像领域）。  
+4. 如果有修改，记得同步更新D:\codes\work-projects\ncct2cpta\configs\ldm_default.yaml，注意需要加入注释来解释每个参数的选项和意义。  

@@ -144,6 +144,27 @@ def _r1_penalty(
     return gradients.pow(2).flatten(1).sum(1).mean()
 
 
+def _lecam_regularization(
+    real_pred: torch.Tensor,
+    fake_pred: torch.Tensor,
+    ema_real: float,
+    ema_fake: float,
+) -> torch.Tensor:
+    """LeCAM regularization (Tseng et al., 2021).
+
+    Prevents D from becoming too confident by penalizing the divergence
+    between current predictions and their exponential moving averages.
+    Effectively constrains D to not overshoot on either real or fake.
+
+    lecam_loss = mean(relu(D(real) - ema_fake)^2) + mean(relu(ema_real - D(fake))^2)
+    """
+    lecam = (
+        torch.nn.functional.relu(real_pred - ema_fake).pow(2).mean()
+        + torch.nn.functional.relu(ema_real - fake_pred).pow(2).mean()
+    )
+    return lecam
+
+
 # ---------------------------------------------------------------------------
 # VAEGANLoss
 # ---------------------------------------------------------------------------
@@ -180,6 +201,11 @@ class VAEGANLoss(nn.Module):
         self.vae = vae
         self.device = device
         self.d_step_count = 0
+
+        # LeCAM EMA trackers
+        self._ema_real = 0.0
+        self._ema_fake = 0.0
+        self._lecam_decay = 0.999
 
         if not cfg.enabled:
             logger.info("  VAE-GAN: DISABLED")
@@ -260,6 +286,8 @@ class VAEGANLoss(nn.Module):
         logger.info(f"    D start epoch:    {cfg.disc_start_epoch}")
         logger.info(f"    D LR:             {cfg.lr}")
         logger.info(f"    R1 gamma:         {cfg.r1_gamma} (interval={cfg.r1_interval})")
+        logger.info(f"    LeCAM weight:     {cfg.lecam_weight}")
+        logger.info(f"    D train ratio:    {cfg.d_train_ratio}")
 
     @staticmethod
     def _warmup_cosine_lambda(warmup_steps: int, total_steps: int):
@@ -452,6 +480,24 @@ class VAEGANLoss(nn.Module):
         if self.cfg.r1_gamma > 0 and self.d_step_count % self.cfg.r1_interval == 0:
             d_loss = d_loss + 0.5 * self.cfg.r1_gamma * r1
 
+        # LeCAM regularization
+        if self.cfg.lecam_weight > 0:
+            lecam = _lecam_regularization(
+                real_pred, fake_pred, self._ema_real, self._ema_fake
+            )
+            d_loss = d_loss + self.cfg.lecam_weight * lecam
+            result["lecam"] = lecam.detach()
+
+            # Update EMA of D predictions
+            self._ema_real = (
+                self._lecam_decay * self._ema_real
+                + (1 - self._lecam_decay) * real_pred.mean().item()
+            )
+            self._ema_fake = (
+                self._lecam_decay * self._ema_fake
+                + (1 - self._lecam_decay) * fake_pred.mean().item()
+            )
+
         result["d_loss"] = d_loss
         result["d_real"] = real_pred.mean().detach()
         result["d_fake"] = fake_pred.mean().detach()
@@ -496,6 +542,8 @@ class VAEGANLoss(nn.Module):
             "optimizer_d_state_dict": self.optimizer_d.state_dict(),
             "scheduler_d_state_dict": self.scheduler_d.state_dict(),
             "d_step_count": self.d_step_count,
+            "lecam_ema_real": self._ema_real,
+            "lecam_ema_fake": self._ema_fake,
         }
 
     def load_state_dict_from_checkpoint(self, state: dict):
@@ -511,6 +559,10 @@ class VAEGANLoss(nn.Module):
             self.scheduler_d.load_state_dict(state["scheduler_d_state_dict"])
         if "d_step_count" in state:
             self.d_step_count = state["d_step_count"]
+        if "lecam_ema_real" in state:
+            self._ema_real = state["lecam_ema_real"]
+        if "lecam_ema_fake" in state:
+            self._ema_fake = state["lecam_ema_fake"]
 
     def _load_pretrained_d(self, path: str):
         """Load pretrained discriminator weights.

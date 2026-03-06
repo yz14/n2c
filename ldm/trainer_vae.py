@@ -32,7 +32,7 @@ from tqdm import tqdm
 
 from ldm.config import LDMConfig
 from ldm.models.autoencoder import AutoencoderKL
-from ldm.utils import MetricTracker, warmup_cosine_schedule as _warmup_cosine_schedule
+from ldm.utils import MetricTracker, warmup_cosine_schedule as _warmup_cosine_schedule, ssim_loss
 from models.nn_utils import update_ema, load_pretrained_weights
 from utils.visualization import save_sample_grid
 
@@ -96,6 +96,8 @@ class VAETrainer:
         # Loss weights
         self.l1_weight = tcfg.l1_weight
         self.kl_weight = tcfg.kl_weight
+        self.ssim_weight = tcfg.ssim_weight
+        self.kl_warmup_epochs = tcfg.kl_warmup_epochs
 
         # EMA
         self.ema_rate = tcfg.ema_rate
@@ -124,7 +126,9 @@ class VAETrainer:
         logger.info(f"VAETrainer initialized:")
         logger.info(f"  VAE params:       {n_params:.2f}M")
         logger.info(f"  L1 weight:        {self.l1_weight}")
+        logger.info(f"  SSIM weight:      {self.ssim_weight}")
         logger.info(f"  KL weight:        {self.kl_weight}")
+        logger.info(f"  KL warmup epochs: {self.kl_warmup_epochs}")
         logger.info(f"  LR:               {tcfg.lr}")
         logger.info(f"  Grad clip norm:   {self.grad_clip_norm}")
         logger.info(f"  EMA rate:         {self.ema_rate}")
@@ -198,6 +202,9 @@ class VAETrainer:
         train_vis_samples: List[Dict[str, torch.Tensor]] = []
         gan_active = (self.vae_gan_loss is not None and
                       self.vae_gan_loss.is_active(epoch))
+        d_train_ratio = (self.vae_gan_loss.cfg.d_train_ratio
+                         if self.vae_gan_loss is not None else 1)
+        batch_idx = 0
 
         pbar = tqdm(self.train_loader, desc=f"VAE Epoch {epoch+1}", leave=False)
         for batch in pbar:
@@ -214,11 +221,11 @@ class VAETrainer:
 
             # Train on CTA images (primary target for reconstruction quality)
             recon_cta, posterior_cta = self.vae(cta)
-            loss_cta, loss_dict_cta = self._compute_loss(cta, recon_cta, posterior_cta)
+            loss_cta, loss_dict_cta = self._compute_loss(cta, recon_cta, posterior_cta, epoch)
 
             # Also train on NCCT for a shared latent space
             recon_ncct, posterior_ncct = self.vae(ncct)
-            loss_ncct, loss_dict_ncct = self._compute_loss(ncct, recon_ncct, posterior_ncct)
+            loss_ncct, loss_dict_ncct = self._compute_loss(ncct, recon_ncct, posterior_ncct, epoch)
 
             # Combined reconstruction loss (equal weight for both modalities)
             recon_loss = 0.5 * (loss_cta + loss_ncct)
@@ -263,7 +270,7 @@ class VAETrainer:
             # Phase 2: Discriminator update (VAE frozen)
             # ============================================================
             d_loss_dict = {}
-            if gan_active:
+            if gan_active and batch_idx % d_train_ratio == 0:
                 # Freeze VAE for D update
                 for p in self.vae.parameters():
                     p.requires_grad = False
@@ -287,12 +294,15 @@ class VAETrainer:
             # Metrics
             # ============================================================
             self.global_step += 1
+            batch_idx += 1
             metrics = {
                 "loss": loss.item(),
                 "l1_cta": loss_dict_cta["l1"],
+                "ssim_cta": loss_dict_cta["ssim"],
                 "kl_cta": loss_dict_cta["kl"],
                 "l1_ncct": loss_dict_ncct["l1"],
                 "kl_ncct": loss_dict_ncct["kl"],
+                "kl_w": loss_dict_cta["kl_w"],
                 "lr": self.optimizer.param_groups[0]["lr"],
                 "gnorm": grad_norm,
             }
@@ -326,16 +336,43 @@ class VAETrainer:
         self._train_vis_samples = train_vis_samples
         return tracker
 
-    def _compute_loss(self, target, recon, posterior):
-        """Compute reconstruction + KL loss."""
+    def _get_effective_kl_weight(self, epoch: int) -> float:
+        """Get KL weight with optional linear warmup."""
+        if self.kl_warmup_epochs <= 0:
+            return self.kl_weight
+        warmup_factor = min(1.0, (epoch + 1) / self.kl_warmup_epochs)
+        return self.kl_weight * warmup_factor
+
+    def _compute_loss(self, target, recon, posterior, epoch: int = 0):
+        """Compute reconstruction (L1 + SSIM) + KL loss."""
         l1_loss = torch.nn.functional.l1_loss(recon, target)
         kl_loss = posterior.kl().mean()
 
-        total = self.l1_weight * l1_loss + self.kl_weight * kl_loss
+        # SSIM loss (structural similarity)
+        ssim_val = torch.tensor(0.0, device=recon.device)
+        if self.ssim_weight > 0:
+            ssim_val = ssim_loss(recon, target)
+
+        # KL warmup: linearly ramp weight from 0 to kl_weight over N epochs
+        effective_kl_weight = self._get_effective_kl_weight(epoch)
+
+        total = (self.l1_weight * l1_loss
+                 + self.ssim_weight * ssim_val
+                 + effective_kl_weight * kl_loss)
         loss_dict = {
             "l1": l1_loss.item(),
+            "ssim": ssim_val.item(),
             "kl": kl_loss.item(),
+            "kl_w": effective_kl_weight,
         }
+
+        # KL monitoring: warn if KL grows too large
+        if kl_loss.item() > 1000:
+            logger.warning(
+                f"  ⚠ KL divergence = {kl_loss.item():.0f} (effective weight = {effective_kl_weight:.2e}). "
+                f"Consider increasing kl_weight or checking encoder outputs."
+            )
+
         return total, loss_dict
 
     # ------------------------------------------------------------------
@@ -358,17 +395,18 @@ class VAETrainer:
 
             # Validate on CTA reconstruction
             recon_cta, posterior_cta = self.vae(cta)
-            loss_cta, loss_dict_cta = self._compute_loss(cta, recon_cta, posterior_cta)
+            loss_cta, loss_dict_cta = self._compute_loss(cta, recon_cta, posterior_cta, epoch)
 
             # Validate on NCCT reconstruction
             recon_ncct, posterior_ncct = self.vae(ncct)
-            loss_ncct, loss_dict_ncct = self._compute_loss(ncct, recon_ncct, posterior_ncct)
+            loss_ncct, loss_dict_ncct = self._compute_loss(ncct, recon_ncct, posterior_ncct, epoch)
 
             loss = 0.5 * (loss_cta + loss_ncct)
 
             tracker.update({
                 "loss": loss.item(),
                 "l1_cta": loss_dict_cta["l1"],
+                "ssim_cta": loss_dict_cta["ssim"],
                 "kl_cta": loss_dict_cta["kl"],
                 "l1_ncct": loss_dict_ncct["l1"],
                 "kl_ncct": loss_dict_ncct["kl"],

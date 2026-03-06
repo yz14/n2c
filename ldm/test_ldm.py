@@ -827,6 +827,128 @@ def test_ddpm_no_clamp():
     logger.info("DDPM no clamp test PASSED\n")
 
 
+def test_ssim_loss():
+    """Test differentiable SSIM loss."""
+    logger.info("=== Testing SSIM Loss ===")
+    from ldm.utils import ssim_loss
+
+    B, C, H, W = 2, 3, 64, 64
+    x = torch.randn(B, C, H, W)
+
+    # SSIM of identical images should be ~0 loss (SSIM ≈ 1)
+    loss_identical = ssim_loss(x, x)
+    assert loss_identical.item() < 0.01, \
+        f"SSIM loss for identical images should be ~0, got {loss_identical.item():.4f}"
+    logger.info(f"  Identical images: loss={loss_identical.item():.6f} (should be ~0)")
+
+    # SSIM of different images should be positive (SSIM < 1)
+    y = torch.randn(B, C, H, W)
+    loss_different = ssim_loss(x, y)
+    assert loss_different.item() > 0.1, \
+        f"SSIM loss for different images should be > 0.1, got {loss_different.item():.4f}"
+    logger.info(f"  Different images: loss={loss_different.item():.6f} (should be > 0)")
+
+    # Gradient should flow through
+    x_grad = x.clone().requires_grad_(True)
+    loss = ssim_loss(x_grad, y)
+    loss.backward()
+    assert x_grad.grad is not None
+    assert x_grad.grad.abs().sum() > 0
+    logger.info("  Gradient flow: PASSED")
+
+    # Per-sample (no reduction)
+    loss_none = ssim_loss(x, y, reduction="none")
+    assert loss_none.shape == (B,)
+    logger.info(f"  Per-sample loss: shape={loss_none.shape}")
+
+    logger.info("SSIM loss test PASSED\n")
+
+
+def test_kl_warmup():
+    """Test KL warmup schedule in VAE trainer."""
+    logger.info("=== Testing KL Warmup ===")
+    from ldm.config import LDMConfig
+
+    # Simulate the warmup computation from trainer_vae._get_effective_kl_weight
+    kl_weight = 1e-4
+    kl_warmup_epochs = 10
+
+    def get_effective_kl_weight(epoch):
+        warmup_factor = min(1.0, (epoch + 1) / kl_warmup_epochs)
+        return kl_weight * warmup_factor
+
+    # Epoch 0: weight = 1e-4 * (1/10) = 1e-5
+    w0 = get_effective_kl_weight(0)
+    assert abs(w0 - 1e-5) < 1e-10, f"Expected 1e-5, got {w0}"
+    logger.info(f"  Epoch 0: kl_w = {w0:.2e}")
+
+    # Epoch 4: weight = 1e-4 * (5/10) = 5e-5
+    w4 = get_effective_kl_weight(4)
+    assert abs(w4 - 5e-5) < 1e-10, f"Expected 5e-5, got {w4}"
+    logger.info(f"  Epoch 4: kl_w = {w4:.2e}")
+
+    # Epoch 9: weight = 1e-4 * (10/10) = 1e-4 (fully ramped)
+    w9 = get_effective_kl_weight(9)
+    assert abs(w9 - 1e-4) < 1e-10, f"Expected 1e-4, got {w9}"
+    logger.info(f"  Epoch 9: kl_w = {w9:.2e}")
+
+    # Epoch 50: still 1e-4 (clamped)
+    w50 = get_effective_kl_weight(50)
+    assert abs(w50 - 1e-4) < 1e-10, f"Expected 1e-4, got {w50}"
+    logger.info(f"  Epoch 50: kl_w = {w50:.2e}")
+
+    # Config round-trip
+    cfg = LDMConfig()
+    assert cfg.vae_train.kl_warmup_epochs == 10
+    assert abs(cfg.vae_train.kl_weight - 1e-4) < 1e-10
+    assert abs(cfg.vae_train.ssim_weight - 0.5) < 1e-10
+    logger.info("  Config defaults: PASSED")
+
+    logger.info("KL warmup test PASSED\n")
+
+
+def test_lecam_regularization():
+    """Test LeCAM regularization for discriminator stability."""
+    logger.info("=== Testing LeCAM Regularization ===")
+    from ldm.vae_gan_loss import _lecam_regularization
+
+    # Case 1: D is balanced — low penalty
+    real_pred = torch.tensor([0.5, 0.6, 0.4])
+    fake_pred = torch.tensor([-0.5, -0.6, -0.4])
+    ema_real = 0.5
+    ema_fake = -0.5
+
+    lecam_balanced = _lecam_regularization(real_pred, fake_pred, ema_real, ema_fake)
+    logger.info(f"  Balanced: lecam = {lecam_balanced.item():.4f}")
+
+    # Case 2: D is overconfident on reals (real > ema_fake by a lot) — high penalty
+    real_pred_high = torch.tensor([5.0, 6.0, 7.0])
+    fake_pred_low = torch.tensor([-5.0, -6.0, -7.0])
+
+    lecam_overfit = _lecam_regularization(real_pred_high, fake_pred_low, ema_real, ema_fake)
+    assert lecam_overfit.item() > lecam_balanced.item(), \
+        "LeCAM should penalize overconfident D more"
+    logger.info(f"  Overconfident: lecam = {lecam_overfit.item():.4f}")
+
+    # Case 3: Gradient should flow
+    real_grad = real_pred_high.clone().requires_grad_(True)
+    fake_grad = fake_pred_low.clone().requires_grad_(True)
+    lecam = _lecam_regularization(real_grad, fake_grad, ema_real, ema_fake)
+    lecam.backward()
+    assert real_grad.grad is not None and real_grad.grad.abs().sum() > 0
+    assert fake_grad.grad is not None and fake_grad.grad.abs().sum() > 0
+    logger.info("  Gradient flow: PASSED")
+
+    # Case 4: VAEGANLoss integration — check config field
+    from ldm.config import VAEGANConfig
+    cfg = VAEGANConfig()
+    assert abs(cfg.lecam_weight - 0.001) < 1e-10
+    assert cfg.d_train_ratio == 1
+    logger.info("  Config defaults: PASSED")
+
+    logger.info("LeCAM regularization test PASSED\n")
+
+
 def main():
     test_config()
     test_distributions()
@@ -844,11 +966,15 @@ def main():
     test_d_negative_samples()
     test_shared_utils()
     test_ddpm_no_clamp()
+    test_ssim_loss()
+    test_kl_warmup()
+    test_lecam_regularization()
 
     logger.info("=" * 50)
-    logger.info("ALL LDM TESTS PASSED! (16 tests)")
+    logger.info("ALL LDM TESTS PASSED! (19 tests)")
     return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
+

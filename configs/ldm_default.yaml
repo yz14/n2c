@@ -1,105 +1,150 @@
+# ===========================================================================
+# NCCT→CTA Latent Diffusion Model (LDM) 默认配置
+# ===========================================================================
+# 两阶段训练:
+#   Stage 1: AutoencoderKL (VAE) — 将 256×256 图像压缩到 32×32 latent
+#   Stage 2: Conditional Diffusion UNet — 在 latent space 中去噪
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# 数据配置
+# ---------------------------------------------------------------------------
 data:
-  data_dir: D:/codes/data/ncct_tiny
-  split_dir: ./splits
-  num_slices: 3
-  image_size: 256
-  hu_min: -1024.0
-  hu_max: 3071.0
-  num_workers: 4
-  aug_prob: 0.5
-  max_angle: 15.0
-  scale_range: 0.1
-  translate_frac: 0.05
-  noise_std: 0.02
-  brightness_range: 0.1
-  contrast_range: 0.1
+  data_dir: D:/codes/data/ncct_tiny        # NPZ 数据目录 (每个文件含 ncct/cta/ncct_lung_cvx)
+  split_dir: ./splits                       # 包含 train.txt / valid.txt 的目录
+  num_slices: 3                             # 2.5D 中间切片数, 即 C 通道数 (输入为 3C 切片)
+  image_size: 256                           # 输入空间分辨率 (H=W)
+  hu_min: -1024.0                           # HU 归一化下界 (推荐 -1024 包含肺部)
+  hu_max: 3071.0                            # HU 归一化上界 (推荐 3071 标准 12-bit CT)
+  num_workers: 4                            # DataLoader 工作线程数
+  aug_prob: 0.5                             # GPU 数据增强概率
+  max_angle: 15.0                           # 随机旋转最大角度 (度)
+  scale_range: 0.1                          # 随机缩放范围: [1-scale, 1+scale]
+  translate_frac: 0.05                      # 随机平移比例
+  noise_std: 0.02                           # 高斯噪声标准差
+  brightness_range: 0.1                     # 亮度增强范围
+  contrast_range: 0.1                       # 对比度增强范围
+
+# ---------------------------------------------------------------------------
+# VAE (AutoencoderKL) 模型配置 — Stage 1
+# ---------------------------------------------------------------------------
+# 架构: Encoder(下采样) → DiagonalGaussian → Decoder(上采样)
+# 下采样因子 f = 2^(len(ch_mult)-1), 默认 f=8 → 256→32
 vae:
-  in_channels: 3
-  out_channels: 3
-  z_channels: 4
-  embed_dim: 4
-  ch: 128
-  ch_mult:
-  - 1
-  - 2
-  - 4
-  - 4
-  num_res_blocks: 2
-  attn_resolutions:
-  - 32
-  dropout: 0.0
-  resolution: 256
-  double_z: true
+  in_channels: 3           # 输入通道 (= num_slices)
+  out_channels: 3          # 输出通道 (= num_slices)
+  z_channels: 4            # latent space 通道数
+  embed_dim: 4             # 嵌入维度 (通常 = z_channels)
+  ch: 128                  # 基础通道数 (越大模型越大)
+  ch_mult:                 # 每级通道倍数, 级数决定下采样次数
+  - 1                      #   level 0: ch*1 = 128, 分辨率 256
+  - 2                      #   level 1: ch*2 = 256, 分辨率 128
+  - 4                      #   level 2: ch*4 = 512, 分辨率 64
+  - 4                      #   level 3: ch*4 = 512, 分辨率 32
+  num_res_blocks: 2        # 每级 ResNet 块数
+  attn_resolutions:        # 使用自注意力的分辨率
+  - 32                     #   在 32×32 分辨率使用 attention
+  dropout: 0.0             # Dropout 概率 (训练时)
+  resolution: 256          # 输入图像分辨率 (用于计算 attention 位置)
+  double_z: true           # 输出 2*z_channels (均值+对数方差)
+
+# ---------------------------------------------------------------------------
+# VAE-GAN 判别器配置 (VQGAN 风格, 可选)
+# ---------------------------------------------------------------------------
+# 开启后使用 PatchGAN 判别器对抗训练, 可显著提升重建锐度
+# 参考: Taming Transformers (VQGAN, Esser et al. CVPR 2021)
 vae_gan:
-  enabled: false
-  ndf: 64
-  n_layers: 3
-  use_spectral_norm: true
-  gan_loss_type: hinge
-  gan_weight: 0.5
-  adaptive_weight: true
-  adaptive_weight_max: 10.0
-  feat_match_weight: 0.0
-  perceptual_weight: 1.0
-  lr: 4.5e-06
-  grad_clip_norm: 1.0
-  disc_start_epoch: 5
-  r1_gamma: 10.0
-  r1_interval: 16
-  disc_pretrained_path: ''
-  d_neg_augment: false
+  enabled: false                # 是否启用 GAN 训练 (true/false)
+  ndf: 64                      # PatchGAN 基础通道数
+  n_layers: 3                  # PatchGAN 卷积层数
+  use_spectral_norm: true      # 是否使用谱归一化 (稳定 D 训练)
+  gan_loss_type: hinge          # GAN 损失类型: "hinge" (更稳定) 或 "lsgan"
+  gan_weight: 0.5              # GAN 损失权重 (自适应权重前的基础值)
+  adaptive_weight: true        # 启用 VQGAN 自适应权重: |∂L_rec/∂θ| / |∂L_GAN/∂θ|
+  adaptive_weight_max: 10.0    # 自适应权重裁剪上限 (防止不稳定)
+  feat_match_weight: 0.0       # 特征匹配损失权重 (0=禁用)
+  perceptual_weight: 1.0       # VGG 感知损失权重 (0=禁用)
+  lr: 4.5e-06                  # D 学习率 (通常低于 G)
+  grad_clip_norm: 1.0          # D 梯度裁剪范数
+  disc_start_epoch: 5          # D 延迟启动 epoch (让 VAE 先学粗特征)
+  r1_gamma: 10.0               # R1 梯度惩罚系数 (0=禁用, 10.0=原始论文推荐值)
+  r1_interval: 16              # R1 惩罚计算间隔 (每 N 步一次, lazy R1)
+  disc_pretrained_path: ''     # 预训练 D 权重路径 (空=不加载)
+  d_neg_augment: false         # 是否用降质图像作为 D 的额外负样本
+  lecam_weight: 0.001          # LeCAM 正则化权重 (防止 D 过拟合, 0=禁用)
+  d_train_ratio: 1             # D/G 更新比例: D 每 N 个 batch 更新一次
+
+# ---------------------------------------------------------------------------
+# VAE 训练配置 — Stage 1
+# ---------------------------------------------------------------------------
 vae_train:
-  batch_size: 8
-  num_epochs: 100
-  lr: 4.5e-06
-  weight_decay: 0.0
-  kl_weight: 1.0e-06
-  l1_weight: 1.0
-  perceptual_weight: 0.0
-  lr_scheduler: cosine
-  warmup_steps: 500
-  ema_rate: 0.9999
-  grad_clip_norm: 1.0
-  save_interval: 10
-  log_interval: 50
-  val_interval: 1
-  output_dir: ./outputs_vae
-  resume_checkpoint: ''
-  seed: 42
+  batch_size: 8                # 批次大小 (GPU 显存约束)
+  num_epochs: 100              # 训练总 epoch 数
+  lr: 4.5e-06                  # 学习率 (LDM 论文推荐: 4.5e-6)
+  weight_decay: 0.0            # 权重衰减 (AdamW)
+  kl_weight: 0.0001            # KL 散度损失权重 (LDM 论文 1e-4~1e-6, 过小会导致 KL 爆炸)
+  kl_warmup_epochs: 10         # KL 权重线性预热 epoch 数 (0=不预热, 从 0 线性增到 kl_weight)
+  l1_weight: 1.0               # L1 重建损失权重
+  ssim_weight: 0.5             # SSIM 结构相似性损失权重 (对医学图像保持结构很重要, 0=禁用)
+  perceptual_weight: 0.0       # 独立感知损失权重 (如果用 vae_gan 则通过那里设置)
+  lr_scheduler: cosine         # 学习率调度: "cosine" (warmup+余弦衰减) / "step" / "none"
+  warmup_steps: 500            # 学习率预热步数
+  ema_rate: 0.9999             # 指数移动平均衰减率 (推荐 0.999~0.9999)
+  grad_clip_norm: 1.0          # 梯度裁剪范数 (0=不裁剪)
+  save_interval: 10            # 每 N epoch 保存 checkpoint
+  log_interval: 50             # 每 N step 记录损失日志
+  val_interval: 1              # 每 N epoch 验证一次
+  output_dir: ./outputs_vae    # 输出目录 (checkpoint, 可视化, 日志)
+  resume_checkpoint: ''        # 恢复训练的 checkpoint 路径 (空=从头训练)
+  seed: 42                     # 随机种子 (可复现性)
+
+# ---------------------------------------------------------------------------
+# Diffusion UNet 模型配置 — Stage 2
+# ---------------------------------------------------------------------------
+# 条件扩散 UNet, 输入 = concat(noisy_z_cta, z_ncct), 输出 = 预测噪声
+# 在 VAE latent space (32×32) 中工作
 unet:
-  model_channels: 128
-  channel_mult:
-  - 1
-  - 2
-  - 4
-  num_res_blocks: 2
-  attention_resolutions:
-  - 4
-  - 2
-  dropout: 0.0
-  num_heads: 4
-  use_scale_shift_norm: true
+  model_channels: 128          # 基础通道数
+  channel_mult:                # 每级通道倍数
+  - 1                          #   level 0: 128, 分辨率 32
+  - 2                          #   level 1: 256, 分辨率 16
+  - 4                          #   level 2: 512, 分辨率 8
+  num_res_blocks: 2            # 每级 ResNet 块数
+  attention_resolutions:       # 在哪些下采样率使用注意力
+  - 4                          #   4x 下采样 = 8×8 分辨率
+  - 2                          #   2x 下采样 = 16×16 分辨率
+  dropout: 0.0                 # Dropout 概率
+  num_heads: 4                 # 注意力头数
+  use_scale_shift_norm: true   # FiLM 条件化: timestep 信息通过 scale+shift 注入
+
+# ---------------------------------------------------------------------------
+# 噪声调度器配置
+# ---------------------------------------------------------------------------
 scheduler:
-  num_train_timesteps: 1000
-  beta_schedule: linear
-  beta_start: 0.00085
-  beta_end: 0.012
-  prediction_type: epsilon
-  num_inference_steps: 50
-  latent_scale_factor: 0.0
+  num_train_timesteps: 1000    # 扩散步数 T (标准值 1000)
+  beta_schedule: linear        # 噪声调度: "linear" (DDPM) 或 "cosine" (改进版)
+  beta_start: 0.00085          # 线性调度起始 β (SD 默认: 0.00085)
+  beta_end: 0.012              # 线性调度终止 β (SD 默认: 0.012)
+  prediction_type: epsilon     # 预测类型: "epsilon" (预测噪声) 或 "v_prediction"
+  num_inference_steps: 50      # DDIM 采样步数 (推理时, 越多质量越好但越慢)
+  latent_scale_factor: 0.0     # latent 缩放因子 (0.0=自动从训练数据计算 1/std(z))
+
+# ---------------------------------------------------------------------------
+# Diffusion UNet 训练配置 — Stage 2
+# ---------------------------------------------------------------------------
 diffusion_train:
-  batch_size: 8
-  num_epochs: 200
-  lr: 0.0001
-  weight_decay: 0.0
-  lr_scheduler: cosine
-  warmup_steps: 500
-  ema_rate: 0.9999
-  grad_clip_norm: 1.0
-  save_interval: 10
-  log_interval: 50
-  val_interval: 1
-  output_dir: ./outputs_diffusion
-  resume_checkpoint: ''
-  pretrained_vae: ''
-  seed: 42
+  batch_size: 8                # 批次大小
+  num_epochs: 200              # 训练总 epoch 数
+  lr: 0.0001                   # 学习率 (扩散模型通常用 1e-4)
+  weight_decay: 0.0            # 权重衰减
+  lr_scheduler: cosine         # "cosine" / "step" / "none"
+  warmup_steps: 500            # 学习率预热步数
+  ema_rate: 0.9999             # EMA 衰减率
+  grad_clip_norm: 1.0          # 梯度裁剪范数
+  save_interval: 10            # 保存间隔 (epoch)
+  log_interval: 50             # 日志间隔 (step)
+  val_interval: 1              # 验证间隔 (epoch)
+  output_dir: ./outputs_diffusion  # 输出目录
+  resume_checkpoint: ''        # 恢复训练路径
+  pretrained_vae: ''           # 预训练 VAE checkpoint (Stage 2 必须提供)
+  seed: 42                     # 随机种子

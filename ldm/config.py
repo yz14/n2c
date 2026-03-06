@@ -67,6 +67,8 @@ class VAEGANConfig:
     r1_interval: int = 16              # lazy R1 every N steps
     disc_pretrained_path: str = ""     # path to pretrained D checkpoint (empty=none)
     d_neg_augment: bool = False        # add degraded images as D negative samples
+    lecam_weight: float = 0.001        # LeCAM regularization weight (0=disabled)
+    d_train_ratio: int = 1             # D updates per G update (1=equal, >1=train D more)
 
 
 @dataclass
@@ -76,8 +78,10 @@ class VAETrainConfig:
     num_epochs: int = 100
     lr: float = 4.5e-6             # learning rate (follows LDM paper)
     weight_decay: float = 0.0
-    kl_weight: float = 1e-6        # KL divergence loss weight
+    kl_weight: float = 1e-4        # KL divergence loss weight (LDM paper: ~1e-4 to 1e-6)
+    kl_warmup_epochs: int = 10     # linearly ramp KL weight from 0 over N epochs (0=disabled)
     l1_weight: float = 1.0         # L1 reconstruction loss weight
+    ssim_weight: float = 0.5       # SSIM structural similarity loss weight (0=disabled)
     perceptual_weight: float = 0.0 # perceptual loss weight (0=disabled, use vae_gan for GAN-based)
     lr_scheduler: str = "cosine"   # "cosine", "step", "none"
     warmup_steps: int = 500
