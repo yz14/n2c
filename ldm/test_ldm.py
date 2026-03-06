@@ -393,6 +393,273 @@ def test_training_step():
     logger.info("Training step test PASSED\n")
 
 
+def test_vae_gan_config():
+    """Test VAEGANConfig serialization/deserialization."""
+    logger.info("=== Testing VAEGANConfig ====")
+    from ldm.config import LDMConfig, VAEGANConfig
+    import tempfile, os
+
+    cfg = LDMConfig()
+    cfg.vae_gan.enabled = True
+    cfg.vae_gan.gan_weight = 0.5
+    cfg.vae_gan.perceptual_weight = 1.0
+    cfg.vae_gan.disc_start_epoch = 3
+
+    with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as f:
+        tmp_path = f.name
+    try:
+        cfg.save(tmp_path)
+        cfg2 = LDMConfig.load(tmp_path)
+        assert cfg2.vae_gan.enabled == True
+        assert cfg2.vae_gan.gan_weight == 0.5
+        assert cfg2.vae_gan.perceptual_weight == 1.0
+        assert cfg2.vae_gan.disc_start_epoch == 3
+        assert cfg2.vae_gan.gan_loss_type == "hinge"
+        assert cfg2.vae_gan.adaptive_weight == True
+    finally:
+        os.unlink(tmp_path)
+
+    # Test default (disabled)
+    cfg3 = LDMConfig()
+    assert cfg3.vae_gan.enabled == False
+
+    logger.info("VAEGANConfig test PASSED\n")
+
+
+def test_vae_gan_loss():
+    """Test VAEGANLoss: creation, G loss, D loss, gradient isolation."""
+    logger.info("=== Testing VAEGANLoss ====")
+    from ldm.config import VAEConfig, VAEGANConfig
+    from ldm.models.autoencoder import AutoencoderKL
+    from ldm.vae_gan_loss import VAEGANLoss
+
+    device = torch.device("cpu")  # CPU for testing
+
+    # Build small VAE
+    vae_cfg = VAEConfig(
+        in_channels=TEST_SLICES, out_channels=TEST_SLICES,
+        z_channels=TEST_Z_CH, embed_dim=TEST_EMBED_DIM,
+        ch=32, ch_mult=(1, 2, 4), num_res_blocks=1,
+        attn_resolutions=(16,), resolution=TEST_SIZE,
+    )
+    vae = AutoencoderKL(vae_cfg).to(device)
+
+    # Create VAEGANLoss with GAN enabled (no perceptual for CPU speed)
+    gan_cfg = VAEGANConfig(
+        enabled=True,
+        ndf=16,  # small for test
+        n_layers=2,
+        use_spectral_norm=False,  # faster on CPU
+        gan_loss_type="hinge",
+        gan_weight=0.5,
+        adaptive_weight=True,
+        adaptive_weight_max=10.0,
+        perceptual_weight=0.0,  # skip VGG for CPU test
+        lr=1e-4,
+        disc_start_epoch=0,  # active from start
+    )
+
+    vae_gan = VAEGANLoss(gan_cfg, vae, device, total_steps=100)
+    assert vae_gan.discriminator is not None
+    assert vae_gan.is_active(0) == True
+    logger.info(f"  D params: {sum(p.numel() for p in vae_gan.discriminator.parameters()) / 1e6:.2f}M")
+
+    # Test with disc_start_epoch > 0
+    gan_cfg2 = VAEGANConfig(enabled=True, disc_start_epoch=5, ndf=16, n_layers=2,
+                            use_spectral_norm=False, perceptual_weight=0.0)
+    vae_gan2 = VAEGANLoss(gan_cfg2, vae, device, total_steps=100)
+    assert vae_gan2.is_active(4) == False
+    assert vae_gan2.is_active(5) == True
+
+    # Test disabled
+    gan_cfg_off = VAEGANConfig(enabled=False)
+    vae_gan_off = VAEGANLoss(gan_cfg_off, vae, device)
+    assert vae_gan_off.discriminator is None
+    assert vae_gan_off.is_active(0) == False
+
+    # ---- Test G loss computation ----
+    x = torch.randn(TEST_BATCH, TEST_SLICES, TEST_SIZE, TEST_SIZE)
+    recon, posterior = vae(x)
+    nll_loss = torch.nn.functional.l1_loss(recon, x)
+
+    g_result = vae_gan.compute_g_loss(
+        recon=recon, target=x, posterior=posterior,
+        epoch=0, nll_loss=nll_loss,
+    )
+    assert "g_loss" in g_result
+    assert "gan_g" in g_result
+    assert "adaptive_w" in g_result
+    assert g_result["disc_factor"].item() == 1.0
+    logger.info(f"  G loss: {g_result['g_loss'].item():.4f}, "
+                f"GAN_g: {g_result['gan_g'].item():.4f}, "
+                f"adaptive_w: {g_result['adaptive_w'].item():.4f}")
+
+    # ---- Test D loss computation ----
+    d_result = vae_gan.compute_d_loss(
+        recon=recon.detach(), target=x.detach(), epoch=0,
+    )
+    assert "d_loss" in d_result
+    assert "d_real" in d_result
+    assert "d_fake" in d_result
+    assert d_result["d_loss"].requires_grad  # should have grad for backprop
+    logger.info(f"  D loss: {d_result['d_loss'].item():.4f}, "
+                f"D_real: {d_result['d_real'].item():.4f}, "
+                f"D_fake: {d_result['d_fake'].item():.4f}")
+
+    # ---- Test gradient isolation ----
+    # After G update, D params should have no grad
+    vae.zero_grad()
+    recon2, posterior2 = vae(x)
+    nll2 = torch.nn.functional.l1_loss(recon2, x)
+    g_result2 = vae_gan.compute_g_loss(
+        recon=recon2, target=x, posterior=posterior2,
+        epoch=0, nll_loss=nll2,
+    )
+    total_g = nll2 + g_result2["g_loss"]
+    total_g.backward()
+
+    # D should NOT have accumulated gradients from G backward
+    d_has_grad = any(
+        p.grad is not None and p.grad.abs().sum() > 0
+        for p in vae_gan.discriminator.parameters()
+    )
+    assert not d_has_grad, "Gradient leaked from G to D!"
+
+    # VAE SHOULD have gradients
+    vae_has_grad = any(
+        p.grad is not None and p.grad.abs().sum() > 0
+        for p in vae.parameters()
+    )
+    assert vae_has_grad, "VAE should have gradients after G backward"
+    logger.info("  Gradient isolation: PASSED (no D grad leak)")
+
+    # ---- Test D step ----
+    d_result3 = vae_gan.compute_d_loss(
+        recon=recon2.detach(), target=x.detach(), epoch=0,
+    )
+    vae_gan.step_d(d_result3["d_loss"])
+    logger.info("  D optimizer step: PASSED")
+
+    # ---- Test state dict ----
+    state = vae_gan.state_dict()
+    assert "discriminator_state_dict" in state
+    assert "optimizer_d_state_dict" in state
+    assert "d_step_count" in state
+    logger.info("  State dict: PASSED")
+
+    logger.info("VAEGANLoss test PASSED\n")
+
+
+def test_vae_gan_training_step():
+    """Test a complete VAE+GAN training step (forward + backward for both)."""
+    logger.info("=== Testing VAE+GAN Training Step ====")
+    from ldm.config import VAEConfig, VAEGANConfig
+    from ldm.models.autoencoder import AutoencoderKL
+    from ldm.vae_gan_loss import VAEGANLoss
+
+    device = torch.device("cpu")
+
+    vae_cfg = VAEConfig(
+        in_channels=TEST_SLICES, out_channels=TEST_SLICES,
+        z_channels=TEST_Z_CH, embed_dim=TEST_EMBED_DIM,
+        ch=32, ch_mult=(1, 2, 4), num_res_blocks=1,
+        attn_resolutions=(16,), resolution=TEST_SIZE,
+    )
+    vae = AutoencoderKL(vae_cfg).to(device)
+
+    gan_cfg = VAEGANConfig(
+        enabled=True, ndf=16, n_layers=2,
+        use_spectral_norm=False, gan_loss_type="hinge",
+        gan_weight=0.5, adaptive_weight=True,
+        perceptual_weight=0.0, disc_start_epoch=0,
+    )
+    vae_gan = VAEGANLoss(gan_cfg, vae, device, total_steps=100)
+
+    optimizer_vae = torch.optim.AdamW(vae.parameters(), lr=1e-4)
+    x = torch.randn(TEST_BATCH, TEST_SLICES, TEST_SIZE, TEST_SIZE)
+
+    # Record initial weights
+    vae_w0 = vae.decoder.conv_out.weight.data.clone()
+    d_w0 = list(vae_gan.discriminator.parameters())[0].data.clone()
+
+    # --- Phase 1: VAE update ---
+    vae.train()
+    recon, posterior = vae(x)
+    l1_loss = torch.nn.functional.l1_loss(recon, x)
+    kl_loss = posterior.kl().mean()
+    recon_loss = l1_loss + 1e-6 * kl_loss
+
+    g_loss_dict = vae_gan.compute_g_loss(
+        recon=recon, target=x, posterior=posterior,
+        epoch=0, nll_loss=recon_loss,
+    )
+    total_loss = recon_loss + g_loss_dict["g_loss"]
+
+    optimizer_vae.zero_grad()
+    total_loss.backward()
+    optimizer_vae.step()
+
+    # --- Phase 2: D update ---
+    for p in vae.parameters():
+        p.requires_grad = False
+    d_loss_dict = vae_gan.compute_d_loss(
+        recon=recon.detach(), target=x.detach(), epoch=0,
+    )
+    # Override D LR to non-zero (warmup scheduler starts at 0 for step 0)
+    vae_gan.optimizer_d.param_groups[0]["lr"] = 0.1
+    vae_gan.step_d(d_loss_dict["d_loss"])
+    for p in vae.parameters():
+        p.requires_grad = True
+
+    # Verify weights changed
+    vae_w1 = vae.decoder.conv_out.weight.data
+    d_w1 = list(vae_gan.discriminator.parameters())[0].data
+    assert not torch.allclose(vae_w0, vae_w1), "VAE weights should have changed"
+    assert not torch.allclose(d_w0, d_w1), "D weights should have changed"
+
+    logger.info(f"  VAE loss: {total_loss.item():.4f}")
+    logger.info(f"  D loss: {d_loss_dict['d_loss'].item():.4f}")
+    logger.info(f"  Both VAE and D weights updated correctly")
+    logger.info("VAE+GAN training step test PASSED\n")
+
+
+def test_vae_gan_lsgan():
+    """Test VAEGANLoss with LSGAN loss type."""
+    logger.info("=== Testing VAEGANLoss (LSGAN) ====")
+    from ldm.config import VAEConfig, VAEGANConfig
+    from ldm.models.autoencoder import AutoencoderKL
+    from ldm.vae_gan_loss import VAEGANLoss
+
+    device = torch.device("cpu")
+    vae_cfg = VAEConfig(
+        in_channels=TEST_SLICES, out_channels=TEST_SLICES,
+        z_channels=TEST_Z_CH, embed_dim=TEST_EMBED_DIM,
+        ch=32, ch_mult=(1, 2, 4), num_res_blocks=1,
+        attn_resolutions=(16,), resolution=TEST_SIZE,
+    )
+    vae = AutoencoderKL(vae_cfg).to(device)
+
+    gan_cfg = VAEGANConfig(
+        enabled=True, ndf=16, n_layers=2,
+        use_spectral_norm=False, gan_loss_type="lsgan",
+        perceptual_weight=0.0, disc_start_epoch=0,
+    )
+    vae_gan = VAEGANLoss(gan_cfg, vae, device, total_steps=100)
+
+    x = torch.randn(TEST_BATCH, TEST_SLICES, TEST_SIZE, TEST_SIZE)
+    recon, posterior = vae(x)
+    nll = torch.nn.functional.l1_loss(recon, x)
+
+    g_result = vae_gan.compute_g_loss(recon=recon, target=x, posterior=posterior,
+                                       epoch=0, nll_loss=nll)
+    d_result = vae_gan.compute_d_loss(recon=recon.detach(), target=x.detach(), epoch=0)
+
+    assert g_result["g_loss"].item() >= 0
+    assert d_result["d_loss"].item() >= 0
+    logger.info(f"  LSGAN G loss: {g_result['gan_g'].item():.4f}, D loss: {d_result['d_loss'].item():.4f}")
+    logger.info("VAEGANLoss (LSGAN) test PASSED\n")
+
+
 def main():
     test_config()
     test_distributions()
@@ -402,6 +669,10 @@ def main():
     test_scheduler()
     test_pipeline()
     test_training_step()
+    test_vae_gan_config()
+    test_vae_gan_loss()
+    test_vae_gan_training_step()
+    test_vae_gan_lsgan()
 
     logger.info("=" * 50)
     logger.info("ALL LDM TESTS PASSED!")

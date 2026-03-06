@@ -41,6 +41,33 @@ class VAEConfig:
 
 
 @dataclass
+class VAEGANConfig:
+    """Discriminator configuration for VAE-GAN training (VQGAN-style).
+
+    When enabled, a PatchGAN discriminator is jointly trained with the VAE
+    to sharpen reconstructions. Follows the Taming Transformers (VQGAN) paper:
+      - Adaptive weight: |∂L_rec/∂θ_last| / |∂L_GAN/∂θ_last|
+      - Hinge GAN loss (default, more stable than LSGAN)
+      - Discriminator start delay (disc_start_epoch)
+    """
+    enabled: bool = False              # ON/OFF switch
+    ndf: int = 64                      # base filters for PatchGAN
+    n_layers: int = 3                  # conv layers in PatchGAN
+    use_spectral_norm: bool = True     # spectral normalization
+    gan_loss_type: str = "hinge"       # "hinge" or "lsgan"
+    gan_weight: float = 0.5            # GAN loss weight (before adaptive scaling)
+    adaptive_weight: bool = True       # VQGAN adaptive weight balancing
+    adaptive_weight_max: float = 10.0  # clamp adaptive weight to prevent instability
+    feat_match_weight: float = 0.0     # feature matching loss weight (0=disabled)
+    perceptual_weight: float = 1.0     # VGG perceptual loss weight (0=disabled)
+    lr: float = 4.5e-6                 # discriminator learning rate
+    grad_clip_norm: float = 1.0        # gradient clipping for D
+    disc_start_epoch: int = 5          # delay D activation for N epochs
+    r1_gamma: float = 0.0              # R1 gradient penalty (0=disabled)
+    r1_interval: int = 16              # lazy R1 every N steps
+
+
+@dataclass
 class VAETrainConfig:
     """VAE training configuration (Stage 1)."""
     batch_size: int = 8
@@ -49,7 +76,7 @@ class VAETrainConfig:
     weight_decay: float = 0.0
     kl_weight: float = 1e-6        # KL divergence loss weight
     l1_weight: float = 1.0         # L1 reconstruction loss weight
-    perceptual_weight: float = 0.0 # perceptual loss weight (0=disabled)
+    perceptual_weight: float = 0.0 # perceptual loss weight (0=disabled, use vae_gan for GAN-based)
     lr_scheduler: str = "cosine"   # "cosine", "step", "none"
     warmup_steps: int = 500
     ema_rate: float = 0.9999
@@ -111,6 +138,7 @@ class LDMConfig:
     """Top-level LDM configuration."""
     data: DataConfig = field(default_factory=DataConfig)
     vae: VAEConfig = field(default_factory=VAEConfig)
+    vae_gan: VAEGANConfig = field(default_factory=VAEGANConfig)
     vae_train: VAETrainConfig = field(default_factory=VAETrainConfig)
     unet: DiffusionUNetConfig = field(default_factory=DiffusionUNetConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
@@ -152,6 +180,7 @@ class LDMConfig:
         return cls(
             data=DataConfig(**data_raw),
             vae=VAEConfig(**vae_raw),
+            vae_gan=VAEGANConfig(**raw.get("vae_gan", {})),
             vae_train=VAETrainConfig(**raw.get("vae_train", {})),
             unet=DiffusionUNetConfig(**unet_raw),
             scheduler=SchedulerConfig(**raw.get("scheduler", {})),

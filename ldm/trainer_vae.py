@@ -4,6 +4,9 @@ VAE (AutoencoderKL) Trainer for Latent Diffusion Model — Stage 1.
 Trains the VAE to reconstruct 2.5D medical images with:
   - L1 reconstruction loss (primary)
   - KL divergence regularization (weighted, typically 1e-6)
+  - Optional VQGAN-style adversarial training (PatchGAN discriminator)
+  - Optional VGG perceptual loss
+  - Adaptive weight balancing (VQGAN: |∂L_rec/∂θ_last| / |∂L_GAN/∂θ_last|)
   - EMA of model weights
   - Cosine LR schedule with warmup
   - Gradient clipping
@@ -102,6 +105,7 @@ class VAETrainer:
         augmentor,
         config: LDMConfig,
         device: torch.device,
+        vae_gan_loss=None,
     ):
         self.vae = vae.to(device)
         self.train_loader = train_loader
@@ -109,6 +113,7 @@ class VAETrainer:
         self.augmentor = augmentor
         self.config = config
         self.device = device
+        self.vae_gan_loss = vae_gan_loss  # VAEGANLoss instance (optional)
 
         tcfg = config.vae_train
 
@@ -161,6 +166,10 @@ class VAETrainer:
         logger.info(f"  LR:               {tcfg.lr}")
         logger.info(f"  Grad clip norm:   {self.grad_clip_norm}")
         logger.info(f"  EMA rate:         {self.ema_rate}")
+        if self.vae_gan_loss is not None and self.vae_gan_loss.cfg.enabled:
+            logger.info(f"  VAE-GAN:          ENABLED (start epoch {self.vae_gan_loss.cfg.disc_start_epoch})")
+        else:
+            logger.info(f"  VAE-GAN:          DISABLED")
 
     # ------------------------------------------------------------------
     # Scheduler
@@ -214,11 +223,19 @@ class VAETrainer:
     # ------------------------------------------------------------------
 
     def _train_epoch(self, epoch: int) -> MetricTracker:
-        """Run one training epoch."""
+        """Run one training epoch.
+
+        When VAE-GAN is enabled, each step has two phases:
+          Phase 1 (VAE/G update): freeze D → compute recon + KL + GAN_g + perceptual
+          Phase 2 (D update):     freeze VAE → compute D real/fake loss
+        Gradient isolation ensures no leakage between VAE and D.
+        """
         self.vae.train()
         tracker = MetricTracker()
         tcfg = self.config.vae_train
         train_vis_samples: List[Dict[str, torch.Tensor]] = []
+        gan_active = (self.vae_gan_loss is not None and
+                      self.vae_gan_loss.is_active(epoch))
 
         pbar = tqdm(self.train_loader, desc=f"VAE Epoch {epoch+1}", leave=False)
         for batch in pbar:
@@ -229,9 +246,11 @@ class VAETrainer:
             # Augment and extract middle C slices
             ncct, cta, mask = self.augmentor(ncct_3c, cta_3c, mask_3c, training=True)
 
+            # ============================================================
+            # Phase 1: VAE (Generator) update
+            # ============================================================
+
             # Train on CTA images (primary target for reconstruction quality)
-            # We train on CTA because the VAE needs to faithfully encode/decode
-            # the target modality for diffusion to work well
             recon_cta, posterior_cta = self.vae(cta)
             loss_cta, loss_dict_cta = self._compute_loss(cta, recon_cta, posterior_cta)
 
@@ -239,10 +258,26 @@ class VAETrainer:
             recon_ncct, posterior_ncct = self.vae(ncct)
             loss_ncct, loss_dict_ncct = self._compute_loss(ncct, recon_ncct, posterior_ncct)
 
-            # Combined loss (equal weight for both modalities)
-            loss = 0.5 * (loss_cta + loss_ncct)
+            # Combined reconstruction loss (equal weight for both modalities)
+            recon_loss = 0.5 * (loss_cta + loss_ncct)
 
-            # Backward
+            # GAN + perceptual loss (applied to CTA reconstruction only)
+            g_loss_dict = {}
+            total_g_loss = torch.tensor(0.0, device=self.device)
+            if self.vae_gan_loss is not None and self.vae_gan_loss.cfg.enabled:
+                g_loss_dict = self.vae_gan_loss.compute_g_loss(
+                    recon=recon_cta,
+                    target=cta,
+                    posterior=posterior_cta,
+                    epoch=epoch,
+                    nll_loss=loss_cta,
+                )
+                total_g_loss = g_loss_dict["g_loss"]
+
+            # Total VAE loss = reconstruction + GAN/perceptual
+            loss = recon_loss + total_g_loss
+
+            # Backward for VAE
             self.optimizer.zero_grad()
             loss.backward()
 
@@ -262,7 +297,29 @@ class VAETrainer:
             # EMA
             update_ema(self.ema_params, self.vae.parameters(), rate=self.ema_rate)
 
+            # ============================================================
+            # Phase 2: Discriminator update (VAE frozen)
+            # ============================================================
+            d_loss_dict = {}
+            if gan_active:
+                # Freeze VAE for D update
+                for p in self.vae.parameters():
+                    p.requires_grad = False
+
+                d_loss_dict = self.vae_gan_loss.compute_d_loss(
+                    recon=recon_cta.detach(),
+                    target=cta.detach(),
+                    epoch=epoch,
+                )
+                self.vae_gan_loss.step_d(d_loss_dict["d_loss"])
+
+                # Unfreeze VAE
+                for p in self.vae.parameters():
+                    p.requires_grad = True
+
+            # ============================================================
             # Metrics
+            # ============================================================
             self.global_step += 1
             metrics = {
                 "loss": loss.item(),
@@ -273,11 +330,21 @@ class VAETrainer:
                 "lr": self.optimizer.param_groups[0]["lr"],
                 "gnorm": grad_norm,
             }
+            # GAN metrics
+            if g_loss_dict:
+                metrics["perceptual"] = g_loss_dict.get("perceptual", torch.tensor(0.0)).item()
+                metrics["gan_g"] = g_loss_dict.get("gan_g", torch.tensor(0.0)).item()
+                metrics["adaptive_w"] = g_loss_dict.get("adaptive_w", torch.tensor(0.0)).item()
+            if d_loss_dict:
+                metrics["d_loss"] = d_loss_dict["d_loss"].item()
+                metrics["d_real"] = d_loss_dict["d_real"].item()
+                metrics["d_fake"] = d_loss_dict["d_fake"].item()
+                metrics["lr_d"] = self.vae_gan_loss.d_lr
             tracker.update(metrics)
 
             if self.global_step % tcfg.log_interval == 0:
                 pbar.set_postfix(**{k: f"{v:.4f}" for k, v in tracker.result().items()
-                                    if k not in ("lr", "gnorm")})
+                                    if k not in ("lr", "gnorm", "lr_d")})
 
             # Collect visualization samples (CTA reconstruction)
             if len(train_vis_samples) < 8:
@@ -395,6 +462,8 @@ class VAETrainer:
         }
         if self.scheduler:
             state["scheduler_state_dict"] = self.scheduler.state_dict()
+        if self.vae_gan_loss is not None:
+            state["vae_gan_loss"] = self.vae_gan_loss.state_dict()
 
         if filename is None:
             filename = f"checkpoint_epoch{epoch+1:04d}.pt"
@@ -419,6 +488,8 @@ class VAETrainer:
             self.ema_params = state["ema_params"]
         if self.scheduler and "scheduler_state_dict" in state:
             self.scheduler.load_state_dict(state["scheduler_state_dict"])
+        if self.vae_gan_loss is not None and "vae_gan_loss" in state:
+            self.vae_gan_loss.load_state_dict_from_checkpoint(state["vae_gan_loss"])
         logger.info(f"  Resumed at epoch {self.start_epoch}, step {self.global_step}")
 
     def load_ema_weights(self):

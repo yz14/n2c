@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from ldm.config import LDMConfig
 from ldm.models.autoencoder import AutoencoderKL
 from ldm.trainer_vae import VAETrainer
+from ldm.vae_gan_loss import VAEGANLoss
 from data.dataset import NCCTDataset
 from data.transforms import GPUAugmentor
 
@@ -137,6 +138,18 @@ def main():
     # Augmentor
     augmentor = GPUAugmentor.from_config(cfg.data)
 
+    # VAE-GAN loss (discriminator + perceptual, optional)
+    vae_gan_loss = None
+    if cfg.vae_gan.enabled:
+        steps_per_epoch = len(train_loader)
+        total_steps = cfg.vae_train.num_epochs * steps_per_epoch
+        vae_gan_loss = VAEGANLoss(
+            cfg=cfg.vae_gan,
+            vae=vae,
+            device=device,
+            total_steps=total_steps,
+        )
+
     # Train
     trainer = VAETrainer(
         vae=vae,
@@ -145,6 +158,7 @@ def main():
         augmentor=augmentor,
         config=cfg,
         device=device,
+        vae_gan_loss=vae_gan_loss,
     )
     trainer.train()
 
