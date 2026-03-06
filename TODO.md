@@ -36,4 +36,7 @@
 **任务**： ncct合成ctpa，D:\codes\work-projects\ncct2cpta\train.py这里是训练入口。方案1：采用生成器G+精修网络G2+配准网络R+判别器D的方案。数据：对同一个样本的两次扫描进行配准，大约配准到90%的样子。G是必须先训练的，训练目前效果正常，也就是平扫的肺血管基本都增强了，只是生成的图像比较模糊，看起来像被平滑过。方案2：采用D:\codes\work-projects\ncct2cpta\ldm里面的方案。  
 
 # TODO  
-1. 我用几个问题，a 训练vae的时候确实把D冻结了吗，训练D的时候确实把G冻结了吗。训练D的时候需要加入更多的负样本吗，像方案1那样加入降质的CTA。  
+1. 请仔细分析vae这块代码，a. 训练vae的时候确实把D冻结了吗，训练D的时候确实把vae冻结了吗。b. 训练D的时候需要加入更多的负样本吗，像方案1那样，类似加入降质的CTA和降质的ncct。c. vae的判别器支持了预训练吗，例如先用降质的CTA和降质的ncct和真实的ncct和cta先预训练判别器，然后再一起训练。d. 我训练了一版vae，见D:\codes\work-projects\ncct2cpta\outputs\config0.yaml配置和对应日志，主观看起来效果还行，vae输出变得清晰，但是也没有非常的清晰，所以我不确定有没有代码的错误，训练逻辑的错误等等。  
+2. 我在vae基础上训练diffusion，见D:\codes\work-projects\ncct2cpta\outputs\config1.yaml配置和对应的日志。训练结果目前仍然看起来很杂乱，请检查代码是否正确，训练逻辑是否正确。  
+3. vae和diffusion的训练是否有高质量提升效果的策略，工程，技巧等等加入。  
+4. 如果有修改，记得同步更新D:\codes\work-projects\ncct2cpta\configs\ldm_default.yaml。  

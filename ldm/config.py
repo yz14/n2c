@@ -63,8 +63,10 @@ class VAEGANConfig:
     lr: float = 4.5e-6                 # discriminator learning rate
     grad_clip_norm: float = 1.0        # gradient clipping for D
     disc_start_epoch: int = 5          # delay D activation for N epochs
-    r1_gamma: float = 0.0              # R1 gradient penalty (0=disabled)
+    r1_gamma: float = 10.0             # R1 gradient penalty (0=disabled)
     r1_interval: int = 16              # lazy R1 every N steps
+    disc_pretrained_path: str = ""     # path to pretrained D checkpoint (empty=none)
+    d_neg_augment: bool = False        # add degraded images as D negative samples
 
 
 @dataclass
@@ -111,6 +113,10 @@ class SchedulerConfig:
     prediction_type: str = "epsilon"       # "epsilon" (predict noise) or "v_prediction"
     # DDIM sampling
     num_inference_steps: int = 50          # DDIM steps for sampling
+    # Latent scaling (Stable Diffusion style)
+    # Normalizes latent std to ~1.0 for proper noise schedule matching.
+    # 0.0 = auto-compute from training data; otherwise use the specified value.
+    latent_scale_factor: float = 0.0
 
 
 @dataclass

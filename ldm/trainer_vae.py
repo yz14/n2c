@@ -20,7 +20,6 @@ Usage:
 """
 
 import logging
-import math
 from pathlib import Path
 from typing import Optional, Dict, List
 
@@ -33,48 +32,11 @@ from tqdm import tqdm
 
 from ldm.config import LDMConfig
 from ldm.models.autoencoder import AutoencoderKL
+from ldm.utils import MetricTracker, warmup_cosine_schedule as _warmup_cosine_schedule
 from models.nn_utils import update_ema, load_pretrained_weights
 from utils.visualization import save_sample_grid
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Utilities (shared with Scheme 1 trainer)
-# ---------------------------------------------------------------------------
-
-class MetricTracker:
-    """Track running averages of metrics."""
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self._sum = {}
-        self._count = {}
-
-    def update(self, metrics: Dict[str, float], n: int = 1):
-        for k, v in metrics.items():
-            if isinstance(v, torch.Tensor):
-                v = v.item()
-            self._sum[k] = self._sum.get(k, 0.0) + v * n
-            self._count[k] = self._count.get(k, 0) + n
-
-    def result(self) -> Dict[str, float]:
-        return {k: self._sum[k] / self._count[k] for k in self._sum}
-
-    def __str__(self):
-        return ", ".join(f"{k}: {v:.6f}" for k, v in self.result().items())
-
-
-def _warmup_cosine_schedule(warmup_steps: int, total_steps: int):
-    """Create a warmup + cosine decay LR lambda."""
-    def lr_lambda(step):
-        if step < warmup_steps:
-            return float(step) / max(1, warmup_steps)
-        progress = float(step - warmup_steps) / max(1, total_steps - warmup_steps)
-        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * progress)))
-    return lr_lambda
 
 
 # ---------------------------------------------------------------------------
@@ -306,10 +268,14 @@ class VAETrainer:
                 for p in self.vae.parameters():
                     p.requires_grad = False
 
+                # Generate negative samples (degraded images) if enabled
+                neg_samples = self.vae_gan_loss.generate_negative_samples(ncct, cta)
+
                 d_loss_dict = self.vae_gan_loss.compute_d_loss(
                     recon=recon_cta.detach(),
                     target=cta.detach(),
                     epoch=epoch,
+                    neg_samples=neg_samples,
                 )
                 self.vae_gan_loss.step_d(d_loss_dict["d_loss"])
 

@@ -23,7 +23,6 @@ Usage:
 """
 
 import logging
-import math
 from pathlib import Path
 from typing import Optional, Dict, List
 
@@ -40,47 +39,11 @@ from ldm.models.autoencoder import AutoencoderKL
 from ldm.models.unet import DiffusionUNet
 from ldm.diffusion.scheduler import DDPMScheduler
 from ldm.diffusion.pipeline import ConditionalLDMPipeline
+from ldm.utils import MetricTracker, warmup_cosine_schedule as _warmup_cosine_schedule
 from models.nn_utils import update_ema, load_pretrained_weights
 from utils.visualization import save_sample_grid
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-class MetricTracker:
-    """Track running averages of metrics."""
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self._sum = {}
-        self._count = {}
-
-    def update(self, metrics: Dict[str, float], n: int = 1):
-        for k, v in metrics.items():
-            if isinstance(v, torch.Tensor):
-                v = v.item()
-            self._sum[k] = self._sum.get(k, 0.0) + v * n
-            self._count[k] = self._count.get(k, 0) + n
-
-    def result(self) -> Dict[str, float]:
-        return {k: self._sum[k] / self._count[k] for k in self._sum}
-
-    def __str__(self):
-        return ", ".join(f"{k}: {v:.6f}" for k, v in self.result().items())
-
-
-def _warmup_cosine_schedule(warmup_steps: int, total_steps: int):
-    def lr_lambda(step):
-        if step < warmup_steps:
-            return float(step) / max(1, warmup_steps)
-        progress = float(step - warmup_steps) / max(1, total_steps - warmup_steps)
-        return max(0.0, 0.5 * (1.0 + math.cos(math.pi * progress)))
-    return lr_lambda
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +96,10 @@ class DiffusionTrainer:
         # Noise scheduler
         self.scheduler = scheduler.to(device)
 
+        # Latent scaling factor (Stable Diffusion style: z_scaled = z * factor)
+        # Normalizes latent std to ~1.0 for proper noise schedule matching.
+        self.latent_scale_factor = config.scheduler.latent_scale_factor
+
         tcfg = config.diffusion_train
 
         # Optimizer
@@ -179,6 +146,7 @@ class DiffusionTrainer:
         logger.info(f"DiffusionTrainer initialized:")
         logger.info(f"  UNet params:      {n_params:.2f}M")
         logger.info(f"  Scheduler:        {config.scheduler.beta_schedule}, T={config.scheduler.num_train_timesteps}")
+        logger.info(f"  Latent scale:     {self.latent_scale_factor:.6f}")
         logger.info(f"  LR:               {tcfg.lr}")
         logger.info(f"  Grad clip norm:   {self.grad_clip_norm}")
         logger.info(f"  EMA rate:         {self.ema_rate}")
@@ -197,8 +165,50 @@ class DiffusionTrainer:
 
     @torch.no_grad()
     def _encode_to_latent(self, x: torch.Tensor) -> torch.Tensor:
-        """Encode images to latent space using frozen VAE (deterministic mode)."""
-        return self.vae.encode(x).mode()
+        """Encode images to latent space using frozen VAE (deterministic mode).
+
+        Applies latent_scale_factor to normalize variance for diffusion.
+        """
+        z = self.vae.encode(x).mode()
+        return z * self.latent_scale_factor
+
+    @torch.no_grad()
+    def compute_latent_scale_factor(
+        self, num_batches: int = 50,
+    ) -> float:
+        """Auto-compute latent scaling factor from training data.
+
+        Computes scale_factor = 1 / std(z) over a subset of training data
+        so that scaled latents have approximately unit variance, matching
+        the assumption of the diffusion noise schedule.
+
+        This follows the Stable Diffusion approach (scaling_factor ≈ 0.18215).
+        """
+        self.vae.eval()
+        latent_values = []
+
+        for i, batch in enumerate(self.train_loader):
+            if i >= num_batches:
+                break
+            ncct_3c = batch["ncct"].to(self.device)
+            cta_3c = batch["cta"].to(self.device)
+            mask_3c = batch["ncct_lung"].to(self.device)
+
+            _, cta, _ = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
+            z = self.vae.encode(cta).mode()
+            latent_values.append(z.flatten().cpu())
+
+        all_latents = torch.cat(latent_values)
+        std = all_latents.std().item()
+        scale_factor = 1.0 / std
+
+        logger.info(f"  Auto-computed latent scale factor:")
+        logger.info(f"    Latent std:     {std:.4f}")
+        logger.info(f"    Latent mean:    {all_latents.mean().item():.4f}")
+        logger.info(f"    Scale factor:   {scale_factor:.6f}")
+        logger.info(f"    Scaled std:     {std * scale_factor:.4f} (target ≈ 1.0)")
+
+        return scale_factor
 
     # ------------------------------------------------------------------
     # Training loop
@@ -358,6 +368,7 @@ class DiffusionTrainer:
         if self._pipeline is None:
             self._pipeline = ConditionalLDMPipeline(
                 self.vae, self.unet, self.scheduler,
+                latent_scale_factor=self.latent_scale_factor,
             )
 
         # Get a validation batch
@@ -397,6 +408,7 @@ class DiffusionTrainer:
             "ema_params": self.ema_params,
             "optimizer_state_dict": self.optimizer.state_dict(),
             "best_val_loss": self.best_val_loss,
+            "latent_scale_factor": self.latent_scale_factor,
             "config": {
                 "unet": self.config.unet.__dict__,
                 "scheduler": self.config.scheduler.__dict__,
@@ -428,6 +440,9 @@ class DiffusionTrainer:
             self.ema_params = state["ema_params"]
         if self.lr_scheduler and "scheduler_state_dict" in state:
             self.lr_scheduler.load_state_dict(state["scheduler_state_dict"])
+        if "latent_scale_factor" in state:
+            self.latent_scale_factor = state["latent_scale_factor"]
+            logger.info(f"  Restored latent_scale_factor: {self.latent_scale_factor:.6f}")
         logger.info(f"  Resumed at epoch {self.start_epoch}, step {self.global_step}")
 
     def load_ema_weights(self):

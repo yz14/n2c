@@ -42,10 +42,12 @@ class ConditionalLDMPipeline:
         vae: AutoencoderKL,
         unet: DiffusionUNet,
         scheduler: DDPMScheduler,
+        latent_scale_factor: float = 1.0,
     ):
         self.vae = vae
         self.unet = unet
         self.scheduler = scheduler
+        self.latent_scale_factor = latent_scale_factor
 
     @property
     def device(self) -> torch.device:
@@ -53,9 +55,12 @@ class ConditionalLDMPipeline:
 
     @torch.no_grad()
     def encode_condition(self, ncct: torch.Tensor) -> torch.Tensor:
-        """Encode NCCT input to latent space (deterministic, uses posterior mode)."""
+        """Encode NCCT input to latent space (deterministic, uses posterior mode).
+
+        Applies latent_scale_factor for consistency with diffusion training.
+        """
         posterior = self.vae.encode(ncct)
-        return posterior.mode()
+        return posterior.mode() * self.latent_scale_factor
 
     @torch.no_grad()
     def sample(
@@ -117,8 +122,8 @@ class ConditionalLDMPipeline:
             if return_intermediates:
                 intermediates.append(pred_x0.clone())
 
-        # 5. Decode latent to image space
-        cta_pred = self.vae.decode(z_noisy)
+        # 5. Decode latent to image space (undo scaling before decode)
+        cta_pred = self.vae.decode(z_noisy / self.latent_scale_factor)
 
         if return_intermediates:
             return cta_pred, intermediates
@@ -154,4 +159,4 @@ class ConditionalLDMPipeline:
             noise_pred = self.unet(model_input, t)
             z_noisy = self.scheduler.ddpm_step(noise_pred, t_val, z_noisy, generator=generator)
 
-        return self.vae.decode(z_noisy)
+        return self.vae.decode(z_noisy / self.latent_scale_factor)

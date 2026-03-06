@@ -1,8 +1,8 @@
 data:
   data_dir: /data0/yzhen/data/lung_pe_v1/npz_v1
   split_dir: ./splits
-  num_slices: 12
-  image_size: 320
+  num_slices: 3
+  image_size: 256
   hu_min: -550.0
   hu_max: 250.0
   num_workers: 24
@@ -13,111 +13,92 @@ data:
   noise_std: 0.09
   brightness_range: 0.1
   contrast_range: 0.1
-  lung_sample_bias: 2.0
-  ncct_degrade_prob: 0.5
-model:
-  in_channels: 12
-  out_channels: 12
-  model_channels: 64
+  lung_sample_bias: 0.0
+  ncct_degrade_prob: 0.0
+vae:
+  in_channels: 3
+  out_channels: 3
+  z_channels: 4
+  embed_dim: 4
+  ch: 128
+  ch_mult:
+  - 1
+  - 2
+  - 4
+  - 4
+  num_res_blocks: 2
+  attn_resolutions:
+  - 32
+  dropout: 0.0
+  resolution: 256
+  double_z: true
+vae_gan:
+  enabled: true
+  ndf: 64
+  n_layers: 3
+  use_spectral_norm: true
+  gan_loss_type: hinge
+  gan_weight: 0.5
+  adaptive_weight: true
+  adaptive_weight_max: 10.0
+  feat_match_weight: 0.0
+  perceptual_weight: 1.0
+  lr: 0.0001
+  grad_clip_norm: 1.0
+  disc_start_epoch: 5
+  r1_gamma: 0.0
+  r1_interval: 16
+vae_train:
+  batch_size: 4
+  num_epochs: 100
+  lr: 4.5e-06
+  weight_decay: 0.0
+  kl_weight: 1.0e-06
+  l1_weight: 1.0
+  perceptual_weight: 0.0
+  lr_scheduler: cosine
+  warmup_steps: 500
+  ema_rate: 0.9999
+  grad_clip_norm: 1.0
+  save_interval: 10
+  log_interval: 50
+  val_interval: 1
+  output_dir: ./outputs_vae
+  resume_checkpoint: /data0/yzhen/a_test_model/v0/outputs_vae/checkpoint_epoch0030.pt
+  seed: 42
+unet:
+  model_channels: 128
   channel_mult:
   - 1
   - 2
   - 4
-  - 8
   num_res_blocks: 2
   attention_resolutions:
   - 4
-  - 8
+  - 2
   dropout: 0.0
-  use_checkpoint: false
   num_heads: 4
-  num_head_channels: -1
-  use_scale_shift_norm: false
-  conv_resample: true
-  resblock_updown: false
-  use_fp16: false
-  residual_output: true
-registration:
-  enabled: false
-  nb_features:
-  - 16
-  - 32
-  - 32
-  - 32
-  integration_steps: 7
-  smoothness_weight: 1.0
-  smoothness_penalty: l2
+  use_scale_shift_norm: true
+scheduler:
+  num_train_timesteps: 1000
+  beta_schedule: linear
+  beta_start: 0.00085
+  beta_end: 0.012
+  prediction_type: epsilon
+  num_inference_steps: 50
+diffusion_train:
+  batch_size: 2
+  num_epochs: 200
   lr: 0.0001
-  r_pretrain_epochs: 0
-  r_pretrain_max_angle: 5.0
-  r_pretrain_max_translate: 0.03
-  r_pretrain_max_scale: 0.05
-  r_pretrain_elastic_alpha: 6.0
-  r_pretrain_elastic_points: 8
-  r_pretrain_degrade: true
-discriminator:
-  enabled: true
-  ndf: 64
-  n_layers: 3
-  num_D: 2
-  use_spectral_norm: true
-  gan_weight: 0.2
-  feat_match_weight: 1.0
-  lr: 0.0004
+  weight_decay: 0.0
   lr_scheduler: cosine
   warmup_steps: 500
-  label_smoothing: 0.0
-  grad_clip_norm_D: 1.0
-  d_cond_mode: none
-  gan_loss_type: lsgan
-  r1_gamma: 0.0
-  r1_interval: 16
-  disc_type: patchgan
-  n_blocks_resD: 4
-  use_attention: true
-  gan_warmup_epochs: 10
-  d_warmup_steps: 500
-  diffaugment_policy: color,translation
-  d_quality_aug: blur,noise,downsample
-  d_quality_aug_prob: 0.5
-  d_quality_aug_weight: 0.5
-refine:
-  enabled: false
-  hidden_dim: 64
-  num_blocks: 6
-  lr: 0.0001
-  lr_scheduler: cosine
-  warmup_steps: 200
-  freeze_G: true
-  g2_input_modes: intermediate
-train:
-  batch_size: 2
-  lr: 0.0002
-  weight_decay: 0.0
-  num_epochs: 100
+  ema_rate: 0.9999
+  grad_clip_norm: 1.0
   save_interval: 10
   log_interval: 50
   val_interval: 1
-  l1_weight: 1.0
-  ssim_weight: 1.0
-  use_3d_ssim: true
-  lung_weight: 10.0
-  lung_weight_schedule: '999:20'
-  ema_rate: 0.999
-  lr_scheduler: cosine
-  warmup_steps: 500
-  output_dir: ./outputs_phase2_g_d
+  output_dir: ./outputs_diffusion
   resume_checkpoint: ''
+  pretrained_vae: /data0/yzhen/a_test_model/v0/outputs_vae/checkpoint_epoch0030.pt
   seed: 42
-  pretrained_G: /data0/yzhen/a_test_model/v0/outputs_phase1_g/checkpoint_epoch0010.pt
-  pretrained_R: ''
-  pretrained_D: ''
-  pretrained_G2: ''
-  grad_clip_norm: 5.0
-  grad_accumulation_steps: 8
-  skip_warmup: true
-  perceptual_weight: 0.0
-  freq_weight: 0.2
-  g_cta_degrade_prob: 0.2
-  g_self_refine_prob: 0.0
-  g_self_refine_weight: 0.5

@@ -188,9 +188,8 @@ class DDPMScheduler:
         """
         t = torch.tensor([timestep], device=sample.device, dtype=torch.long)
 
-        # Predict x_0
+        # Predict x_0 (no clamping — latent values are not bounded to [-1, 1])
         pred_x0 = self.predict_start_from_noise(sample, t, model_output)
-        pred_x0 = torch.clamp(pred_x0, -1.0, 1.0)
 
         # Posterior mean
         coef1 = self._extract(self.posterior_mean_coef1, t, sample.shape)

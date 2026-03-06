@@ -236,8 +236,12 @@ def load_vae_from_checkpoint(
 
 def load_unet_from_checkpoint(
     cfg: LDMConfig, ckpt_path: str, device: torch.device,
-) -> DiffusionUNet:
-    """Load diffusion UNet from a Stage 2 checkpoint (prefers EMA weights)."""
+) -> tuple:
+    """Load diffusion UNet from a Stage 2 checkpoint (prefers EMA weights).
+
+    Returns:
+        (unet, latent_scale_factor)
+    """
     unet = DiffusionUNet.from_config(cfg.unet, z_channels=cfg.vae.embed_dim)
     state = torch.load(ckpt_path, map_location=device)
 
@@ -250,8 +254,16 @@ def load_unet_from_checkpoint(
     else:
         unet.load_state_dict(state, strict=False)
 
+    # Load latent scale factor from checkpoint
+    latent_scale_factor = state.get("latent_scale_factor", cfg.scheduler.latent_scale_factor)
+    if latent_scale_factor <= 0:
+        latent_scale_factor = 1.0
+        logger.warning("  No latent_scale_factor found in checkpoint or config, using 1.0")
+    else:
+        logger.info(f"  Latent scale factor: {latent_scale_factor:.6f}")
+
     logger.info(f"Loaded UNet from: {ckpt_path}")
-    return unet.to(device).eval()
+    return unet.to(device).eval(), latent_scale_factor
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +305,7 @@ def main():
 
     # Load models
     vae = load_vae_from_checkpoint(cfg, args.vae_ckpt, device)
-    unet = load_unet_from_checkpoint(cfg, args.diff_ckpt, device)
+    unet, latent_scale_factor = load_unet_from_checkpoint(cfg, args.diff_ckpt, device)
 
     scheduler = DDPMScheduler(
         num_train_timesteps=cfg.scheduler.num_train_timesteps,
@@ -303,7 +315,9 @@ def main():
         prediction_type=cfg.scheduler.prediction_type,
     ).to(device)
 
-    pipeline = ConditionalLDMPipeline(vae, unet, scheduler)
+    pipeline = ConditionalLDMPipeline(
+        vae, unet, scheduler, latent_scale_factor=latent_scale_factor,
+    )
 
     # Load input volume
     logger.info(f"Loading input: {args.input}")

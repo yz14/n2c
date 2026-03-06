@@ -660,6 +660,173 @@ def test_vae_gan_lsgan():
     logger.info("VAEGANLoss (LSGAN) test PASSED\n")
 
 
+def test_latent_scale_factor():
+    """Test latent_scale_factor in config, pipeline, and scheduler."""
+    logger.info("=== Testing Latent Scale Factor ===")
+    from ldm.config import LDMConfig, VAEConfig, SchedulerConfig
+    from ldm.models.autoencoder import AutoencoderKL
+    from ldm.diffusion.scheduler import DDPMScheduler
+    from ldm.diffusion.pipeline import ConditionalLDMPipeline
+    from ldm.models.unet import DiffusionUNet
+    import tempfile, os
+
+    # 1. Config round-trip
+    cfg = LDMConfig()
+    cfg.scheduler.latent_scale_factor = 0.35
+    with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as f:
+        tmp_path = f.name
+    try:
+        cfg.save(tmp_path)
+        cfg2 = LDMConfig.load(tmp_path)
+        assert abs(cfg2.scheduler.latent_scale_factor - 0.35) < 1e-6, \
+            f"Scale factor mismatch: {cfg2.scheduler.latent_scale_factor}"
+    finally:
+        os.unlink(tmp_path)
+    logger.info("  Config round-trip: PASSED")
+
+    # 2. Pipeline applies scaling correctly
+    device = torch.device("cpu")
+    vae_cfg = VAEConfig(
+        in_channels=TEST_SLICES, out_channels=TEST_SLICES,
+        z_channels=TEST_Z_CH, embed_dim=TEST_EMBED_DIM,
+        ch=32, ch_mult=(1, 2, 4), num_res_blocks=1,
+        attn_resolutions=(16,), resolution=TEST_SIZE,
+    )
+    vae = AutoencoderKL(vae_cfg).to(device).eval()
+
+    scale = 0.4
+    x = torch.randn(1, TEST_SLICES, TEST_SIZE, TEST_SIZE)
+
+    # Encode without scaling
+    with torch.no_grad():
+        z_raw = vae.encode(x).mode()
+
+    # Pipeline with scaling
+    scheduler = DDPMScheduler(num_train_timesteps=10, beta_schedule="linear")
+    unet = DiffusionUNet.from_config(
+        cfg.unet, z_channels=TEST_EMBED_DIM,
+    ).to(device)
+    pipeline = ConditionalLDMPipeline(
+        vae, unet, scheduler, latent_scale_factor=scale,
+    )
+    z_scaled = pipeline.encode_condition(x)
+    assert torch.allclose(z_scaled, z_raw * scale, atol=1e-5), \
+        "Pipeline encode_condition should apply scale factor"
+    logger.info(f"  Pipeline scaling: PASSED (raw_std={z_raw.std():.3f}, scaled_std={z_scaled.std():.3f})")
+
+    # 3. Default scale_factor=0 in config
+    cfg3 = LDMConfig()
+    assert cfg3.scheduler.latent_scale_factor == 0.0
+    logger.info("  Default value (0.0 = auto): PASSED")
+
+    logger.info("Latent scale factor test PASSED\n")
+
+
+def test_d_negative_samples():
+    """Test D negative sample augmentation."""
+    logger.info("=== Testing D Negative Samples ===")
+    from ldm.config import VAEConfig, VAEGANConfig
+    from ldm.models.autoencoder import AutoencoderKL
+    from ldm.vae_gan_loss import VAEGANLoss
+
+    device = torch.device("cpu")
+    vae_cfg = VAEConfig(
+        in_channels=TEST_SLICES, out_channels=TEST_SLICES,
+        z_channels=TEST_Z_CH, embed_dim=TEST_EMBED_DIM,
+        ch=32, ch_mult=(1, 2, 4), num_res_blocks=1,
+        attn_resolutions=(16,), resolution=TEST_SIZE,
+    )
+    vae = AutoencoderKL(vae_cfg).to(device)
+
+    # Test with neg augment disabled
+    gan_cfg_off = VAEGANConfig(
+        enabled=True, ndf=16, n_layers=2,
+        use_spectral_norm=False, perceptual_weight=0.0,
+        disc_start_epoch=0, d_neg_augment=False,
+    )
+    vae_gan_off = VAEGANLoss(gan_cfg_off, vae, device, total_steps=100)
+    ncct = torch.randn(TEST_BATCH, TEST_SLICES, TEST_SIZE, TEST_SIZE)
+    cta = torch.randn(TEST_BATCH, TEST_SLICES, TEST_SIZE, TEST_SIZE)
+    assert vae_gan_off.generate_negative_samples(ncct, cta) is None
+    logger.info("  Disabled: returns None — PASSED")
+
+    # Test with neg augment enabled
+    gan_cfg_on = VAEGANConfig(
+        enabled=True, ndf=16, n_layers=2,
+        use_spectral_norm=False, perceptual_weight=0.0,
+        disc_start_epoch=0, d_neg_augment=True,
+    )
+    vae_gan_on = VAEGANLoss(gan_cfg_on, vae, device, total_steps=100)
+    neg = vae_gan_on.generate_negative_samples(ncct, cta)
+    assert neg is not None
+    assert neg.shape == cta.shape
+    logger.info(f"  Enabled: shape={neg.shape} — PASSED")
+
+    # Test compute_d_loss with negative samples
+    recon, _ = vae(cta)
+    d_result = vae_gan_on.compute_d_loss(
+        recon=recon.detach(), target=cta.detach(),
+        epoch=0, neg_samples=neg,
+    )
+    assert "d_neg" in d_result
+    assert d_result["d_loss"].requires_grad
+    logger.info(f"  D loss with neg samples: {d_result['d_loss'].item():.4f}, "
+                f"d_neg: {d_result['d_neg'].item():.4f} — PASSED")
+
+    logger.info("D negative samples test PASSED\n")
+
+
+def test_shared_utils():
+    """Test shared MetricTracker from ldm.utils."""
+    logger.info("=== Testing Shared Utils ===")
+    from ldm.utils import MetricTracker, warmup_cosine_schedule
+
+    # MetricTracker
+    tracker = MetricTracker()
+    tracker.update({"loss": 1.0, "lr": 0.01})
+    tracker.update({"loss": 2.0, "lr": 0.01})
+    result = tracker.result()
+    assert abs(result["loss"] - 1.5) < 1e-6
+    assert abs(result["lr"] - 0.01) < 1e-6
+    logger.info(f"  MetricTracker: {tracker}")
+
+    tracker.reset()
+    assert len(tracker.result()) == 0
+    logger.info("  MetricTracker reset: PASSED")
+
+    # warmup_cosine_schedule
+    lr_fn = warmup_cosine_schedule(warmup_steps=10, total_steps=100)
+    assert abs(lr_fn(0) - 0.0) < 1e-6  # step 0 = 0
+    assert abs(lr_fn(5) - 0.5) < 1e-6  # step 5 = 0.5 (warmup)
+    assert abs(lr_fn(10) - 1.0) < 1e-6  # step 10 = 1.0 (end warmup)
+    assert lr_fn(100) < 0.01  # near end = near 0
+    logger.info("  warmup_cosine_schedule: PASSED")
+
+    logger.info("Shared utils test PASSED\n")
+
+
+def test_ddpm_no_clamp():
+    """Test that DDPM step does NOT clamp pred_x0 (BUG-2 fix)."""
+    logger.info("=== Testing DDPM No Clamp (BUG-2 Fix) ===")
+    from ldm.diffusion.scheduler import DDPMScheduler
+
+    scheduler = DDPMScheduler(num_train_timesteps=100, beta_schedule="linear")
+
+    # Create a sample with values outside [-1, 1] (like latent space)
+    sample = torch.randn(1, 4, 8, 8) * 3.0  # std ~3, values in [-9, 9]
+    noise_pred = torch.randn(1, 4, 8, 8)
+
+    # DDPM step at t=50 (mid-schedule)
+    result = scheduler.ddpm_step(noise_pred, 50, sample)
+
+    # The result should NOT be clamped to [-1, 1]
+    # With input std~3, output should also have values outside [-1, 1]
+    assert result.abs().max() > 1.0, \
+        "DDPM step should not clamp latent values to [-1, 1]"
+    logger.info(f"  Output range: [{result.min():.2f}, {result.max():.2f}] (not clamped)")
+    logger.info("DDPM no clamp test PASSED\n")
+
+
 def main():
     test_config()
     test_distributions()
@@ -673,9 +840,13 @@ def main():
     test_vae_gan_loss()
     test_vae_gan_training_step()
     test_vae_gan_lsgan()
+    test_latent_scale_factor()
+    test_d_negative_samples()
+    test_shared_utils()
+    test_ddpm_no_clamp()
 
     logger.info("=" * 50)
-    logger.info("ALL LDM TESTS PASSED!")
+    logger.info("ALL LDM TESTS PASSED! (16 tests)")
     return 0
 
 

@@ -218,6 +218,17 @@ class VAEGANLoss(nn.Module):
             self.perceptual_loss.eval()
             logger.info(f"  VAE-GAN perceptual loss: weight={cfg.perceptual_weight}")
 
+        # Negative sample augmentation for D (degraded images as extra fakes)
+        self.neg_augment = None
+        if cfg.d_neg_augment:
+            from data.cta_degrade import CTADegradation
+            self.neg_augment = CTADegradation(
+                direct_prob=0.7,  # mostly direct CTA degradation
+                blur_prob=0.8,
+                noise_prob=0.6,
+            )
+            logger.info("  VAE-GAN: D negative sample augmentation ENABLED")
+
         # D optimizer
         self.optimizer_d = AdamW(
             self.discriminator.parameters(),
@@ -231,6 +242,10 @@ class VAEGANLoss(nn.Module):
             self.optimizer_d,
             lr_lambda=self._warmup_cosine_lambda(warmup_steps, total_steps),
         )
+
+        # Load pretrained D weights if specified
+        if cfg.disc_pretrained_path:
+            self._load_pretrained_d(cfg.disc_pretrained_path)
 
         # Log
         n_params = sum(p.numel() for p in self.discriminator.parameters()) / 1e6
@@ -380,6 +395,7 @@ class VAEGANLoss(nn.Module):
         recon: torch.Tensor,
         target: torch.Tensor,
         epoch: int,
+        neg_samples: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         """Compute discriminator loss on real and fake images.
 
@@ -387,12 +403,13 @@ class VAEGANLoss(nn.Module):
         to prevent gradients flowing back to VAE.
 
         Args:
-            recon:  (N, C, H, W) VAE reconstruction (DETACHED)
-            target: (N, C, H, W) ground truth image
-            epoch:  current epoch
+            recon:       (N, C, H, W) VAE reconstruction (DETACHED)
+            target:      (N, C, H, W) ground truth image
+            epoch:       current epoch
+            neg_samples: (N, C, H, W) optional degraded images as extra fakes
 
         Returns:
-            dict with: d_loss, d_real, d_fake (+ r1_penalty if enabled)
+            dict with: d_loss, d_real, d_fake (+ r1_penalty, d_neg if applicable)
         """
         result = {
             "d_loss": torch.tensor(0.0, device=self.device),
@@ -421,6 +438,15 @@ class VAEGANLoss(nn.Module):
 
         # D loss
         d_loss = self._d_loss_fn(real_pred, fake_pred)
+
+        # Negative sample loss (degraded images as extra fakes)
+        if neg_samples is not None:
+            neg_out = self.discriminator(neg_samples.detach())
+            neg_pred = neg_out[-1] if isinstance(neg_out, list) else neg_out
+            # Treat degraded images as fake — D should reject them too
+            neg_loss = self._d_loss_fn(real_pred.detach(), neg_pred)
+            d_loss = d_loss + 0.5 * neg_loss
+            result["d_neg"] = neg_pred.mean().detach()
 
         # Add R1 penalty
         if self.cfg.r1_gamma > 0 and self.d_step_count % self.cfg.r1_interval == 0:
@@ -485,6 +511,45 @@ class VAEGANLoss(nn.Module):
             self.scheduler_d.load_state_dict(state["scheduler_d_state_dict"])
         if "d_step_count" in state:
             self.d_step_count = state["d_step_count"]
+
+    def _load_pretrained_d(self, path: str):
+        """Load pretrained discriminator weights.
+
+        Supports loading from:
+          - A VAE+GAN checkpoint (has 'vae_gan_loss' key with D state inside)
+          - A standalone D state dict
+        """
+        logger.info(f"  Loading pretrained D from: {path}")
+        state = torch.load(path, map_location=self.device)
+
+        # Try VAE checkpoint format first
+        if "vae_gan_loss" in state and "discriminator_state_dict" in state["vae_gan_loss"]:
+            d_state = state["vae_gan_loss"]["discriminator_state_dict"]
+        elif "discriminator_state_dict" in state:
+            d_state = state["discriminator_state_dict"]
+        else:
+            d_state = state  # assume raw state dict
+
+        missing, unexpected = self.discriminator.load_state_dict(d_state, strict=False)
+        if missing:
+            logger.warning(f"  Missing D keys: {missing[:5]}...")
+        if unexpected:
+            logger.warning(f"  Unexpected D keys: {unexpected[:5]}...")
+        logger.info(f"  Loaded pretrained D weights ({len(d_state)} tensors)")
+
+    def generate_negative_samples(
+        self,
+        ncct: torch.Tensor,
+        cta: torch.Tensor,
+    ) -> Optional[torch.Tensor]:
+        """Generate degraded images as extra negative samples for D.
+
+        Returns None if d_neg_augment is disabled.
+        """
+        if self.neg_augment is None:
+            return None
+        with torch.no_grad():
+            return self.neg_augment(ncct, cta)
 
     @property
     def d_lr(self) -> float:

@@ -198,6 +198,19 @@ def main():
         config=cfg,
         device=device,
     )
+
+    # Auto-compute latent scale factor if not set (critical for proper diffusion)
+    if trainer.latent_scale_factor <= 0:
+        logger.info("Auto-computing latent scale factor from training data...")
+        trainer.latent_scale_factor = trainer.compute_latent_scale_factor(
+            num_batches=50,
+        )
+        # Save the computed value back to config for reproducibility
+        cfg.scheduler.latent_scale_factor = trainer.latent_scale_factor
+        cfg.save(str(Path(cfg.diffusion_train.output_dir) / "config.yaml"))
+        logger.info(f"  Saved updated config with latent_scale_factor="
+                    f"{trainer.latent_scale_factor:.6f}")
+
     trainer.train()
 
 
