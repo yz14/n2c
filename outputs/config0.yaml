@@ -5,7 +5,7 @@ data:
   image_size: 256
   hu_min: -550.0
   hu_max: 250.0
-  num_workers: 24
+  num_workers: 32
   aug_prob: 0.5
   max_angle: 15.0
   scale_range: 0.1
@@ -33,7 +33,7 @@ vae:
   resolution: 256
   double_z: true
 vae_gan:
-  enabled: true
+  enabled: false
   ndf: 64
   n_layers: 3
   use_spectral_norm: true
@@ -43,18 +43,24 @@ vae_gan:
   adaptive_weight_max: 10.0
   feat_match_weight: 0.0
   perceptual_weight: 1.0
-  lr: 0.0001
+  lr: 4.5e-06
   grad_clip_norm: 1.0
   disc_start_epoch: 5
-  r1_gamma: 0.0
+  r1_gamma: 10.0
   r1_interval: 16
+  disc_pretrained_path: ''
+  d_neg_augment: false
+  lecam_weight: 0.001
+  d_train_ratio: 1
 vae_train:
-  batch_size: 4
+  batch_size: 8
   num_epochs: 100
   lr: 4.5e-06
   weight_decay: 0.0
-  kl_weight: 1.0e-06
+  kl_weight: 0.0001
+  kl_warmup_epochs: 10
   l1_weight: 1.0
+  ssim_weight: 0.5
   perceptual_weight: 0.0
   lr_scheduler: cosine
   warmup_steps: 500
@@ -64,7 +70,7 @@ vae_train:
   log_interval: 50
   val_interval: 1
   output_dir: ./outputs_vae
-  resume_checkpoint: /data0/yzhen/a_test_model/v0/outputs_vae/checkpoint_epoch0030.pt
+  resume_checkpoint: ''
   seed: 42
 unet:
   model_channels: 128
@@ -86,8 +92,9 @@ scheduler:
   beta_end: 0.012
   prediction_type: epsilon
   num_inference_steps: 50
+  latent_scale_factor: 1.0268839117083395
 diffusion_train:
-  batch_size: 2
+  batch_size: 8
   num_epochs: 200
   lr: 0.0001
   weight_decay: 0.0
@@ -100,5 +107,5 @@ diffusion_train:
   val_interval: 1
   output_dir: ./outputs_diffusion
   resume_checkpoint: ''
-  pretrained_vae: /data0/yzhen/a_test_model/v0/outputs_vae/checkpoint_epoch0030.pt
+  pretrained_vae: /data0/yzhen/a_test_model/v1/outputs_vae/checkpoint_epoch0100.pt
   seed: 42

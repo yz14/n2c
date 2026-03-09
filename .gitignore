@@ -1,4 +1,8 @@
-# ref_models
-# outputs
-# outputs_g
-# __pycache__
+ref_models
+outputs
+outputs_g
+__pycache__
+__pycache__/
+*.pyc
+outputs/
+*.log

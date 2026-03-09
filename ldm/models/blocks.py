@@ -306,6 +306,10 @@ class MultiHeadAttnBlock(nn.Module):
         attn = F.softmax(attn, dim=-1)
         out = torch.matmul(attn, v)                            # (B, heads, HW, head_dim)
 
-        out = out.permute(0, 2, 1, 3).reshape(B, C, H, W)     # (B, C, H, W)
+        # Merge heads back: (B, heads, HW, head_dim) → (B, HW, heads, head_dim)
+        #   → (B, H, W, C) → (B, C, H, W)
+        # NOTE: the naive .reshape(B, C, H, W) here would scramble spatial/channel
+        # dims because HW and heads*head_dim are interleaved incorrectly.
+        out = out.permute(0, 2, 1, 3).reshape(B, H, W, C).permute(0, 3, 1, 2)
         out = self.proj_out(out)
         return x + out

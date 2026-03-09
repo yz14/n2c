@@ -100,6 +100,12 @@ class DiffusionTrainer:
         # Normalizes latent std to ~1.0 for proper noise schedule matching.
         self.latent_scale_factor = config.scheduler.latent_scale_factor
 
+        # Min-SNR-γ loss weighting (0 = disabled)
+        self.snr_gamma = config.scheduler.snr_gamma
+
+        # Prediction type for loss target selection
+        self.prediction_type = config.scheduler.prediction_type
+
         tcfg = config.diffusion_train
 
         # Optimizer
@@ -147,6 +153,8 @@ class DiffusionTrainer:
         logger.info(f"  UNet params:      {n_params:.2f}M")
         logger.info(f"  Scheduler:        {config.scheduler.beta_schedule}, T={config.scheduler.num_train_timesteps}")
         logger.info(f"  Latent scale:     {self.latent_scale_factor:.6f}")
+        logger.info(f"  Prediction type:  {self.prediction_type}")
+        logger.info(f"  Min-SNR γ:        {self.snr_gamma} ({'enabled' if self.snr_gamma > 0 else 'disabled'})")
         logger.info(f"  LR:               {tcfg.lr}")
         logger.info(f"  Grad clip norm:   {self.grad_clip_norm}")
         logger.info(f"  EMA rate:         {self.ema_rate}")
@@ -276,12 +284,27 @@ class DiffusionTrainer:
             # Forward diffusion: add noise to CTA latent
             z_noisy = self.scheduler.add_noise(z_cta, noise, t)
 
-            # UNet predicts noise from concat(z_noisy, z_ncct)
+            # UNet prediction from concat(z_noisy, z_ncct)
             model_input = torch.cat([z_noisy, z_ncct], dim=1)
-            noise_pred = self.unet(model_input, t)
+            model_output = self.unet(model_input, t)
 
-            # Simple MSE loss on noise prediction
-            loss = F.mse_loss(noise_pred, noise)
+            # Select loss target based on prediction_type
+            if self.prediction_type == "v_prediction":
+                target = self.scheduler.get_v_target(z_cta, noise, t)
+            else:  # epsilon
+                target = noise
+
+            # Per-sample MSE loss (before SNR weighting)
+            loss_per_sample = F.mse_loss(
+                model_output, target, reduction="none",
+            ).mean(dim=[1, 2, 3])  # (B,)
+
+            # Min-SNR-γ weighting
+            if self.snr_gamma > 0:
+                snr_weights = self.scheduler.get_min_snr_weight(t, gamma=self.snr_gamma)
+                loss = (loss_per_sample * snr_weights).mean()
+            else:
+                loss = loss_per_sample.mean()
 
             # Backward
             self.optimizer.zero_grad()
@@ -301,6 +324,16 @@ class DiffusionTrainer:
             # EMA
             update_ema(self.ema_params, self.unet.parameters(), rate=self.ema_rate)
 
+            # Per-timestep-range loss tracking for diagnostics
+            with torch.no_grad():
+                t_cpu = t.cpu()
+                T = self.config.scheduler.num_train_timesteps
+                third = T // 3
+                low_mask = t_cpu < third
+                mid_mask = (t_cpu >= third) & (t_cpu < 2 * third)
+                high_mask = t_cpu >= 2 * third
+                loss_raw = loss_per_sample.detach().cpu()
+
             # Metrics
             self.global_step += 1
             metrics = {
@@ -308,6 +341,13 @@ class DiffusionTrainer:
                 "lr": self.optimizer.param_groups[0]["lr"],
                 "gnorm": grad_norm,
             }
+            # Per-range losses (only update when samples exist in range)
+            if low_mask.any():
+                metrics["loss_low_t"] = loss_raw[low_mask].mean().item()
+            if mid_mask.any():
+                metrics["loss_mid_t"] = loss_raw[mid_mask].mean().item()
+            if high_mask.any():
+                metrics["loss_high_t"] = loss_raw[high_mask].mean().item()
             tracker.update(metrics)
 
             if self.global_step % tcfg.log_interval == 0:
@@ -341,9 +381,24 @@ class DiffusionTrainer:
             z_noisy = self.scheduler.add_noise(z_cta, noise, t)
 
             model_input = torch.cat([z_noisy, z_ncct], dim=1)
-            noise_pred = self.unet(model_input, t)
+            model_output = self.unet(model_input, t)
 
-            loss = F.mse_loss(noise_pred, noise)
+            # Same target selection as training
+            if self.prediction_type == "v_prediction":
+                target = self.scheduler.get_v_target(z_cta, noise, t)
+            else:
+                target = noise
+
+            loss_per_sample = F.mse_loss(
+                model_output, target, reduction="none",
+            ).mean(dim=[1, 2, 3])
+
+            if self.snr_gamma > 0:
+                snr_weights = self.scheduler.get_min_snr_weight(t, gamma=self.snr_gamma)
+                loss = (loss_per_sample * snr_weights).mean()
+            else:
+                loss = loss_per_sample.mean()
+
             tracker.update({"loss": loss.item()})
 
         return tracker

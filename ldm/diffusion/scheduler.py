@@ -94,6 +94,9 @@ class DDPMScheduler:
         self.sqrt_recip_alphas_cumprod = torch.sqrt(1.0 / self.alphas_cumprod)
         self.sqrt_recipm1_alphas_cumprod = torch.sqrt(1.0 / self.alphas_cumprod - 1.0)
 
+        # Signal-to-noise ratio: SNR(t) = ᾱ_t / (1 - ᾱ_t)
+        self.snr = self.alphas_cumprod / (1.0 - self.alphas_cumprod)
+
         # Posterior q(x_{t-1} | x_t, x_0) parameters
         self.posterior_variance = (
             self.betas * (1.0 - self.alphas_cumprod_prev) / (1.0 - self.alphas_cumprod)
@@ -117,6 +120,7 @@ class DDPMScheduler:
             "betas", "alphas", "alphas_cumprod", "alphas_cumprod_prev",
             "sqrt_alphas_cumprod", "sqrt_one_minus_alphas_cumprod",
             "sqrt_recip_alphas_cumprod", "sqrt_recipm1_alphas_cumprod",
+            "snr",
             "posterior_variance", "posterior_log_variance_clipped",
             "posterior_mean_coef1", "posterior_mean_coef2",
         ]:
@@ -162,11 +166,67 @@ class DDPMScheduler:
         t: torch.Tensor,
         noise: torch.Tensor,
     ) -> torch.Tensor:
-        """Recover x_0 from x_t and predicted noise: x_0 = (x_t - sqrt(1-ᾱ) ε) / sqrt(ᾱ)."""
+        """Recover x_0 from x_t and predicted noise: x_0 = (x_t - sqrt(1-ᾱ) ε) / sqrt(ᾱ)."""
         return (
             self._extract(self.sqrt_recip_alphas_cumprod, t, x_t.shape) * x_t
             - self._extract(self.sqrt_recipm1_alphas_cumprod, t, x_t.shape) * noise
         )
+
+    def predict_start_from_v(
+        self,
+        x_t: torch.Tensor,
+        t: torch.Tensor,
+        v: torch.Tensor,
+    ) -> torch.Tensor:
+        """Recover x_0 from x_t and predicted v: x_0 = sqrt(ᾱ) * x_t - sqrt(1-ᾱ) * v."""
+        sqrt_alpha = self._extract(self.sqrt_alphas_cumprod, t, x_t.shape)
+        sqrt_one_minus_alpha = self._extract(
+            self.sqrt_one_minus_alphas_cumprod, t, x_t.shape
+        )
+        return sqrt_alpha * x_t - sqrt_one_minus_alpha * v
+
+    def predict_start(
+        self,
+        x_t: torch.Tensor,
+        t: torch.Tensor,
+        model_output: torch.Tensor,
+    ) -> torch.Tensor:
+        """Recover x_0 from x_t and model output, respecting prediction_type."""
+        if self.prediction_type == "epsilon":
+            return self.predict_start_from_noise(x_t, t, model_output)
+        elif self.prediction_type == "v_prediction":
+            return self.predict_start_from_v(x_t, t, model_output)
+        else:
+            raise ValueError(f"Unknown prediction_type: {self.prediction_type}")
+
+    def get_v_target(
+        self,
+        x_start: torch.Tensor,
+        noise: torch.Tensor,
+        timesteps: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute v-prediction target: v = sqrt(ᾱ_t) * ε - sqrt(1-ᾱ_t) * x_0."""
+        sqrt_alpha = self._extract(self.sqrt_alphas_cumprod, timesteps, x_start.shape)
+        sqrt_one_minus_alpha = self._extract(
+            self.sqrt_one_minus_alphas_cumprod, timesteps, x_start.shape
+        )
+        return sqrt_alpha * noise - sqrt_one_minus_alpha * x_start
+
+    def get_snr(self, timesteps: torch.Tensor) -> torch.Tensor:
+        """Get signal-to-noise ratio for given timesteps: SNR(t) = ᾱ_t / (1-ᾱ_t)."""
+        return self._extract(self.snr, timesteps, (timesteps.shape[0], 1, 1, 1))
+
+    def get_min_snr_weight(
+        self, timesteps: torch.Tensor, gamma: float = 5.0,
+    ) -> torch.Tensor:
+        """Compute Min-SNR-γ loss weight: min(SNR(t), γ) / SNR(t).
+
+        Reference: Efficient Diffusion Training via Min-SNR Weighting (ICCV 2023).
+        Returns per-sample weight of shape (B,).
+        """
+        snr = self.get_snr(timesteps).squeeze()  # (B,)
+        weight = torch.clamp(snr, max=gamma) / snr
+        return weight
 
     def ddpm_step(
         self,
@@ -189,7 +249,7 @@ class DDPMScheduler:
         t = torch.tensor([timestep], device=sample.device, dtype=torch.long)
 
         # Predict x_0 (no clamping — latent values are not bounded to [-1, 1])
-        pred_x0 = self.predict_start_from_noise(sample, t, model_output)
+        pred_x0 = self.predict_start(sample, t, model_output)
 
         # Posterior mean
         coef1 = self._extract(self.posterior_mean_coef1, t, sample.shape)
@@ -233,10 +293,13 @@ class DDIMScheduler:
         self.timesteps = np.flip(self.timesteps).copy()  # reverse for sampling
 
         # Pre-compute DDIM parameters for each step
+        # timesteps are in descending order: [980, 960, ..., 20, 0]
+        # For step i (at timestep[i]), we denoise toward timestep[i+1] (less noisy).
+        # The last step arrives at the clean signal (alpha_prev = 1.0).
         alphas_cumprod = ddpm_scheduler.alphas_cumprod.cpu().numpy()
         self.ddim_alphas = alphas_cumprod[self.timesteps]
         self.ddim_alphas_prev = np.concatenate(
-            [[1.0], alphas_cumprod[self.timesteps[:-1]]]
+            [alphas_cumprod[self.timesteps[1:]], [1.0]]
         )
         # Clamp argument to avoid sqrt of negative values (numerical edge cases)
         sigma_arg = np.clip(
@@ -278,11 +341,17 @@ class DDIMScheduler:
         sqrt_alpha_t = torch.sqrt(alpha_t)
         sqrt_one_minus_alpha_t = torch.sqrt(1.0 - alpha_t)
 
-        # Predict x_0
-        pred_x0 = (sample - sqrt_one_minus_alpha_t * model_output) / sqrt_alpha_t
+        # Predict x_0 based on prediction_type
+        if self.ddpm.prediction_type == "v_prediction":
+            pred_x0 = sqrt_alpha_t * sample - sqrt_one_minus_alpha_t * model_output
+            # Derive predicted epsilon from pred_x0 for DDIM direction term
+            pred_eps = (sample - sqrt_alpha_t * pred_x0) / sqrt_one_minus_alpha_t
+        else:  # epsilon
+            pred_x0 = (sample - sqrt_one_minus_alpha_t * model_output) / sqrt_alpha_t
+            pred_eps = model_output
 
-        # Direction pointing to x_t
-        dir_xt = torch.sqrt(1.0 - alpha_prev - sigma_t ** 2) * model_output
+        # Direction pointing to x_t (always uses predicted epsilon)
+        dir_xt = torch.sqrt(1.0 - alpha_prev - sigma_t ** 2) * pred_eps
 
         # Noise (stochastic component)
         if sigma_t > 0 and step_index > 0:

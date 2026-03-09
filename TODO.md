@@ -36,7 +36,5 @@
 **任务**： ncct合成ctpa，D:\codes\work-projects\ncct2cpta\train.py这里是训练入口。数据：对同一个样本的两次扫描进行配准，大约配准到90%的样子。方案1：采用生成器G+精修网络G2+配准网络R+判别器D的方案。G是必须先训练的，训练目前效果正常，也就是平扫的肺血管基本都增强了，只是生成的图像比较模糊，看起来像被平滑过。方案2：采用D:\codes\work-projects\ncct2cpta\ldm里面的方案，改方案参考方案1和D:\codes\work-projects\ncct2cpta\ref_models\pix2pixHD，D:\codes\work-projects\ncct2cpta\ref_models\guided-diffusion来训练vae，参考D:\codes\work-projects\ncct2cpta\ref_models\guided-diffusion来训练diffusion。D:\codes\work-projects\ncct2cpta\ldm\train_vae.py和train_diffusion.py是训练入口。  
 
 # TODO  
-1. 请全面，细致，认真的分析和审查vae这块代码，保证全流程代码正确无误，算法正确实现，训练逻辑正确等等。我训练了一版vae，见D:\codes\work-projects\ncct2cpta\outputs\config0.yaml配置和对应日志。  
-2. 请全面，细致，认真的分析和审查diffusion这块代码，保证全流程代码正确无误，算法正确实现，训练逻辑正确等等。我在vae基础上训练diffusion，见D:\codes\work-projects\ncct2cpta\outputs\config1.yaml配置和对应的日志。  
-3. vae和diffusion的训练是否有高质量提升效果的策略，工程，技巧等等加入（不要局限于医学图像领域）。  
-4. 如果有修改，记得同步更新D:\codes\work-projects\ncct2cpta\configs\ldm_default.yaml，注意需要加入注释来解释每个参数的选项和意义。  
+1. 请全面，细致，认真的分析和审查diffusion这块代码，保证全流程代码正确无误，算法正确实现，训练逻辑正确等等。我在vae基础上训练diffusion，见D:\codes\work-projects\ncct2cpta\outputs\config0.yaml配置和对应的日志。训练到目前为止生成的图像看起来有了肺部的大致形状，但是里面的内容是杂乱的。如果可以确定问题，则直接修改；如果不确定，需要加入细致的debug来获取信息来帮助定位问题。  
+2. 如果有修改，记得同步更新D:\codes\work-projects\ncct2cpta\configs\ldm_default.yaml，注意需要加入注释来解释每个参数的选项和意义。  

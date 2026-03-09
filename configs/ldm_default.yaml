@@ -113,6 +113,9 @@ unet:
   attention_resolutions:       # 在哪些下采样率使用注意力
   - 4                          #   4x 下采样 = 8×8 分辨率
   - 2                          #   2x 下采样 = 16×16 分辨率
+  # 推荐: 加入 1 (即 32×32 入口分辨率也使用 attention)
+  # 可提升全局特征感知但显存消耗更大:
+  # attention_resolutions: [1, 2, 4]
   dropout: 0.0                 # Dropout 概率
   num_heads: 4                 # 注意力头数
   use_scale_shift_norm: true   # FiLM 条件化: timestep 信息通过 scale+shift 注入
@@ -123,11 +126,17 @@ unet:
 scheduler:
   num_train_timesteps: 1000    # 扩散步数 T (标准值 1000)
   beta_schedule: linear        # 噪声调度: "linear" (DDPM) 或 "cosine" (改进版)
-  beta_start: 0.00085          # 线性调度起始 β (SD 默认: 0.00085)
-  beta_end: 0.012              # 线性调度终止 β (SD 默认: 0.012)
-  prediction_type: epsilon     # 预测类型: "epsilon" (预测噪声) 或 "v_prediction"
+                               # 推荐: "cosine" — 在 latent space 中更平滑的 SNR 过渡
+  beta_start: 0.00085          # 线性调度起始 β (SD 默认: 0.00085, cosine 时忽略)
+  beta_end: 0.012              # 线性调度终止 β (SD 默认: 0.012, cosine 时忽略)
+  prediction_type: epsilon     # 预测类型: "epsilon" (预测噪声) 或 "v_prediction" (预测 velocity)
+                               # v_prediction 在 cosine schedule 下效果更好 (数值更稳定)
   num_inference_steps: 50      # DDIM 采样步数 (推理时, 越多质量越好但越慢)
   latent_scale_factor: 0.0     # latent 缩放因子 (0.0=自动从训练数据计算 1/std(z))
+  snr_gamma: 5.0               # Min-SNR-γ 损失加权 (ICCV 2023)
+                               #   0.0 = 禁用 (标准均匀加权)
+                               #   5.0 = 推荐值, 消除 timestep 间梯度冲突
+                               #   效果: 约 3.4x 更快收敛, 更低的 FID
 
 # ---------------------------------------------------------------------------
 # Diffusion UNet 训练配置 — Stage 2

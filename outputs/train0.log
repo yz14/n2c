@@ -1,278 +1,665 @@
-2026-03-05 17:40:14,943 INFO: Using device: cuda
-2026-03-05 17:40:14,943 INFO: Loaded 2083 files from splits/train.txt
-2026-03-05 17:40:14,943 INFO: Loaded 100 files from splits/valid.txt
-2026-03-05 17:40:14,944 INFO: Train batches: 520, Val batches: 25
-2026-03-05 17:40:15,545 INFO: AutoencoderKL: 88.91M parameters
-2026-03-05 17:40:18,218 INFO:   VAE-GAN perceptual loss: weight=1.0
-2026-03-05 17:40:18,219 INFO:   VAE-GAN: ENABLED
-2026-03-05 17:40:18,219 INFO:     D params:         2.76M
-2026-03-05 17:40:18,219 INFO:     D input channels: 3
-2026-03-05 17:40:18,219 INFO:     GAN loss:         hinge
-2026-03-05 17:40:18,219 INFO:     GAN weight:       0.5
-2026-03-05 17:40:18,219 INFO:     Adaptive weight:  True (max=10.0)
-2026-03-05 17:40:18,219 INFO:     Perceptual weight:1.0
-2026-03-05 17:40:18,219 INFO:     Feat match weight:0.0
-2026-03-05 17:40:18,220 INFO:     D start epoch:    5
-2026-03-05 17:40:18,220 INFO:     D LR:             0.0001
-2026-03-05 17:40:18,220 INFO:     R1 gamma:         0.0 (interval=16)
-2026-03-05 17:40:18,331 INFO: VAETrainer initialized:
-2026-03-05 17:40:18,332 INFO:   VAE params:       88.91M
-2026-03-05 17:40:18,332 INFO:   L1 weight:        1.0
-2026-03-05 17:40:18,332 INFO:   KL weight:        1e-06
-2026-03-05 17:40:18,332 INFO:   LR:               4.5e-06
-2026-03-05 17:40:18,332 INFO:   Grad clip norm:   1.0
-2026-03-05 17:40:18,332 INFO:   EMA rate:         0.9999
-2026-03-05 17:40:18,332 INFO:   VAE-GAN:          ENABLED (start epoch 5)
-2026-03-05 17:40:18,332 INFO: Starting VAE training for 100 epochs
-2026-03-05 17:51:02,061 INFO: Epoch 1/100 [Train] loss: 3.751256, l1_cta: 0.562698, kl_cta: 3066.019954, l1_ncct: 0.522080, kl_ncct: 3107.310288, lr: 0.000002, gnorm: 12.324371, perceptual: 3.205781, gan_g: 0.000000, adaptive_w: 0.500000
-2026-03-05 17:51:42,495 INFO: Epoch 1/100 [Val]   loss: 0.428063, l1_cta: 0.477497, kl_cta: 4029.451201, l1_ncct: 0.369380, kl_ncct: 5220.421045
-2026-03-05 17:51:44,363 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0001.pt
-2026-03-05 17:51:45,960 INFO:   New best val loss: 0.428063
-2026-03-05 17:51:46,350 INFO:   Saved VAE visualizations for epoch 1
-2026-03-05 17:54:38,015 INFO: Using device: cuda
-2026-03-05 17:54:38,016 INFO: Loaded 2083 files from splits/train.txt
-2026-03-05 17:54:38,016 INFO: Loaded 100 files from splits/valid.txt
-2026-03-05 17:54:38,016 INFO: Train batches: 520, Val batches: 25
-2026-03-05 17:54:38,715 INFO: AutoencoderKL: 88.91M parameters
-2026-03-05 17:54:41,428 INFO:   VAE-GAN perceptual loss: weight=1.0
-2026-03-05 17:54:41,429 INFO:   VAE-GAN: ENABLED
-2026-03-05 17:54:41,429 INFO:     D params:         2.76M
-2026-03-05 17:54:41,429 INFO:     D input channels: 3
-2026-03-05 17:54:41,429 INFO:     GAN loss:         hinge
-2026-03-05 17:54:41,429 INFO:     GAN weight:       0.5
-2026-03-05 17:54:41,429 INFO:     Adaptive weight:  True (max=10.0)
-2026-03-05 17:54:41,429 INFO:     Perceptual weight:1.0
-2026-03-05 17:54:41,429 INFO:     Feat match weight:0.0
-2026-03-05 17:54:41,429 INFO:     D start epoch:    5
-2026-03-05 17:54:41,429 INFO:     D LR:             0.0001
-2026-03-05 17:54:41,429 INFO:     R1 gamma:         0.0 (interval=16)
-2026-03-05 17:54:41,599 INFO: Resuming VAE from: /data0/yzhen/a_test_model/v0/outputs_vae/checkpoint_epoch0030.pt
-2026-03-05 17:54:42,841 INFO:   Resumed at epoch 30, step 15600
-2026-03-05 17:54:42,844 INFO: VAETrainer initialized:
-2026-03-05 17:54:42,844 INFO:   VAE params:       88.91M
-2026-03-05 17:54:42,844 INFO:   L1 weight:        1.0
-2026-03-05 17:54:42,844 INFO:   KL weight:        1e-06
-2026-03-05 17:54:42,844 INFO:   LR:               4.5e-06
-2026-03-05 17:54:42,844 INFO:   Grad clip norm:   1.0
-2026-03-05 17:54:42,844 INFO:   EMA rate:         0.9999
-2026-03-05 17:54:42,844 INFO:   VAE-GAN:          ENABLED (start epoch 5)
-2026-03-05 17:54:42,844 INFO: Starting VAE training for 100 epochs
-2026-03-05 18:05:26,496 INFO: Epoch 31/100 [Train] loss: 2.623677, l1_cta: 0.115830, kl_cta: 7082.839715, l1_ncct: 0.128871, kl_ncct: 7011.854910, lr: 0.000004, gnorm: 33.821773, perceptual: 2.437756, gan_g: 0.034111, adaptive_w: 5.294654, d_loss: 0.946810, d_real: 0.091607, d_fake: -0.034111, lr_d: 0.000052
-2026-03-05 18:06:08,949 INFO: Epoch 31/100 [Val]   loss: 0.098431, l1_cta: 0.084550, kl_cta: 7745.227637, l1_ncct: 0.096875, kl_ncct: 7691.420801
-2026-03-05 18:06:09,258 INFO:   Saved VAE visualizations for epoch 31
-2026-03-05 18:16:57,320 INFO: Epoch 32/100 [Train] loss: 2.424517, l1_cta: 0.076727, kl_cta: 7766.844922, l1_ncct: 0.096486, kl_ncct: 7693.671531, lr: 0.000004, gnorm: 47.590773, perceptual: 2.178330, gan_g: 0.765009, adaptive_w: 0.211037, d_loss: 0.476007, d_real: 0.914594, d_fake: -0.765009, lr_d: 0.000100
-2026-03-05 18:17:38,049 INFO: Epoch 32/100 [Val]   loss: 0.088770, l1_cta: 0.072144, kl_cta: 7844.593574, l1_ncct: 0.089776, kl_ncct: 7776.185078
-2026-03-05 18:17:38,339 INFO:   Saved VAE visualizations for epoch 32
-2026-03-05 18:28:17,275 INFO: Epoch 33/100 [Train] loss: 2.321362, l1_cta: 0.066502, kl_cta: 7946.191232, l1_ncct: 0.087288, kl_ncct: 7853.333454, lr: 0.000003, gnorm: 47.951898, perceptual: 2.096417, gan_g: 1.225774, adaptive_w: 0.093302, d_loss: 0.349146, d_real: 1.450980, d_fake: -1.225774, lr_d: 0.000100
-2026-03-05 18:28:58,406 INFO: Epoch 33/100 [Val]   loss: 0.103537, l1_cta: 0.085947, kl_cta: 8026.132188, l1_ncct: 0.105166, kl_ncct: 7934.620684
-2026-03-05 18:28:58,780 INFO:   Saved VAE visualizations for epoch 33
-2026-03-05 18:39:52,063 INFO: Epoch 34/100 [Train] loss: 2.299639, l1_cta: 0.065394, kl_cta: 8159.114077, l1_ncct: 0.086210, kl_ncct: 8042.680226, lr: 0.000003, gnorm: 47.951310, perceptual: 2.079396, gan_g: 1.296168, adaptive_w: 0.088037, d_loss: 0.357405, d_real: 1.660737, d_fake: -1.296168, lr_d: 0.000100
-2026-03-05 18:40:32,734 INFO: Epoch 34/100 [Val]   loss: 0.090257, l1_cta: 0.072049, kl_cta: 8291.403359, l1_ncct: 0.091993, kl_ncct: 8180.159434
-2026-03-05 18:40:33,002 INFO:   Saved VAE visualizations for epoch 34
-2026-03-05 18:51:17,189 INFO: Epoch 35/100 [Train] loss: 2.249818, l1_cta: 0.064582, kl_cta: 8407.081162, l1_ncct: 0.084632, kl_ncct: 8274.087190, lr: 0.000003, gnorm: 44.695982, perceptual: 2.057364, gan_g: 1.286689, adaptive_w: 0.079370, d_loss: 0.351730, d_real: 1.601224, d_fake: -1.286688, lr_d: 0.000100
-2026-03-05 18:51:57,773 INFO: Epoch 35/100 [Val]   loss: 0.085751, l1_cta: 0.066710, kl_cta: 8595.645039, l1_ncct: 0.087688, kl_ncct: 8507.209180
-2026-03-05 18:51:58,063 INFO:   Saved VAE visualizations for epoch 35
-2026-03-05 19:02:53,313 INFO: Epoch 36/100 [Train] loss: 2.237004, l1_cta: 0.064106, kl_cta: 8633.724724, l1_ncct: 0.085138, kl_ncct: 8494.341030, lr: 0.000003, gnorm: 48.459376, perceptual: 2.041978, gan_g: 1.341676, adaptive_w: 0.073465, d_loss: 0.318959, d_real: 1.727834, d_fake: -1.341676, lr_d: 0.000099
-2026-03-05 19:03:34,021 INFO: Epoch 36/100 [Val]   loss: 0.085596, l1_cta: 0.066026, kl_cta: 8724.040781, l1_ncct: 0.087824, kl_ncct: 8618.239922
-2026-03-05 19:03:34,332 INFO:   Saved VAE visualizations for epoch 36
-2026-03-05 19:14:30,160 INFO: Epoch 37/100 [Train] loss: 2.192870, l1_cta: 0.061466, kl_cta: 8861.029479, l1_ncct: 0.082161, kl_ncct: 8724.301559, lr: 0.000003, gnorm: 44.376286, perceptual: 2.003480, gan_g: 1.437162, adaptive_w: 0.067683, d_loss: 0.324228, d_real: 1.751130, d_fake: -1.437162, lr_d: 0.000099
-2026-03-05 19:15:11,545 INFO: Epoch 37/100 [Val]   loss: 0.088816, l1_cta: 0.070011, kl_cta: 8892.762500, l1_ncct: 0.089949, kl_ncct: 8779.537070
-2026-03-05 19:15:11,831 INFO:   Saved VAE visualizations for epoch 37
-2026-03-05 19:25:43,532 INFO: Epoch 38/100 [Train] loss: 2.180998, l1_cta: 0.061548, kl_cta: 9048.322125, l1_ncct: 0.082206, kl_ncct: 8911.007538, lr: 0.000003, gnorm: 39.683964, perceptual: 1.998688, gan_g: 1.344060, adaptive_w: 0.069377, d_loss: 0.367595, d_real: 1.582268, d_fake: -1.344059, lr_d: 0.000099
-2026-03-05 19:26:24,505 INFO: Epoch 38/100 [Val]   loss: 0.085287, l1_cta: 0.066599, kl_cta: 9270.991172, l1_ncct: 0.085535, kl_ncct: 9169.867070
-2026-03-05 19:26:24,770 INFO:   Saved VAE visualizations for epoch 38
-2026-03-05 19:37:11,226 INFO: Epoch 39/100 [Train] loss: 2.129554, l1_cta: 0.060146, kl_cta: 9244.735678, l1_ncct: 0.081631, kl_ncct: 9106.745386, lr: 0.000003, gnorm: 38.170255, perceptual: 1.951830, gan_g: 1.520597, adaptive_w: 0.058234, d_loss: 0.306020, d_real: 1.923155, d_fake: -1.520596, lr_d: 0.000099
-2026-03-05 19:37:51,804 INFO: Epoch 39/100 [Val]   loss: 0.086831, l1_cta: 0.067999, kl_cta: 9340.498164, l1_ncct: 0.087097, kl_ncct: 9226.369766
-2026-03-05 19:37:52,048 INFO:   Saved VAE visualizations for epoch 39
-2026-03-05 19:48:18,180 INFO: Epoch 40/100 [Train] loss: 2.146328, l1_cta: 0.060898, kl_cta: 9436.636236, l1_ncct: 0.082430, kl_ncct: 9287.303379, lr: 0.000003, gnorm: 45.973894, perceptual: 1.963426, gan_g: 1.393640, adaptive_w: 0.066607, d_loss: 0.369817, d_real: 1.636295, d_fake: -1.393640, lr_d: 0.000098
-2026-03-05 19:48:58,936 INFO: Epoch 40/100 [Val]   loss: 0.087170, l1_cta: 0.066151, kl_cta: 9493.406172, l1_ncct: 0.089295, kl_ncct: 9400.419180
-2026-03-05 19:48:59,180 INFO:   Saved VAE visualizations for epoch 40
-2026-03-05 19:49:00,811 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0040.pt
-2026-03-05 20:00:01,985 INFO: Epoch 41/100 [Train] loss: 2.113414, l1_cta: 0.059935, kl_cta: 9593.162710, l1_ncct: 0.081920, kl_ncct: 9446.933464, lr: 0.000003, gnorm: 44.077440, perceptual: 1.939167, gan_g: 1.465094, adaptive_w: 0.060338, d_loss: 0.329243, d_real: 1.730914, d_fake: -1.465094, lr_d: 0.000098
-2026-03-05 20:00:42,744 INFO: Epoch 41/100 [Val]   loss: 0.082456, l1_cta: 0.061799, kl_cta: 9671.872695, l1_ncct: 0.083867, kl_ncct: 9572.456289
-2026-03-05 20:00:43,052 INFO:   Saved VAE visualizations for epoch 41
-2026-03-05 20:11:07,748 INFO: Epoch 42/100 [Train] loss: 2.127511, l1_cta: 0.060599, kl_cta: 9764.706051, l1_ncct: 0.082530, kl_ncct: 9615.256999, lr: 0.000003, gnorm: 40.597375, perceptual: 1.958655, gan_g: 1.225519, adaptive_w: 0.068673, d_loss: 0.432331, d_real: 1.400547, d_fake: -1.225518, lr_d: 0.000097
-2026-03-05 20:11:48,760 INFO: Epoch 42/100 [Val]   loss: 0.085879, l1_cta: 0.065047, kl_cta: 9922.660469, l1_ncct: 0.086954, kl_ncct: 9833.342852
-2026-03-05 20:11:49,096 INFO:   Saved VAE visualizations for epoch 42
-2026-03-05 20:22:13,460 INFO: Epoch 43/100 [Train] loss: 2.064440, l1_cta: 0.058372, kl_cta: 9934.970290, l1_ncct: 0.080661, kl_ncct: 9783.803993, lr: 0.000003, gnorm: 37.994212, perceptual: 1.904277, gan_g: 1.378842, adaptive_w: 0.058143, d_loss: 0.365000, d_real: 1.629409, d_fake: -1.378842, lr_d: 0.000097
-2026-03-05 20:22:54,702 INFO: Epoch 43/100 [Val]   loss: 0.085468, l1_cta: 0.064811, kl_cta: 9985.404375, l1_ncct: 0.086285, kl_ncct: 9855.018906
-2026-03-05 20:22:54,970 INFO:   Saved VAE visualizations for epoch 43
-2026-03-05 20:33:36,226 INFO: Epoch 44/100 [Train] loss: 2.111984, l1_cta: 0.060309, kl_cta: 10069.528358, l1_ncct: 0.082304, kl_ncct: 9920.388114, lr: 0.000003, gnorm: 49.470337, perceptual: 1.944553, gan_g: 1.056854, adaptive_w: 0.079835, d_loss: 0.473752, d_real: 1.173899, d_fake: -1.056854, lr_d: 0.000096
-2026-03-05 20:34:16,847 INFO: Epoch 44/100 [Val]   loss: 0.085126, l1_cta: 0.064469, kl_cta: 10157.445859, l1_ncct: 0.085574, kl_ncct: 10051.733477
-2026-03-05 20:34:17,100 INFO:   Saved VAE visualizations for epoch 44
-2026-03-05 20:44:54,046 INFO: Epoch 45/100 [Train] loss: 2.058762, l1_cta: 0.058538, kl_cta: 10221.920850, l1_ncct: 0.080677, kl_ncct: 10065.615462, lr: 0.000003, gnorm: 42.329649, perceptual: 1.905316, gan_g: 1.157007, adaptive_w: 0.063098, d_loss: 0.433937, d_real: 1.319576, d_fake: -1.157007, lr_d: 0.000095
-2026-03-05 20:45:35,136 INFO: Epoch 45/100 [Val]   loss: 0.086300, l1_cta: 0.065755, kl_cta: 10168.423086, l1_ncct: 0.086608, kl_ncct: 10069.610937
-2026-03-05 20:45:35,401 INFO:   Saved VAE visualizations for epoch 45
-2026-03-05 20:56:31,709 INFO: Epoch 46/100 [Train] loss: 2.060110, l1_cta: 0.058369, kl_cta: 10355.853022, l1_ncct: 0.080239, kl_ncct: 10195.602520, lr: 0.000003, gnorm: 46.166739, perceptual: 1.901800, gan_g: 1.055712, adaptive_w: 0.071069, d_loss: 0.473754, d_real: 1.160396, d_fake: -1.055712, lr_d: 0.000095
-2026-03-05 20:57:12,287 INFO: Epoch 46/100 [Val]   loss: 0.083652, l1_cta: 0.062163, kl_cta: 10407.911055, l1_ncct: 0.084428, kl_ncct: 10304.747109
-2026-03-05 20:57:12,548 INFO:   Saved VAE visualizations for epoch 46
-2026-03-05 21:07:43,323 INFO: Epoch 47/100 [Train] loss: 2.066968, l1_cta: 0.059454, kl_cta: 10471.006800, l1_ncct: 0.081401, kl_ncct: 10304.835515, lr: 0.000003, gnorm: 49.577642, perceptual: 1.905555, gan_g: 1.024361, adaptive_w: 0.072632, d_loss: 0.500700, d_real: 1.145414, d_fake: -1.024361, lr_d: 0.000094
-2026-03-05 21:08:24,522 INFO: Epoch 47/100 [Val]   loss: 0.086327, l1_cta: 0.064486, kl_cta: 10578.001836, l1_ncct: 0.087120, kl_ncct: 10470.826133
-2026-03-05 21:08:24,784 INFO:   Saved VAE visualizations for epoch 47
-2026-03-05 21:19:08,984 INFO: Epoch 48/100 [Train] loss: 2.059667, l1_cta: 0.058471, kl_cta: 10580.365109, l1_ncct: 0.080551, kl_ncct: 10411.304887, lr: 0.000002, gnorm: 50.561028, perceptual: 1.902579, gan_g: 1.039570, adaptive_w: 0.071750, d_loss: 0.494203, d_real: 1.111645, d_fake: -1.039570, lr_d: 0.000093
-2026-03-05 21:19:49,758 INFO: Epoch 48/100 [Val]   loss: 0.084180, l1_cta: 0.063408, kl_cta: 10589.355625, l1_ncct: 0.083889, kl_ncct: 10473.557969
-2026-03-05 21:19:50,032 INFO:   Saved VAE visualizations for epoch 48
-2026-03-05 21:30:28,298 INFO: Epoch 49/100 [Train] loss: 2.035195, l1_cta: 0.057124, kl_cta: 10707.868788, l1_ncct: 0.079029, kl_ncct: 10542.389934, lr: 0.000002, gnorm: 46.321296, perceptual: 1.875912, gan_g: 1.186344, adaptive_w: 0.064076, d_loss: 0.432004, d_real: 1.283478, d_fake: -1.186344, lr_d: 0.000092
-2026-03-05 21:31:09,210 INFO: Epoch 49/100 [Val]   loss: 0.083899, l1_cta: 0.062733, kl_cta: 10752.363125, l1_ncct: 0.083666, kl_ncct: 10647.935039
-2026-03-05 21:31:09,519 INFO:   Saved VAE visualizations for epoch 49
-2026-03-05 21:41:40,274 INFO: Epoch 50/100 [Train] loss: 2.030874, l1_cta: 0.057660, kl_cta: 10809.254674, l1_ncct: 0.079530, kl_ncct: 10636.636152, lr: 0.000002, gnorm: 46.261712, perceptual: 1.878905, gan_g: 0.967118, adaptive_w: 0.070277, d_loss: 0.513968, d_real: 1.134201, d_fake: -0.967118, lr_d: 0.000092
-2026-03-05 21:42:20,885 INFO: Epoch 50/100 [Val]   loss: 0.081413, l1_cta: 0.060007, kl_cta: 10857.702695, l1_ncct: 0.081221, kl_ncct: 10740.168594
-2026-03-05 21:42:21,143 INFO:   Saved VAE visualizations for epoch 50
-2026-03-05 21:42:22,803 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0050.pt
-2026-03-05 21:52:51,152 INFO: Epoch 51/100 [Train] loss: 2.006925, l1_cta: 0.056131, kl_cta: 10916.552654, l1_ncct: 0.078814, kl_ncct: 10742.958845, lr: 0.000002, gnorm: 46.457825, perceptual: 1.855524, gan_g: 1.104701, adaptive_w: 0.063064, d_loss: 0.463848, d_real: 1.169356, d_fake: -1.104701, lr_d: 0.000091
-2026-03-05 21:53:32,278 INFO: Epoch 51/100 [Val]   loss: 0.081817, l1_cta: 0.059252, kl_cta: 10978.960039, l1_ncct: 0.082535, kl_ncct: 10868.708906
-2026-03-05 21:53:32,521 INFO:   Saved VAE visualizations for epoch 51
-2026-03-05 22:04:00,899 INFO: Epoch 52/100 [Train] loss: 1.983960, l1_cta: 0.055357, kl_cta: 11039.607559, l1_ncct: 0.078404, kl_ncct: 10861.866141, lr: 0.000002, gnorm: 46.024422, perceptual: 1.829525, gan_g: 1.148032, adaptive_w: 0.063631, d_loss: 0.440478, d_real: 1.348856, d_fake: -1.148032, lr_d: 0.000090
-2026-03-05 22:04:41,602 INFO: Epoch 52/100 [Val]   loss: 0.082763, l1_cta: 0.060107, kl_cta: 11087.051367, l1_ncct: 0.083354, kl_ncct: 10978.081133
-2026-03-05 22:04:41,857 INFO:   Saved VAE visualizations for epoch 52
-2026-03-05 22:15:12,324 INFO: Epoch 53/100 [Train] loss: 1.992287, l1_cta: 0.056022, kl_cta: 11121.511146, l1_ncct: 0.078390, kl_ncct: 10948.542377, lr: 0.000002, gnorm: 49.484213, perceptual: 1.839209, gan_g: 1.055659, adaptive_w: 0.068116, d_loss: 0.472044, d_real: 1.199830, d_fake: -1.055659, lr_d: 0.000089
-2026-03-05 22:15:52,996 INFO: Epoch 53/100 [Val]   loss: 0.082221, l1_cta: 0.059863, kl_cta: 11191.636523, l1_ncct: 0.082295, kl_ncct: 11093.733828
-2026-03-05 22:15:53,268 INFO:   Saved VAE visualizations for epoch 53
-2026-03-05 22:26:20,460 INFO: Epoch 54/100 [Train] loss: 1.981049, l1_cta: 0.055261, kl_cta: 11237.940018, l1_ncct: 0.078086, kl_ncct: 11054.998329, lr: 0.000002, gnorm: 44.128381, perceptual: 1.828597, gan_g: 1.081907, adaptive_w: 0.067547, d_loss: 0.455569, d_real: 1.263298, d_fake: -1.081907, lr_d: 0.000088
-2026-03-05 22:27:01,115 INFO: Epoch 54/100 [Val]   loss: 0.085558, l1_cta: 0.063561, kl_cta: 11352.117422, l1_ncct: 0.084971, kl_ncct: 11232.432461
-2026-03-05 22:27:01,440 INFO:   Saved VAE visualizations for epoch 54
-2026-03-05 22:37:33,944 INFO: Epoch 55/100 [Train] loss: 2.009343, l1_cta: 0.056679, kl_cta: 11342.572095, l1_ncct: 0.079025, kl_ncct: 11169.890903, lr: 0.000002, gnorm: 45.869114, perceptual: 1.853993, gan_g: 0.920020, adaptive_w: 0.077649, d_loss: 0.532653, d_real: 0.980814, d_fake: -0.920020, lr_d: 0.000087
-2026-03-05 22:38:15,883 INFO: Epoch 55/100 [Val]   loss: 0.082780, l1_cta: 0.060790, kl_cta: 11338.515117, l1_ncct: 0.082217, kl_ncct: 11214.455625
-2026-03-05 22:38:16,202 INFO:   Saved VAE visualizations for epoch 55
-2026-03-05 22:48:50,115 INFO: Epoch 56/100 [Train] loss: 1.964707, l1_cta: 0.054637, kl_cta: 11467.141171, l1_ncct: 0.077480, kl_ncct: 11291.067723, lr: 0.000002, gnorm: 39.757060, perceptual: 1.813305, gan_g: 1.102372, adaptive_w: 0.062919, d_loss: 0.469083, d_real: 1.123415, d_fake: -1.102372, lr_d: 0.000086
-2026-03-05 22:49:31,529 INFO: Epoch 56/100 [Val]   loss: 0.081810, l1_cta: 0.058898, kl_cta: 11530.918359, l1_ncct: 0.081771, kl_ncct: 11420.131992
-2026-03-05 22:49:31,775 INFO:   Saved VAE visualizations for epoch 56
-2026-03-05 23:00:12,540 INFO: Epoch 57/100 [Train] loss: 1.954191, l1_cta: 0.054542, kl_cta: 11589.173081, l1_ncct: 0.077484, kl_ncct: 11402.345701, lr: 0.000002, gnorm: 48.617849, perceptual: 1.808128, gan_g: 0.961544, adaptive_w: 0.066342, d_loss: 0.493550, d_real: 1.139848, d_fake: -0.961544, lr_d: 0.000084
-2026-03-05 23:00:53,321 INFO: Epoch 57/100 [Val]   loss: 0.082839, l1_cta: 0.060369, kl_cta: 11618.119023, l1_ncct: 0.082196, kl_ncct: 11495.570781
-2026-03-05 23:00:53,571 INFO:   Saved VAE visualizations for epoch 57
-2026-03-05 23:11:24,978 INFO: Epoch 58/100 [Train] loss: 1.952781, l1_cta: 0.054760, kl_cta: 11686.564111, l1_ncct: 0.077519, kl_ncct: 11493.542035, lr: 0.000002, gnorm: 47.709723, perceptual: 1.808606, gan_g: 0.967852, adaptive_w: 0.066071, d_loss: 0.502979, d_real: 1.053063, d_fake: -0.967852, lr_d: 0.000083
-2026-03-05 23:12:06,203 INFO: Epoch 58/100 [Val]   loss: 0.081412, l1_cta: 0.058788, kl_cta: 11708.847031, l1_ncct: 0.080734, kl_ncct: 11593.366953
-2026-03-05 23:12:06,451 INFO:   Saved VAE visualizations for epoch 58
-2026-03-05 23:22:34,961 INFO: Epoch 59/100 [Train] loss: 1.922624, l1_cta: 0.053218, kl_cta: 11787.988974, l1_ncct: 0.076342, kl_ncct: 11588.125073, lr: 0.000002, gnorm: 45.436582, perceptual: 1.774932, gan_g: 1.223690, adaptive_w: 0.055317, d_loss: 0.400924, d_real: 1.353699, d_fake: -1.223690, lr_d: 0.000082
-2026-03-05 23:23:15,654 INFO: Epoch 59/100 [Val]   loss: 0.084231, l1_cta: 0.061737, kl_cta: 11803.693203, l1_ncct: 0.083246, kl_ncct: 11674.348008
-2026-03-05 23:23:15,887 INFO:   Saved VAE visualizations for epoch 59
-2026-03-05 23:33:56,919 INFO: Epoch 60/100 [Train] loss: 1.936208, l1_cta: 0.053254, kl_cta: 11875.651775, l1_ncct: 0.076519, kl_ncct: 11665.254085, lr: 0.000002, gnorm: 50.206788, perceptual: 1.786346, gan_g: 1.083629, adaptive_w: 0.063547, d_loss: 0.453863, d_real: 1.172261, d_fake: -1.083629, lr_d: 0.000081
-2026-03-05 23:34:37,874 INFO: Epoch 60/100 [Val]   loss: 0.088300, l1_cta: 0.066095, kl_cta: 11887.075820, l1_ncct: 0.086843, kl_ncct: 11775.547695
-2026-03-05 23:34:38,103 INFO:   Saved VAE visualizations for epoch 60
-2026-03-05 23:34:39,753 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0060.pt
-2026-03-05 23:45:04,239 INFO: Epoch 61/100 [Train] loss: 1.927679, l1_cta: 0.053314, kl_cta: 11973.951054, l1_ncct: 0.076775, kl_ncct: 11763.088820, lr: 0.000002, gnorm: 46.770357, perceptual: 1.781218, gan_g: 1.105881, adaptive_w: 0.058678, d_loss: 0.418047, d_real: 1.297734, d_fake: -1.105881, lr_d: 0.000080
-2026-03-05 23:45:44,836 INFO: Epoch 61/100 [Val]   loss: 0.081804, l1_cta: 0.057528, kl_cta: 12032.982773, l1_ncct: 0.082145, kl_ncct: 11903.105664
-2026-03-05 23:45:45,078 INFO:   Saved VAE visualizations for epoch 61
-2026-03-05 23:56:28,190 INFO: Epoch 62/100 [Train] loss: 1.907635, l1_cta: 0.052487, kl_cta: 12057.632206, l1_ncct: 0.075945, kl_ncct: 11836.881494, lr: 0.000001, gnorm: 46.507803, perceptual: 1.762248, gan_g: 1.210804, adaptive_w: 0.056328, d_loss: 0.398116, d_real: 1.374691, d_fake: -1.210804, lr_d: 0.000078
-2026-03-05 23:57:09,824 INFO: Epoch 62/100 [Val]   loss: 0.081976, l1_cta: 0.059030, kl_cta: 12059.396094, l1_ncct: 0.080921, kl_ncct: 11943.028984
-2026-03-05 23:57:10,057 INFO:   Saved VAE visualizations for epoch 62
-2026-03-06 00:07:33,388 INFO: Epoch 63/100 [Train] loss: 1.916744, l1_cta: 0.052600, kl_cta: 12127.289459, l1_ncct: 0.076065, kl_ncct: 11898.721757, lr: 0.000001, gnorm: 47.103187, perceptual: 1.769392, gan_g: 1.149115, adaptive_w: 0.060844, d_loss: 0.440792, d_real: 1.205209, d_fake: -1.149115, lr_d: 0.000077
-2026-03-06 00:08:14,408 INFO: Epoch 63/100 [Val]   loss: 0.079714, l1_cta: 0.055721, kl_cta: 12176.626680, l1_ncct: 0.079484, kl_ncct: 12046.155000
-2026-03-06 00:08:14,729 INFO:   Saved VAE visualizations for epoch 63
-2026-03-06 00:18:55,752 INFO: Epoch 64/100 [Train] loss: 1.909996, l1_cta: 0.052467, kl_cta: 12198.899053, l1_ncct: 0.075792, kl_ncct: 11971.729436, lr: 0.000001, gnorm: 39.605775, perceptual: 1.769737, gan_g: 1.123758, adaptive_w: 0.057291, d_loss: 0.419404, d_real: 1.215126, d_fake: -1.123758, lr_d: 0.000076
-2026-03-06 00:19:36,440 INFO: Epoch 64/100 [Val]   loss: 0.080448, l1_cta: 0.056779, kl_cta: 12221.480273, l1_ncct: 0.079806, kl_ncct: 12090.075977
-2026-03-06 00:19:36,740 INFO:   Saved VAE visualizations for epoch 64
-2026-03-06 00:30:14,714 INFO: Epoch 65/100 [Train] loss: 1.888618, l1_cta: 0.051764, kl_cta: 12284.881318, l1_ncct: 0.075947, kl_ncct: 12052.792392, lr: 0.000001, gnorm: 41.653765, perceptual: 1.748984, gan_g: 1.248793, adaptive_w: 0.049068, d_loss: 0.352239, d_real: 1.475295, d_fake: -1.248793, lr_d: 0.000074
-2026-03-06 00:30:55,391 INFO: Epoch 65/100 [Val]   loss: 0.082011, l1_cta: 0.058388, kl_cta: 12332.863203, l1_ncct: 0.081095, kl_ncct: 12206.512188
-2026-03-06 00:30:55,714 INFO:   Saved VAE visualizations for epoch 65
-2026-03-06 00:41:59,612 INFO: Epoch 66/100 [Train] loss: 1.865540, l1_cta: 0.050800, kl_cta: 12380.733267, l1_ncct: 0.074382, kl_ncct: 12144.736187, lr: 0.000001, gnorm: 29.036461, perceptual: 1.727426, gan_g: 1.420608, adaptive_w: 0.042954, d_loss: 0.306560, d_real: 1.763021, d_fake: -1.420608, lr_d: 0.000073
-2026-03-06 00:42:40,532 INFO: Epoch 66/100 [Val]   loss: 0.083191, l1_cta: 0.058674, kl_cta: 12396.399414, l1_ncct: 0.083057, kl_ncct: 12253.741875
-2026-03-06 00:42:40,851 INFO:   Saved VAE visualizations for epoch 66
-2026-03-06 00:53:58,825 INFO: Epoch 67/100 [Train] loss: 1.893122, l1_cta: 0.051593, kl_cta: 12441.533759, l1_ncct: 0.075331, kl_ncct: 12205.316590, lr: 0.000001, gnorm: 41.925611, perceptual: 1.747946, gan_g: 1.151029, adaptive_w: 0.057826, d_loss: 0.408432, d_real: 1.230902, d_fake: -1.151029, lr_d: 0.000071
-2026-03-06 00:54:39,513 INFO: Epoch 67/100 [Val]   loss: 0.081157, l1_cta: 0.057368, kl_cta: 12431.062773, l1_ncct: 0.080217, kl_ncct: 12297.995391
-2026-03-06 00:54:39,743 INFO:   Saved VAE visualizations for epoch 67
-2026-03-06 01:05:25,773 INFO: Epoch 68/100 [Train] loss: 1.885353, l1_cta: 0.051330, kl_cta: 12497.962124, l1_ncct: 0.074990, kl_ncct: 12246.216483, lr: 0.000001, gnorm: 41.946177, perceptual: 1.739105, gan_g: 1.255538, adaptive_w: 0.052231, d_loss: 0.363688, d_real: 1.444116, d_fake: -1.255538, lr_d: 0.000070
-2026-03-06 01:06:06,881 INFO: Epoch 68/100 [Val]   loss: 0.080862, l1_cta: 0.056640, kl_cta: 12513.420195, l1_ncct: 0.080197, kl_ncct: 12374.864063
-2026-03-06 01:06:07,111 INFO:   Saved VAE visualizations for epoch 68
-2026-03-06 01:16:27,927 INFO: Epoch 69/100 [Train] loss: 1.873335, l1_cta: 0.050937, kl_cta: 12552.401540, l1_ncct: 0.074869, kl_ncct: 12296.064583, lr: 0.000001, gnorm: 36.529329, perceptual: 1.734100, gan_g: 1.220692, adaptive_w: 0.051074, d_loss: 0.361808, d_real: 1.455293, d_fake: -1.220692, lr_d: 0.000069
-2026-03-06 01:17:08,615 INFO: Epoch 69/100 [Val]   loss: 0.079034, l1_cta: 0.055026, kl_cta: 12576.876992, l1_ncct: 0.078017, kl_ncct: 12446.876602
-2026-03-06 01:17:08,856 INFO:   Saved VAE visualizations for epoch 69
-2026-03-06 01:28:12,528 INFO: Epoch 70/100 [Train] loss: 1.882439, l1_cta: 0.051150, kl_cta: 12602.375280, l1_ncct: 0.074976, kl_ncct: 12353.972393, lr: 0.000001, gnorm: 40.649969, perceptual: 1.737358, gan_g: 1.243211, adaptive_w: 0.057778, d_loss: 0.367566, d_real: 1.394227, d_fake: -1.243211, lr_d: 0.000067
-2026-03-06 01:28:53,690 INFO: Epoch 70/100 [Val]   loss: 0.080851, l1_cta: 0.056645, kl_cta: 12621.570195, l1_ncct: 0.079967, kl_ncct: 12468.618320
-2026-03-06 01:28:53,968 INFO:   Saved VAE visualizations for epoch 70
-2026-03-06 01:28:55,583 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0070.pt
-2026-03-06 01:39:46,740 INFO: Epoch 71/100 [Train] loss: 1.883370, l1_cta: 0.051123, kl_cta: 12638.113148, l1_ncct: 0.075097, kl_ncct: 12370.867796, lr: 0.000001, gnorm: 38.375954, perceptual: 1.738140, gan_g: 1.208892, adaptive_w: 0.058305, d_loss: 0.391448, d_real: 1.259053, d_fake: -1.208892, lr_d: 0.000066
-2026-03-06 01:40:27,764 INFO: Epoch 71/100 [Val]   loss: 0.080005, l1_cta: 0.055773, kl_cta: 12641.472305, l1_ncct: 0.079094, kl_ncct: 12501.825977
-2026-03-06 01:40:28,009 INFO:   Saved VAE visualizations for epoch 71
-2026-03-06 01:51:09,347 INFO: Epoch 72/100 [Train] loss: 1.852901, l1_cta: 0.049857, kl_cta: 12697.698646, l1_ncct: 0.074235, kl_ncct: 12417.956060, lr: 0.000001, gnorm: 40.523453, perceptual: 1.711317, gan_g: 1.313391, adaptive_w: 0.048272, d_loss: 0.314662, d_real: 1.557834, d_fake: -1.313391, lr_d: 0.000064
-2026-03-06 01:51:50,199 INFO: Epoch 72/100 [Val]   loss: 0.079270, l1_cta: 0.054920, kl_cta: 12742.656094, l1_ncct: 0.078273, kl_ncct: 12604.431719
-2026-03-06 01:51:50,453 INFO:   Saved VAE visualizations for epoch 72
-2026-03-06 02:02:23,739 INFO: Epoch 73/100 [Train] loss: 1.853400, l1_cta: 0.050164, kl_cta: 12731.290090, l1_ncct: 0.074231, kl_ncct: 12464.520155, lr: 0.000001, gnorm: 32.817169, perceptual: 1.715233, gan_g: 1.295624, adaptive_w: 0.047172, d_loss: 0.311174, d_real: 1.623712, d_fake: -1.295624, lr_d: 0.000063
-2026-03-06 02:03:04,247 INFO: Epoch 73/100 [Val]   loss: 0.080908, l1_cta: 0.056773, kl_cta: 12739.358086, l1_ncct: 0.079714, kl_ncct: 12589.719766
-2026-03-06 02:03:04,497 INFO:   Saved VAE visualizations for epoch 73
-2026-03-06 02:13:43,803 INFO: Epoch 74/100 [Train] loss: 1.877179, l1_cta: 0.050695, kl_cta: 12778.272636, l1_ncct: 0.074714, kl_ncct: 12501.398768, lr: 0.000001, gnorm: 38.909260, perceptual: 1.731351, gan_g: 1.162353, adaptive_w: 0.059823, d_loss: 0.391302, d_real: 1.250773, d_fake: -1.162354, lr_d: 0.000061
-2026-03-06 02:14:24,643 INFO: Epoch 74/100 [Val]   loss: 0.078774, l1_cta: 0.054697, kl_cta: 12828.053008, l1_ncct: 0.077337, kl_ncct: 12685.160234
-2026-03-06 02:14:24,903 INFO:   Saved VAE visualizations for epoch 74
-2026-03-06 02:25:16,609 INFO: Epoch 75/100 [Train] loss: 1.857166, l1_cta: 0.050119, kl_cta: 12817.571546, l1_ncct: 0.074291, kl_ncct: 12545.068682, lr: 0.000001, gnorm: 28.390628, perceptual: 1.717819, gan_g: 1.333485, adaptive_w: 0.049662, d_loss: 0.311720, d_real: 1.557066, d_fake: -1.333485, lr_d: 0.000059
-2026-03-06 02:25:57,314 INFO: Epoch 75/100 [Val]   loss: 0.081065, l1_cta: 0.057002, kl_cta: 12852.869258, l1_ncct: 0.079563, kl_ncct: 12712.612539
-2026-03-06 02:25:57,616 INFO:   Saved VAE visualizations for epoch 75
-2026-03-06 02:36:23,569 INFO: Epoch 76/100 [Train] loss: 1.855836, l1_cta: 0.049875, kl_cta: 12857.309467, l1_ncct: 0.073879, kl_ncct: 12574.147373, lr: 0.000001, gnorm: 32.341225, perceptual: 1.716322, gan_g: 1.299134, adaptive_w: 0.049640, d_loss: 0.299421, d_real: 1.559512, d_fake: -1.299134, lr_d: 0.000058
-2026-03-06 02:37:04,526 INFO: Epoch 76/100 [Val]   loss: 0.079887, l1_cta: 0.055657, kl_cta: 12815.856055, l1_ncct: 0.078633, kl_ncct: 12668.700156
-2026-03-06 02:37:04,791 INFO:   Saved VAE visualizations for epoch 76
-2026-03-06 02:47:32,412 INFO: Epoch 77/100 [Train] loss: 1.874878, l1_cta: 0.050374, kl_cta: 12878.836328, l1_ncct: 0.074265, kl_ncct: 12593.034260, lr: 0.000001, gnorm: 27.417127, perceptual: 1.723955, gan_g: 1.312993, adaptive_w: 0.057597, d_loss: 0.340532, d_real: 1.410266, d_fake: -1.312993, lr_d: 0.000056
-2026-03-06 02:48:13,939 INFO: Epoch 77/100 [Val]   loss: 0.085284, l1_cta: 0.061653, kl_cta: 12817.355469, l1_ncct: 0.083451, kl_ncct: 12647.310195
-2026-03-06 02:48:14,187 INFO:   Saved VAE visualizations for epoch 77
-2026-03-06 02:59:05,488 INFO: Epoch 78/100 [Train] loss: 1.855511, l1_cta: 0.049709, kl_cta: 12918.034266, l1_ncct: 0.073840, kl_ncct: 12633.017099, lr: 0.000001, gnorm: 26.536844, perceptual: 1.714095, gan_g: 1.308998, adaptive_w: 0.050428, d_loss: 0.289968, d_real: 1.514604, d_fake: -1.308998, lr_d: 0.000055
-2026-03-06 02:59:46,331 INFO: Epoch 78/100 [Val]   loss: 0.077676, l1_cta: 0.052556, kl_cta: 12982.421914, l1_ncct: 0.076994, kl_ncct: 12820.068242
-2026-03-06 02:59:46,583 INFO:   Saved VAE visualizations for epoch 78
-2026-03-06 03:10:41,313 INFO: Epoch 79/100 [Train] loss: 1.854052, l1_cta: 0.049358, kl_cta: 12956.013751, l1_ncct: 0.074031, kl_ncct: 12652.603099, lr: 0.000001, gnorm: 28.242942, perceptual: 1.705215, gan_g: 1.338944, adaptive_w: 0.053464, d_loss: 0.293918, d_real: 1.499220, d_fake: -1.338945, lr_d: 0.000053
-2026-03-06 03:11:22,095 INFO: Epoch 79/100 [Val]   loss: 0.079903, l1_cta: 0.055108, kl_cta: 12998.898945, l1_ncct: 0.078849, kl_ncct: 12850.988672
-2026-03-06 03:11:22,341 INFO:   Saved VAE visualizations for epoch 79
-2026-03-06 03:22:00,964 INFO: Epoch 80/100 [Train] loss: 1.877864, l1_cta: 0.050448, kl_cta: 12965.455758, l1_ncct: 0.074432, kl_ncct: 12659.147523, lr: 0.000000, gnorm: 30.356901, perceptual: 1.727032, gan_g: 1.161348, adaptive_w: 0.067229, d_loss: 0.350172, d_real: 1.273618, d_fake: -1.161348, lr_d: 0.000052
-2026-03-06 03:22:41,889 INFO: Epoch 80/100 [Val]   loss: 0.079298, l1_cta: 0.055027, kl_cta: 12979.998945, l1_ncct: 0.077764, kl_ncct: 12825.821406
-2026-03-06 03:22:42,148 INFO:   Saved VAE visualizations for epoch 80
-2026-03-06 03:22:43,804 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0080.pt
-2026-03-06 03:33:51,131 INFO: Epoch 81/100 [Train] loss: 1.867994, l1_cta: 0.049922, kl_cta: 12988.311713, l1_ncct: 0.074153, kl_ncct: 12686.258806, lr: 0.000000, gnorm: 30.178593, perceptual: 1.719020, gan_g: 1.281566, adaptive_w: 0.057700, d_loss: 0.278858, d_real: 1.439177, d_fake: -1.281566, lr_d: 0.000050
-2026-03-06 03:34:31,762 INFO: Epoch 81/100 [Val]   loss: 0.079457, l1_cta: 0.054407, kl_cta: 12982.312617, l1_ncct: 0.078692, kl_ncct: 12832.016406
-2026-03-06 03:34:32,030 INFO:   Saved VAE visualizations for epoch 81
-2026-03-06 03:45:14,707 INFO: Epoch 82/100 [Train] loss: 1.867302, l1_cta: 0.049575, kl_cta: 13014.579447, l1_ncct: 0.074112, kl_ncct: 12702.191977, lr: 0.000000, gnorm: 23.895670, perceptual: 1.714061, gan_g: 1.238779, adaptive_w: 0.062881, d_loss: 0.299410, d_real: 1.377843, d_fake: -1.238780, lr_d: 0.000048
-2026-03-06 03:45:55,361 INFO: Epoch 82/100 [Val]   loss: 0.080677, l1_cta: 0.055301, kl_cta: 13025.760391, l1_ncct: 0.080185, kl_ncct: 12843.388359
-2026-03-06 03:45:55,662 INFO:   Saved VAE visualizations for epoch 82
-2026-03-06 03:56:39,895 INFO: Epoch 83/100 [Train] loss: 1.876210, l1_cta: 0.049679, kl_cta: 13019.711803, l1_ncct: 0.074446, kl_ncct: 12702.165253, lr: 0.000000, gnorm: 26.804614, perceptual: 1.715278, gan_g: 1.334680, adaptive_w: 0.065230, d_loss: 0.272600, d_real: 1.437563, d_fake: -1.334680, lr_d: 0.000047
-2026-03-06 03:57:20,735 INFO: Epoch 83/100 [Val]   loss: 0.080298, l1_cta: 0.055631, kl_cta: 13005.350156, l1_ncct: 0.079117, kl_ncct: 12843.112031
-2026-03-06 03:57:21,063 INFO:   Saved VAE visualizations for epoch 83
-2026-03-06 04:08:11,312 INFO: Epoch 84/100 [Train] loss: 1.889216, l1_cta: 0.050170, kl_cta: 13047.000120, l1_ncct: 0.074199, kl_ncct: 12739.782459, lr: 0.000000, gnorm: 24.239023, perceptual: 1.730879, gan_g: 1.236427, adaptive_w: 0.068117, d_loss: 0.296199, d_real: 1.294652, d_fake: -1.236427, lr_d: 0.000045
-2026-03-06 04:08:52,108 INFO: Epoch 84/100 [Val]   loss: 0.080292, l1_cta: 0.055509, kl_cta: 13084.472852, l1_ncct: 0.079072, kl_ncct: 12919.518320
-2026-03-06 04:08:52,513 INFO:   Saved VAE visualizations for epoch 84
-2026-03-06 04:19:54,049 INFO: Epoch 85/100 [Train] loss: 1.896319, l1_cta: 0.050003, kl_cta: 13048.240142, l1_ncct: 0.074389, kl_ncct: 12727.425103, lr: 0.000000, gnorm: 24.989957, perceptual: 1.729805, gan_g: 1.271313, adaptive_w: 0.070918, d_loss: 0.257343, d_real: 1.375265, d_fake: -1.271313, lr_d: 0.000044
-2026-03-06 04:20:35,089 INFO: Epoch 85/100 [Val]   loss: 0.079684, l1_cta: 0.055436, kl_cta: 13074.581523, l1_ncct: 0.077939, kl_ncct: 12917.818008
-2026-03-06 04:20:35,334 INFO:   Saved VAE visualizations for epoch 85
-2026-03-06 04:30:56,948 INFO: Epoch 86/100 [Train] loss: 1.878602, l1_cta: 0.049698, kl_cta: 13072.039894, l1_ncct: 0.073975, kl_ncct: 12756.510859, lr: 0.000000, gnorm: 22.672484, perceptual: 1.718604, gan_g: 1.311700, adaptive_w: 0.066891, d_loss: 0.245650, d_real: 1.393332, d_fake: -1.311700, lr_d: 0.000042
-2026-03-06 04:31:37,854 INFO: Epoch 86/100 [Val]   loss: 0.079427, l1_cta: 0.054599, kl_cta: 13108.632656, l1_ncct: 0.078199, kl_ncct: 12947.849336
-2026-03-06 04:31:38,166 INFO:   Saved VAE visualizations for epoch 86
-2026-03-06 04:42:20,074 INFO: Epoch 87/100 [Train] loss: 1.892538, l1_cta: 0.049680, kl_cta: 13081.057240, l1_ncct: 0.074278, kl_ncct: 12763.023811, lr: 0.000000, gnorm: 22.283871, perceptual: 1.719407, gan_g: 1.276973, adaptive_w: 0.078475, d_loss: 0.232923, d_real: 1.379906, d_fake: -1.276973, lr_d: 0.000041
-2026-03-06 04:43:01,095 INFO: Epoch 87/100 [Val]   loss: 0.080930, l1_cta: 0.056151, kl_cta: 13087.605586, l1_ncct: 0.079696, kl_ncct: 12925.973633
-2026-03-06 04:43:01,347 INFO:   Saved VAE visualizations for epoch 87
-2026-03-06 04:53:49,921 INFO: Epoch 88/100 [Train] loss: 1.893730, l1_cta: 0.049608, kl_cta: 13092.854875, l1_ncct: 0.074350, kl_ncct: 12769.781406, lr: 0.000000, gnorm: 19.812675, perceptual: 1.722598, gan_g: 1.284181, adaptive_w: 0.076295, d_loss: 0.238309, d_real: 1.346199, d_fake: -1.284181, lr_d: 0.000039
-2026-03-06 04:54:31,029 INFO: Epoch 88/100 [Val]   loss: 0.081705, l1_cta: 0.056526, kl_cta: 13089.300625, l1_ncct: 0.080870, kl_ncct: 12925.124336
-2026-03-06 04:54:31,286 INFO:   Saved VAE visualizations for epoch 88
-2026-03-06 05:05:03,644 INFO: Epoch 89/100 [Train] loss: 1.886814, l1_cta: 0.049509, kl_cta: 13107.656962, l1_ncct: 0.073883, kl_ncct: 12783.388338, lr: 0.000000, gnorm: 18.430058, perceptual: 1.719668, gan_g: 1.333807, adaptive_w: 0.069987, d_loss: 0.201878, d_real: 1.446732, d_fake: -1.333807, lr_d: 0.000037
-2026-03-06 05:05:44,383 INFO: Epoch 89/100 [Val]   loss: 0.081205, l1_cta: 0.056280, kl_cta: 13073.382344, l1_ncct: 0.080134, kl_ncct: 12921.975898
-2026-03-06 05:05:44,645 INFO:   Saved VAE visualizations for epoch 89
-2026-03-06 05:16:34,364 INFO: Epoch 90/100 [Train] loss: 1.898146, l1_cta: 0.049474, kl_cta: 13110.011473, l1_ncct: 0.074106, kl_ncct: 12788.065785, lr: 0.000000, gnorm: 18.353723, perceptual: 1.719691, gan_g: 1.367411, adaptive_w: 0.075525, d_loss: 0.189031, d_real: 1.461981, d_fake: -1.367411, lr_d: 0.000036
-2026-03-06 05:17:15,160 INFO: Epoch 90/100 [Val]   loss: 0.080518, l1_cta: 0.055529, kl_cta: 13114.211875, l1_ncct: 0.079432, kl_ncct: 12960.372461
-2026-03-06 05:17:15,422 INFO:   Saved VAE visualizations for epoch 90
-2026-03-06 05:17:17,057 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0090.pt
-2026-03-06 05:27:53,366 INFO: Epoch 91/100 [Train] loss: 1.881012, l1_cta: 0.049000, kl_cta: 13121.073146, l1_ncct: 0.073840, kl_ncct: 12799.094826, lr: 0.000000, gnorm: 16.862087, perceptual: 1.706517, gan_g: 1.530849, adaptive_w: 0.064804, d_loss: 0.134953, d_real: 1.618441, d_fake: -1.530849, lr_d: 0.000034
-2026-03-06 05:28:33,923 INFO: Epoch 91/100 [Val]   loss: 0.079941, l1_cta: 0.055269, kl_cta: 13121.866914, l1_ncct: 0.078521, kl_ncct: 12969.113320
-2026-03-06 05:28:34,248 INFO:   Saved VAE visualizations for epoch 91
-2026-03-06 05:39:18,213 INFO: Epoch 92/100 [Train] loss: 1.889915, l1_cta: 0.049177, kl_cta: 13124.763723, l1_ncct: 0.073398, kl_ncct: 12809.105088, lr: 0.000000, gnorm: 15.414318, perceptual: 1.710561, gan_g: 1.506766, adaptive_w: 0.068627, d_loss: 0.141533, d_real: 1.634986, d_fake: -1.506766, lr_d: 0.000033
-2026-03-06 05:39:59,179 INFO: Epoch 92/100 [Val]   loss: 0.079737, l1_cta: 0.054442, kl_cta: 13128.775859, l1_ncct: 0.078931, kl_ncct: 12971.466133
-2026-03-06 05:39:59,425 INFO:   Saved VAE visualizations for epoch 92
-2026-03-06 05:50:36,469 INFO: Epoch 93/100 [Train] loss: 1.897102, l1_cta: 0.049406, kl_cta: 13117.200742, l1_ncct: 0.074167, kl_ncct: 12783.966173, lr: 0.000000, gnorm: 15.609780, perceptual: 1.712615, gan_g: 1.523026, adaptive_w: 0.070567, d_loss: 0.113013, d_real: 1.728158, d_fake: -1.523027, lr_d: 0.000031
-2026-03-06 05:51:17,457 INFO: Epoch 93/100 [Val]   loss: 0.080622, l1_cta: 0.055144, kl_cta: 13110.415547, l1_ncct: 0.080040, kl_ncct: 12949.038672
-2026-03-06 05:51:17,722 INFO:   Saved VAE visualizations for epoch 93
-2026-03-06 06:02:08,300 INFO: Epoch 94/100 [Train] loss: 1.886913, l1_cta: 0.048826, kl_cta: 13129.616898, l1_ncct: 0.074130, kl_ncct: 12798.803148, lr: 0.000000, gnorm: 14.884189, perceptual: 1.703068, gan_g: 1.614858, adaptive_w: 0.067368, d_loss: 0.088676, d_real: 1.815001, d_fake: -1.614858, lr_d: 0.000030
-2026-03-06 06:02:49,363 INFO: Epoch 94/100 [Val]   loss: 0.079159, l1_cta: 0.054705, kl_cta: 13163.039492, l1_ncct: 0.077440, kl_ncct: 13010.448750
-2026-03-06 06:02:49,627 INFO:   Saved VAE visualizations for epoch 94
-2026-03-06 06:13:30,972 INFO: Epoch 95/100 [Train] loss: 1.882337, l1_cta: 0.049101, kl_cta: 13128.687562, l1_ncct: 0.073813, kl_ncct: 12808.390366, lr: 0.000000, gnorm: 13.517985, perceptual: 1.707073, gan_g: 1.692110, adaptive_w: 0.060255, d_loss: 0.067351, d_real: 1.966780, d_fake: -1.692110, lr_d: 0.000028
-2026-03-06 06:14:12,149 INFO: Epoch 95/100 [Val]   loss: 0.079488, l1_cta: 0.054654, kl_cta: 13157.297109, l1_ncct: 0.078165, kl_ncct: 12999.364922
-2026-03-06 06:14:12,457 INFO:   Saved VAE visualizations for epoch 95
-2026-03-06 06:24:44,003 INFO: Epoch 96/100 [Train] loss: 1.885033, l1_cta: 0.048828, kl_cta: 13130.471456, l1_ncct: 0.073631, kl_ncct: 12797.606032, lr: 0.000000, gnorm: 13.708764, perceptual: 1.700107, gan_g: 1.756195, adaptive_w: 0.062796, d_loss: 0.060496, d_real: 1.990995, d_fake: -1.756195, lr_d: 0.000027
-2026-03-06 06:25:25,130 INFO: Epoch 96/100 [Val]   loss: 0.079648, l1_cta: 0.054577, kl_cta: 13143.462539, l1_ncct: 0.078591, kl_ncct: 12984.831562
-2026-03-06 06:25:25,389 INFO:   Saved VAE visualizations for epoch 96
-2026-03-06 06:35:43,205 INFO: Epoch 97/100 [Train] loss: 1.897637, l1_cta: 0.049024, kl_cta: 13131.849745, l1_ncct: 0.073290, kl_ncct: 12823.218664, lr: 0.000000, gnorm: 13.228175, perceptual: 1.704676, gan_g: 1.767172, adaptive_w: 0.066517, d_loss: 0.046370, d_real: 2.049635, d_fake: -1.767172, lr_d: 0.000026
-2026-03-06 06:36:24,210 INFO: Epoch 97/100 [Val]   loss: 0.079231, l1_cta: 0.054259, kl_cta: 13164.118906, l1_ncct: 0.078027, kl_ncct: 13012.048594
-2026-03-06 06:36:24,548 INFO:   Saved VAE visualizations for epoch 97
-2026-03-06 06:47:09,693 INFO: Epoch 98/100 [Train] loss: 1.887728, l1_cta: 0.048720, kl_cta: 13137.584229, l1_ncct: 0.073755, kl_ncct: 12821.333032, lr: 0.000000, gnorm: 12.712039, perceptual: 1.697615, gan_g: 1.826450, adaptive_w: 0.062813, d_loss: 0.044858, d_real: 2.076801, d_fake: -1.826450, lr_d: 0.000024
-2026-03-06 06:47:50,582 INFO: Epoch 98/100 [Val]   loss: 0.080436, l1_cta: 0.055115, kl_cta: 13127.817969, l1_ncct: 0.079664, kl_ncct: 12966.336367
-2026-03-06 06:47:50,843 INFO:   Saved VAE visualizations for epoch 98
-2026-03-06 06:58:32,160 INFO: Epoch 99/100 [Train] loss: 1.905508, l1_cta: 0.049004, kl_cta: 13128.412459, l1_ncct: 0.073705, kl_ncct: 12803.954440, lr: 0.000000, gnorm: 13.294045, perceptual: 1.699653, gan_g: 1.880262, adaptive_w: 0.068892, d_loss: 0.031319, d_real: 2.125614, d_fake: -1.880262, lr_d: 0.000023
-2026-03-06 06:59:13,261 INFO: Epoch 99/100 [Val]   loss: 0.079813, l1_cta: 0.054799, kl_cta: 13147.851758, l1_ncct: 0.078692, kl_ncct: 12988.498047
-2026-03-06 06:59:13,578 INFO:   Saved VAE visualizations for epoch 99
-2026-03-06 07:09:42,983 INFO: Epoch 100/100 [Train] loss: 1.894071, l1_cta: 0.048584, kl_cta: 13132.144118, l1_ncct: 0.073543, kl_ncct: 12809.025753, lr: 0.000000, gnorm: 12.969395, perceptual: 1.696043, gan_g: 1.922924, adaptive_w: 0.063820, d_loss: 0.024194, d_real: 2.157458, d_fake: -1.922924, lr_d: 0.000022
-2026-03-06 07:10:23,578 INFO: Epoch 100/100 [Val]   loss: 0.079040, l1_cta: 0.054346, kl_cta: 13141.991211, l1_ncct: 0.077607, kl_ncct: 12986.006211
-2026-03-06 07:10:23,880 INFO:   Saved VAE visualizations for epoch 100
-2026-03-06 07:10:25,572 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_epoch0100.pt
-2026-03-06 07:10:27,207 INFO:   Saved VAE checkpoint: outputs_vae/checkpoint_final.pt
-2026-03-06 07:10:27,207 INFO: VAE training complete.
+2026-03-06 12:55:19,192 INFO: Using device: cuda
+2026-03-06 12:55:42,741 INFO: Using device: cuda
+2026-03-06 12:55:42,741 INFO: Loaded 2083 files from splits/train.txt
+2026-03-06 12:55:42,741 INFO: Loaded 100 files from splits/valid.txt
+2026-03-06 12:55:42,742 INFO: Train batches: 260, Val batches: 13
+2026-03-06 12:55:43,469 INFO: AutoencoderKL: 88.91M parameters
+2026-03-06 12:55:43,469 INFO: Loading pretrained VAE from: /data0/yzhen/a_test_model/v1/outputs_vae/checkpoint_epoch0100.pt
+2026-03-06 12:55:46,020 INFO:   Using EMA weights from VAE checkpoint
+2026-03-06 12:55:46,070 INFO:   Loaded 298/298 parameter tensors
+2026-03-06 12:55:46,466 INFO: DiffusionUNet: 66.97M parameters
+2026-03-06 12:55:46,609 INFO: DiffusionTrainer initialized:
+2026-03-06 12:55:46,609 INFO:   UNet params:      66.97M
+2026-03-06 12:55:46,609 INFO:   Scheduler:        linear, T=1000
+2026-03-06 12:55:46,609 INFO:   Latent scale:     0.000000
+2026-03-06 12:55:46,609 INFO:   LR:               0.0001
+2026-03-06 12:55:46,609 INFO:   Grad clip norm:   1.0
+2026-03-06 12:55:46,609 INFO:   EMA rate:         0.9999
+2026-03-06 12:55:46,609 INFO: Auto-computing latent scale factor from training data...
+2026-03-06 12:58:41,625 INFO:   Auto-computed latent scale factor:
+2026-03-06 12:58:41,626 INFO:     Latent std:     0.9738
+2026-03-06 12:58:41,626 INFO:     Latent mean:    -0.1046
+2026-03-06 12:58:41,626 INFO:     Scale factor:   1.026884
+2026-03-06 12:58:41,626 INFO:     Scaled std:     1.0000 (target ≈ 1.0)
+2026-03-06 12:58:41,635 INFO:   Saved updated config with latent_scale_factor=1.026884
+2026-03-06 12:58:41,635 INFO: Starting diffusion training for 200 epochs
+2026-03-06 13:07:09,323 INFO: Epoch 1/200 [Train] loss: 0.742663, lr: 0.000026, gnorm: 1.301889
+2026-03-06 13:08:15,988 INFO: Epoch 1/200 [Val]   loss: 0.361312
+2026-03-06 13:08:17,331 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0001.pt
+2026-03-06 13:08:18,557 INFO:   New best val loss: 0.361312
+2026-03-06 13:09:17,587 INFO:   Saved diffusion samples for epoch 1
+2026-03-06 13:17:36,348 INFO: Epoch 2/200 [Train] loss: 0.255089, lr: 0.000078, gnorm: 0.385408
+2026-03-06 13:18:42,720 INFO: Epoch 2/200 [Val]   loss: 0.305547
+2026-03-06 13:18:43,986 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0002.pt
+2026-03-06 13:18:51,862 INFO:   New best val loss: 0.305547
+2026-03-06 13:19:50,630 INFO:   Saved diffusion samples for epoch 2
+2026-03-06 13:28:10,022 INFO: Epoch 3/200 [Train] loss: 0.221389, lr: 0.000100, gnorm: 0.303963
+2026-03-06 13:29:15,985 INFO: Epoch 3/200 [Val]   loss: 0.258350
+2026-03-06 13:29:17,206 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0003.pt
+2026-03-06 13:29:23,394 INFO:   New best val loss: 0.258350
+2026-03-06 13:30:22,473 INFO:   Saved diffusion samples for epoch 3
+2026-03-06 13:38:51,553 INFO: Epoch 4/200 [Train] loss: 0.218128, lr: 0.000100, gnorm: 0.295365
+2026-03-06 13:39:57,475 INFO: Epoch 4/200 [Val]   loss: 0.275667
+2026-03-06 13:40:56,742 INFO:   Saved diffusion samples for epoch 4
+2026-03-06 13:49:25,117 INFO: Epoch 5/200 [Train] loss: 0.218476, lr: 0.000100, gnorm: 0.280815
+2026-03-06 13:50:31,021 INFO: Epoch 5/200 [Val]   loss: 0.195350
+2026-03-06 13:50:32,349 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0005.pt
+2026-03-06 13:50:38,783 INFO:   New best val loss: 0.195350
+2026-03-06 13:51:38,229 INFO:   Saved diffusion samples for epoch 5
+2026-03-06 14:00:37,987 INFO: Epoch 6/200 [Train] loss: 0.211343, lr: 0.000100, gnorm: 0.293373
+2026-03-06 14:01:44,092 INFO: Epoch 6/200 [Val]   loss: 0.168097
+2026-03-06 14:01:45,334 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0006.pt
+2026-03-06 14:01:52,816 INFO:   New best val loss: 0.168097
+2026-03-06 14:02:51,939 INFO:   Saved diffusion samples for epoch 6
+2026-03-06 14:11:41,918 INFO: Epoch 7/200 [Train] loss: 0.198315, lr: 0.000100, gnorm: 0.269143
+2026-03-06 14:12:50,222 INFO: Epoch 7/200 [Val]   loss: 0.241844
+2026-03-06 14:13:49,645 INFO:   Saved diffusion samples for epoch 7
+2026-03-06 14:22:32,184 INFO: Epoch 8/200 [Train] loss: 0.194287, lr: 0.000100, gnorm: 0.268061
+2026-03-06 14:23:40,123 INFO: Epoch 8/200 [Val]   loss: 0.235498
+2026-03-06 14:24:41,820 INFO:   Saved diffusion samples for epoch 8
+2026-03-06 14:33:19,179 INFO: Epoch 9/200 [Train] loss: 0.202808, lr: 0.000100, gnorm: 0.250940
+2026-03-06 14:34:26,317 INFO: Epoch 9/200 [Val]   loss: 0.234389
+2026-03-06 14:35:25,320 INFO:   Saved diffusion samples for epoch 9
+2026-03-06 14:44:00,653 INFO: Epoch 10/200 [Train] loss: 0.192678, lr: 0.000100, gnorm: 0.262698
+2026-03-06 14:45:08,413 INFO: Epoch 10/200 [Val]   loss: 0.180554
+2026-03-06 14:46:08,246 INFO:   Saved diffusion samples for epoch 10
+2026-03-06 14:46:09,700 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0010.pt
+2026-03-06 14:54:56,093 INFO: Epoch 11/200 [Train] loss: 0.194965, lr: 0.000100, gnorm: 0.256047
+2026-03-06 14:56:03,494 INFO: Epoch 11/200 [Val]   loss: 0.216935
+2026-03-06 14:57:02,857 INFO:   Saved diffusion samples for epoch 11
+2026-03-06 15:05:48,484 INFO: Epoch 12/200 [Train] loss: 0.193510, lr: 0.000099, gnorm: 0.265972
+2026-03-06 15:06:55,146 INFO: Epoch 12/200 [Val]   loss: 0.229803
+2026-03-06 15:07:54,792 INFO:   Saved diffusion samples for epoch 12
+2026-03-06 15:16:25,687 INFO: Epoch 13/200 [Train] loss: 0.196877, lr: 0.000099, gnorm: 0.258057
+2026-03-06 15:17:32,109 INFO: Epoch 13/200 [Val]   loss: 0.215183
+2026-03-06 15:18:32,346 INFO:   Saved diffusion samples for epoch 13
+2026-03-06 15:27:05,893 INFO: Epoch 14/200 [Train] loss: 0.194487, lr: 0.000099, gnorm: 0.253253
+2026-03-06 15:28:12,205 INFO: Epoch 14/200 [Val]   loss: 0.235031
+2026-03-06 15:29:11,200 INFO:   Saved diffusion samples for epoch 14
+2026-03-06 15:37:50,679 INFO: Epoch 15/200 [Train] loss: 0.196258, lr: 0.000099, gnorm: 0.259035
+2026-03-06 15:38:56,702 INFO: Epoch 15/200 [Val]   loss: 0.239143
+2026-03-06 15:39:56,100 INFO:   Saved diffusion samples for epoch 15
+2026-03-06 15:48:33,121 INFO: Epoch 16/200 [Train] loss: 0.195863, lr: 0.000099, gnorm: 0.250102
+2026-03-06 15:49:39,725 INFO: Epoch 16/200 [Val]   loss: 0.177881
+2026-03-06 15:50:38,888 INFO:   Saved diffusion samples for epoch 16
+2026-03-06 15:59:07,685 INFO: Epoch 17/200 [Train] loss: 0.181878, lr: 0.000099, gnorm: 0.234614
+2026-03-06 16:00:13,860 INFO: Epoch 17/200 [Val]   loss: 0.158563
+2026-03-06 16:00:15,329 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0017.pt
+2026-03-06 16:00:20,598 INFO:   New best val loss: 0.158563
+2026-03-06 16:01:20,551 INFO:   Saved diffusion samples for epoch 17
+2026-03-06 16:09:59,012 INFO: Epoch 18/200 [Train] loss: 0.196207, lr: 0.000098, gnorm: 0.247993
+2026-03-06 16:11:04,906 INFO: Epoch 18/200 [Val]   loss: 0.166326
+2026-03-06 16:12:03,724 INFO:   Saved diffusion samples for epoch 18
+2026-03-06 16:20:47,689 INFO: Epoch 19/200 [Train] loss: 0.185094, lr: 0.000098, gnorm: 0.237441
+2026-03-06 16:21:53,956 INFO: Epoch 19/200 [Val]   loss: 0.185844
+2026-03-06 16:22:52,830 INFO:   Saved diffusion samples for epoch 19
+2026-03-06 16:31:24,775 INFO: Epoch 20/200 [Train] loss: 0.185224, lr: 0.000098, gnorm: 0.256380
+2026-03-06 16:32:31,136 INFO: Epoch 20/200 [Val]   loss: 0.172157
+2026-03-06 16:33:30,361 INFO:   Saved diffusion samples for epoch 20
+2026-03-06 16:33:31,619 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0020.pt
+2026-03-06 16:42:17,324 INFO: Epoch 21/200 [Train] loss: 0.192511, lr: 0.000098, gnorm: 0.248776
+2026-03-06 16:43:23,286 INFO: Epoch 21/200 [Val]   loss: 0.222009
+2026-03-06 16:44:21,720 INFO:   Saved diffusion samples for epoch 21
+2026-03-06 16:52:43,338 INFO: Epoch 22/200 [Train] loss: 0.188520, lr: 0.000098, gnorm: 0.247337
+2026-03-06 16:53:49,965 INFO: Epoch 22/200 [Val]   loss: 0.203057
+2026-03-06 16:54:49,067 INFO:   Saved diffusion samples for epoch 22
+2026-03-06 17:03:37,924 INFO: Epoch 23/200 [Train] loss: 0.181079, lr: 0.000097, gnorm: 0.244863
+2026-03-06 17:04:44,390 INFO: Epoch 23/200 [Val]   loss: 0.226410
+2026-03-06 17:05:43,122 INFO:   Saved diffusion samples for epoch 23
+2026-03-06 17:14:03,652 INFO: Epoch 24/200 [Train] loss: 0.191362, lr: 0.000097, gnorm: 0.242050
+2026-03-06 17:15:09,653 INFO: Epoch 24/200 [Val]   loss: 0.207119
+2026-03-06 17:16:08,463 INFO:   Saved diffusion samples for epoch 24
+2026-03-06 17:24:34,510 INFO: Epoch 25/200 [Train] loss: 0.185259, lr: 0.000097, gnorm: 0.233977
+2026-03-06 17:25:40,534 INFO: Epoch 25/200 [Val]   loss: 0.205655
+2026-03-06 17:26:39,032 INFO:   Saved diffusion samples for epoch 25
+2026-03-06 17:35:02,557 INFO: Epoch 26/200 [Train] loss: 0.182770, lr: 0.000097, gnorm: 0.237468
+2026-03-06 17:36:08,945 INFO: Epoch 26/200 [Val]   loss: 0.264073
+2026-03-06 17:37:07,883 INFO:   Saved diffusion samples for epoch 26
+2026-03-06 17:45:21,125 INFO: Epoch 27/200 [Train] loss: 0.178436, lr: 0.000096, gnorm: 0.232827
+2026-03-06 17:46:27,010 INFO: Epoch 27/200 [Val]   loss: 0.179158
+2026-03-06 17:47:26,107 INFO:   Saved diffusion samples for epoch 27
+2026-03-06 17:55:48,480 INFO: Epoch 28/200 [Train] loss: 0.176575, lr: 0.000096, gnorm: 0.235870
+2026-03-06 17:56:54,313 INFO: Epoch 28/200 [Val]   loss: 0.194045
+2026-03-06 17:57:52,708 INFO:   Saved diffusion samples for epoch 28
+2026-03-06 18:06:12,690 INFO: Epoch 29/200 [Train] loss: 0.177303, lr: 0.000096, gnorm: 0.229697
+2026-03-06 18:07:18,771 INFO: Epoch 29/200 [Val]   loss: 0.222720
+2026-03-06 18:08:17,184 INFO:   Saved diffusion samples for epoch 29
+2026-03-06 18:16:19,860 INFO: Epoch 30/200 [Train] loss: 0.177371, lr: 0.000095, gnorm: 0.220767
+2026-03-06 18:17:27,254 INFO: Epoch 30/200 [Val]   loss: 0.209328
+2026-03-06 18:18:26,663 INFO:   Saved diffusion samples for epoch 30
+2026-03-06 18:18:27,935 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0030.pt
+2026-03-06 18:26:35,853 INFO: Epoch 31/200 [Train] loss: 0.180848, lr: 0.000095, gnorm: 0.235213
+2026-03-06 18:27:42,372 INFO: Epoch 31/200 [Val]   loss: 0.177623
+2026-03-06 18:28:41,321 INFO:   Saved diffusion samples for epoch 31
+2026-03-06 18:36:38,783 INFO: Epoch 32/200 [Train] loss: 0.173811, lr: 0.000095, gnorm: 0.222824
+2026-03-06 18:37:45,255 INFO: Epoch 32/200 [Val]   loss: 0.181826
+2026-03-06 18:38:44,225 INFO:   Saved diffusion samples for epoch 32
+2026-03-06 18:47:14,660 INFO: Epoch 33/200 [Train] loss: 0.185854, lr: 0.000094, gnorm: 0.232075
+2026-03-06 18:48:20,445 INFO: Epoch 33/200 [Val]   loss: 0.201891
+2026-03-06 18:49:19,037 INFO:   Saved diffusion samples for epoch 33
+2026-03-06 18:57:58,654 INFO: Epoch 34/200 [Train] loss: 0.182467, lr: 0.000094, gnorm: 0.228447
+2026-03-06 18:59:04,643 INFO: Epoch 34/200 [Val]   loss: 0.203124
+2026-03-06 19:00:03,144 INFO:   Saved diffusion samples for epoch 34
+2026-03-06 19:08:06,640 INFO: Epoch 35/200 [Train] loss: 0.171587, lr: 0.000093, gnorm: 0.223571
+2026-03-06 19:09:12,941 INFO: Epoch 35/200 [Val]   loss: 0.194430
+2026-03-06 19:10:11,788 INFO:   Saved diffusion samples for epoch 35
+2026-03-06 19:18:20,684 INFO: Epoch 36/200 [Train] loss: 0.177797, lr: 0.000093, gnorm: 0.230228
+2026-03-06 19:19:27,213 INFO: Epoch 36/200 [Val]   loss: 0.190886
+2026-03-06 19:20:26,199 INFO:   Saved diffusion samples for epoch 36
+2026-03-06 19:28:58,911 INFO: Epoch 37/200 [Train] loss: 0.188697, lr: 0.000093, gnorm: 0.242890
+2026-03-06 19:30:06,376 INFO: Epoch 37/200 [Val]   loss: 0.168917
+2026-03-06 19:31:05,514 INFO:   Saved diffusion samples for epoch 37
+2026-03-06 19:39:21,785 INFO: Epoch 38/200 [Train] loss: 0.179339, lr: 0.000092, gnorm: 0.227303
+2026-03-06 19:40:29,644 INFO: Epoch 38/200 [Val]   loss: 0.185691
+2026-03-06 19:41:28,376 INFO:   Saved diffusion samples for epoch 38
+2026-03-06 19:50:11,031 INFO: Epoch 39/200 [Train] loss: 0.176553, lr: 0.000092, gnorm: 0.220430
+2026-03-06 19:51:17,497 INFO: Epoch 39/200 [Val]   loss: 0.177630
+2026-03-06 19:52:16,060 INFO:   Saved diffusion samples for epoch 39
+2026-03-06 20:00:38,552 INFO: Epoch 40/200 [Train] loss: 0.177386, lr: 0.000091, gnorm: 0.222651
+2026-03-06 20:01:44,844 INFO: Epoch 40/200 [Val]   loss: 0.202510
+2026-03-06 20:02:44,491 INFO:   Saved diffusion samples for epoch 40
+2026-03-06 20:02:45,941 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0040.pt
+2026-03-06 20:11:08,902 INFO: Epoch 41/200 [Train] loss: 0.177466, lr: 0.000091, gnorm: 0.234816
+2026-03-06 20:12:15,334 INFO: Epoch 41/200 [Val]   loss: 0.151944
+2026-03-06 20:12:16,645 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0041.pt
+2026-03-06 20:12:24,303 INFO:   New best val loss: 0.151944
+2026-03-06 20:13:23,524 INFO:   Saved diffusion samples for epoch 41
+2026-03-06 20:21:40,653 INFO: Epoch 42/200 [Train] loss: 0.177655, lr: 0.000090, gnorm: 0.220962
+2026-03-06 20:22:47,176 INFO: Epoch 42/200 [Val]   loss: 0.257122
+2026-03-06 20:23:46,189 INFO:   Saved diffusion samples for epoch 42
+2026-03-06 20:31:57,562 INFO: Epoch 43/200 [Train] loss: 0.166423, lr: 0.000090, gnorm: 0.211617
+2026-03-06 20:33:05,574 INFO: Epoch 43/200 [Val]   loss: 0.226187
+2026-03-06 20:34:04,874 INFO:   Saved diffusion samples for epoch 43
+2026-03-06 20:42:19,106 INFO: Epoch 44/200 [Train] loss: 0.170610, lr: 0.000090, gnorm: 0.220146
+2026-03-06 20:43:25,780 INFO: Epoch 44/200 [Val]   loss: 0.226775
+2026-03-06 20:44:24,520 INFO:   Saved diffusion samples for epoch 44
+2026-03-06 20:52:50,266 INFO: Epoch 45/200 [Train] loss: 0.172129, lr: 0.000089, gnorm: 0.218247
+2026-03-06 20:53:56,393 INFO: Epoch 45/200 [Val]   loss: 0.167157
+2026-03-06 20:54:55,107 INFO:   Saved diffusion samples for epoch 45
+2026-03-06 21:03:19,947 INFO: Epoch 46/200 [Train] loss: 0.165865, lr: 0.000089, gnorm: 0.215699
+2026-03-06 21:04:27,406 INFO: Epoch 46/200 [Val]   loss: 0.222757
+2026-03-06 21:05:26,453 INFO:   Saved diffusion samples for epoch 46
+2026-03-06 21:14:00,997 INFO: Epoch 47/200 [Train] loss: 0.163983, lr: 0.000088, gnorm: 0.214685
+2026-03-06 21:15:08,613 INFO: Epoch 47/200 [Val]   loss: 0.177510
+2026-03-06 21:16:08,157 INFO:   Saved diffusion samples for epoch 47
+2026-03-06 21:24:37,095 INFO: Epoch 48/200 [Train] loss: 0.167943, lr: 0.000087, gnorm: 0.219169
+2026-03-06 21:25:44,441 INFO: Epoch 48/200 [Val]   loss: 0.176782
+2026-03-06 21:26:43,271 INFO:   Saved diffusion samples for epoch 48
+2026-03-06 21:35:17,119 INFO: Epoch 49/200 [Train] loss: 0.175018, lr: 0.000087, gnorm: 0.220511
+2026-03-06 21:36:23,822 INFO: Epoch 49/200 [Val]   loss: 0.147077
+2026-03-06 21:36:25,166 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0049.pt
+2026-03-06 21:36:34,222 INFO:   New best val loss: 0.147077
+2026-03-06 21:37:32,942 INFO:   Saved diffusion samples for epoch 49
+2026-03-06 21:45:50,288 INFO: Epoch 50/200 [Train] loss: 0.176963, lr: 0.000086, gnorm: 0.216862
+2026-03-06 21:46:58,583 INFO: Epoch 50/200 [Val]   loss: 0.171269
+2026-03-06 21:47:57,874 INFO:   Saved diffusion samples for epoch 50
+2026-03-06 21:47:59,147 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0050.pt
+2026-03-06 21:56:48,362 INFO: Epoch 51/200 [Train] loss: 0.172822, lr: 0.000086, gnorm: 0.213340
+2026-03-06 21:57:54,726 INFO: Epoch 51/200 [Val]   loss: 0.212123
+2026-03-06 21:58:53,385 INFO:   Saved diffusion samples for epoch 51
+2026-03-06 22:07:03,241 INFO: Epoch 52/200 [Train] loss: 0.173057, lr: 0.000085, gnorm: 0.223442
+2026-03-06 22:08:09,788 INFO: Epoch 52/200 [Val]   loss: 0.222970
+2026-03-06 22:09:08,133 INFO:   Saved diffusion samples for epoch 52
+2026-03-06 22:17:47,289 INFO: Epoch 53/200 [Train] loss: 0.161971, lr: 0.000085, gnorm: 0.203070
+2026-03-06 22:18:53,562 INFO: Epoch 53/200 [Val]   loss: 0.221575
+2026-03-06 22:19:52,370 INFO:   Saved diffusion samples for epoch 53
+2026-03-06 22:28:17,603 INFO: Epoch 54/200 [Train] loss: 0.172136, lr: 0.000084, gnorm: 0.225640
+2026-03-06 22:29:23,749 INFO: Epoch 54/200 [Val]   loss: 0.196370
+2026-03-06 22:30:22,238 INFO:   Saved diffusion samples for epoch 54
+2026-03-06 22:38:27,123 INFO: Epoch 55/200 [Train] loss: 0.160671, lr: 0.000084, gnorm: 0.202188
+2026-03-06 22:39:33,239 INFO: Epoch 55/200 [Val]   loss: 0.197765
+2026-03-06 22:40:31,917 INFO:   Saved diffusion samples for epoch 55
+2026-03-06 22:48:48,841 INFO: Epoch 56/200 [Train] loss: 0.165331, lr: 0.000083, gnorm: 0.215638
+2026-03-06 22:49:55,832 INFO: Epoch 56/200 [Val]   loss: 0.205656
+2026-03-06 22:50:55,116 INFO:   Saved diffusion samples for epoch 56
+2026-03-06 22:58:57,442 INFO: Epoch 57/200 [Train] loss: 0.166314, lr: 0.000082, gnorm: 0.213638
+2026-03-06 23:00:03,580 INFO: Epoch 57/200 [Val]   loss: 0.164737
+2026-03-06 23:01:02,549 INFO:   Saved diffusion samples for epoch 57
+2026-03-06 23:09:44,057 INFO: Epoch 58/200 [Train] loss: 0.161644, lr: 0.000082, gnorm: 0.209679
+2026-03-06 23:10:51,020 INFO: Epoch 58/200 [Val]   loss: 0.169505
+2026-03-06 23:11:50,097 INFO:   Saved diffusion samples for epoch 58
+2026-03-06 23:20:35,237 INFO: Epoch 59/200 [Train] loss: 0.167138, lr: 0.000081, gnorm: 0.221783
+2026-03-06 23:21:41,724 INFO: Epoch 59/200 [Val]   loss: 0.187452
+2026-03-06 23:22:40,500 INFO:   Saved diffusion samples for epoch 59
+2026-03-06 23:31:53,890 INFO: Epoch 60/200 [Train] loss: 0.167668, lr: 0.000081, gnorm: 0.217892
+2026-03-06 23:33:00,200 INFO: Epoch 60/200 [Val]   loss: 0.239400
+2026-03-06 23:33:59,043 INFO:   Saved diffusion samples for epoch 60
+2026-03-06 23:34:00,201 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0060.pt
+2026-03-06 23:42:48,104 INFO: Epoch 61/200 [Train] loss: 0.177125, lr: 0.000080, gnorm: 0.216016
+2026-03-06 23:43:55,031 INFO: Epoch 61/200 [Val]   loss: 0.211652
+2026-03-06 23:44:53,584 INFO:   Saved diffusion samples for epoch 61
+2026-03-06 23:53:07,069 INFO: Epoch 62/200 [Train] loss: 0.176493, lr: 0.000079, gnorm: 0.218524
+2026-03-06 23:54:13,609 INFO: Epoch 62/200 [Val]   loss: 0.193549
+2026-03-06 23:55:12,358 INFO:   Saved diffusion samples for epoch 62
+2026-03-07 00:03:56,276 INFO: Epoch 63/200 [Train] loss: 0.175584, lr: 0.000079, gnorm: 0.218140
+2026-03-07 00:05:02,445 INFO: Epoch 63/200 [Val]   loss: 0.169041
+2026-03-07 00:06:01,061 INFO:   Saved diffusion samples for epoch 63
+2026-03-07 00:14:27,174 INFO: Epoch 64/200 [Train] loss: 0.166773, lr: 0.000078, gnorm: 0.201321
+2026-03-07 00:15:33,940 INFO: Epoch 64/200 [Val]   loss: 0.194128
+2026-03-07 00:16:32,356 INFO:   Saved diffusion samples for epoch 64
+2026-03-07 00:25:05,144 INFO: Epoch 65/200 [Train] loss: 0.177191, lr: 0.000077, gnorm: 0.215226
+2026-03-07 00:26:10,971 INFO: Epoch 65/200 [Val]   loss: 0.208122
+2026-03-07 00:27:09,143 INFO:   Saved diffusion samples for epoch 65
+2026-03-07 00:35:40,482 INFO: Epoch 66/200 [Train] loss: 0.174176, lr: 0.000077, gnorm: 0.216021
+2026-03-07 00:36:46,401 INFO: Epoch 66/200 [Val]   loss: 0.153239
+2026-03-07 00:37:45,003 INFO:   Saved diffusion samples for epoch 66
+2026-03-07 00:46:04,630 INFO: Epoch 67/200 [Train] loss: 0.166158, lr: 0.000076, gnorm: 0.209897
+2026-03-07 00:47:11,220 INFO: Epoch 67/200 [Val]   loss: 0.232486
+2026-03-07 00:48:09,804 INFO:   Saved diffusion samples for epoch 67
+2026-03-07 00:56:34,606 INFO: Epoch 68/200 [Train] loss: 0.167272, lr: 0.000075, gnorm: 0.211041
+2026-03-07 00:57:40,907 INFO: Epoch 68/200 [Val]   loss: 0.192265
+2026-03-07 00:58:39,667 INFO:   Saved diffusion samples for epoch 68
+2026-03-07 01:07:22,536 INFO: Epoch 69/200 [Train] loss: 0.166788, lr: 0.000075, gnorm: 0.206508
+2026-03-07 01:08:28,854 INFO: Epoch 69/200 [Val]   loss: 0.169809
+2026-03-07 01:09:27,951 INFO:   Saved diffusion samples for epoch 69
+2026-03-07 01:17:27,362 INFO: Epoch 70/200 [Train] loss: 0.169720, lr: 0.000074, gnorm: 0.213717
+2026-03-07 01:18:35,488 INFO: Epoch 70/200 [Val]   loss: 0.184060
+2026-03-07 01:19:35,181 INFO:   Saved diffusion samples for epoch 70
+2026-03-07 01:19:36,393 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0070.pt
+2026-03-07 01:28:15,897 INFO: Epoch 71/200 [Train] loss: 0.171987, lr: 0.000073, gnorm: 0.208606
+2026-03-07 01:29:23,456 INFO: Epoch 71/200 [Val]   loss: 0.184321
+2026-03-07 01:30:22,538 INFO:   Saved diffusion samples for epoch 71
+2026-03-07 01:38:45,808 INFO: Epoch 72/200 [Train] loss: 0.171390, lr: 0.000073, gnorm: 0.200738
+2026-03-07 01:39:51,678 INFO: Epoch 72/200 [Val]   loss: 0.183934
+2026-03-07 01:40:50,286 INFO:   Saved diffusion samples for epoch 72
+2026-03-07 01:49:15,893 INFO: Epoch 73/200 [Train] loss: 0.175746, lr: 0.000072, gnorm: 0.219485
+2026-03-07 01:50:23,081 INFO: Epoch 73/200 [Val]   loss: 0.200341
+2026-03-07 01:51:21,811 INFO:   Saved diffusion samples for epoch 73
+2026-03-07 01:59:32,323 INFO: Epoch 74/200 [Train] loss: 0.169003, lr: 0.000071, gnorm: 0.208866
+2026-03-07 02:00:38,799 INFO: Epoch 74/200 [Val]   loss: 0.163747
+2026-03-07 02:01:38,394 INFO:   Saved diffusion samples for epoch 74
+2026-03-07 02:09:47,251 INFO: Epoch 75/200 [Train] loss: 0.162077, lr: 0.000070, gnorm: 0.208254
+2026-03-07 02:10:53,348 INFO: Epoch 75/200 [Val]   loss: 0.189847
+2026-03-07 02:11:52,123 INFO:   Saved diffusion samples for epoch 75
+2026-03-07 02:20:25,772 INFO: Epoch 76/200 [Train] loss: 0.169554, lr: 0.000070, gnorm: 0.214035
+2026-03-07 02:21:32,463 INFO: Epoch 76/200 [Val]   loss: 0.242271
+2026-03-07 02:22:31,552 INFO:   Saved diffusion samples for epoch 76
+2026-03-07 02:30:25,318 INFO: Epoch 77/200 [Train] loss: 0.168493, lr: 0.000069, gnorm: 0.205558
+2026-03-07 02:31:32,421 INFO: Epoch 77/200 [Val]   loss: 0.160207
+2026-03-07 02:32:31,248 INFO:   Saved diffusion samples for epoch 77
+2026-03-07 02:40:57,549 INFO: Epoch 78/200 [Train] loss: 0.170901, lr: 0.000068, gnorm: 0.199910
+2026-03-07 02:42:05,692 INFO: Epoch 78/200 [Val]   loss: 0.165530
+2026-03-07 02:43:05,321 INFO:   Saved diffusion samples for epoch 78
+2026-03-07 02:51:41,496 INFO: Epoch 79/200 [Train] loss: 0.169051, lr: 0.000067, gnorm: 0.206886
+2026-03-07 02:52:47,913 INFO: Epoch 79/200 [Val]   loss: 0.184056
+2026-03-07 02:53:46,463 INFO:   Saved diffusion samples for epoch 79
+2026-03-07 03:02:00,929 INFO: Epoch 80/200 [Train] loss: 0.164285, lr: 0.000067, gnorm: 0.207166
+2026-03-07 03:03:07,213 INFO: Epoch 80/200 [Val]   loss: 0.159608
+2026-03-07 03:04:06,051 INFO:   Saved diffusion samples for epoch 80
+2026-03-07 03:04:07,387 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0080.pt
+2026-03-07 03:12:33,814 INFO: Epoch 81/200 [Train] loss: 0.163530, lr: 0.000066, gnorm: 0.205597
+2026-03-07 03:13:40,130 INFO: Epoch 81/200 [Val]   loss: 0.164959
+2026-03-07 03:14:38,610 INFO:   Saved diffusion samples for epoch 81
+2026-03-07 03:23:21,931 INFO: Epoch 82/200 [Train] loss: 0.172810, lr: 0.000065, gnorm: 0.211220
+2026-03-07 03:24:27,800 INFO: Epoch 82/200 [Val]   loss: 0.205499
+2026-03-07 03:25:26,354 INFO:   Saved diffusion samples for epoch 82
+2026-03-07 03:33:45,688 INFO: Epoch 83/200 [Train] loss: 0.165114, lr: 0.000064, gnorm: 0.203091
+2026-03-07 03:34:52,053 INFO: Epoch 83/200 [Val]   loss: 0.210883
+2026-03-07 03:35:51,243 INFO:   Saved diffusion samples for epoch 83
+2026-03-07 03:44:33,634 INFO: Epoch 84/200 [Train] loss: 0.160819, lr: 0.000064, gnorm: 0.196909
+2026-03-07 03:45:39,404 INFO: Epoch 84/200 [Val]   loss: 0.149366
+2026-03-07 03:46:38,488 INFO:   Saved diffusion samples for epoch 84
+2026-03-07 03:54:58,832 INFO: Epoch 85/200 [Train] loss: 0.159397, lr: 0.000063, gnorm: 0.194411
+2026-03-07 03:56:06,066 INFO: Epoch 85/200 [Val]   loss: 0.182061
+2026-03-07 03:57:04,824 INFO:   Saved diffusion samples for epoch 85
+2026-03-07 04:05:36,332 INFO: Epoch 86/200 [Train] loss: 0.163081, lr: 0.000062, gnorm: 0.204794
+2026-03-07 04:06:42,460 INFO: Epoch 86/200 [Val]   loss: 0.218260
+2026-03-07 04:07:41,675 INFO:   Saved diffusion samples for epoch 86
+2026-03-07 04:16:28,343 INFO: Epoch 87/200 [Train] loss: 0.160478, lr: 0.000061, gnorm: 0.202333
+2026-03-07 04:17:34,702 INFO: Epoch 87/200 [Val]   loss: 0.166078
+2026-03-07 04:18:33,403 INFO:   Saved diffusion samples for epoch 87
+2026-03-07 04:26:45,802 INFO: Epoch 88/200 [Train] loss: 0.169530, lr: 0.000061, gnorm: 0.200702
+2026-03-07 04:27:53,573 INFO: Epoch 88/200 [Val]   loss: 0.173373
+2026-03-07 04:28:52,825 INFO:   Saved diffusion samples for epoch 88
+2026-03-07 04:37:17,414 INFO: Epoch 89/200 [Train] loss: 0.164440, lr: 0.000060, gnorm: 0.198996
+2026-03-07 04:38:24,509 INFO: Epoch 89/200 [Val]   loss: 0.193658
+2026-03-07 04:39:23,009 INFO:   Saved diffusion samples for epoch 89
+2026-03-07 04:47:57,282 INFO: Epoch 90/200 [Train] loss: 0.166767, lr: 0.000059, gnorm: 0.192950
+2026-03-07 04:49:03,724 INFO: Epoch 90/200 [Val]   loss: 0.194112
+2026-03-07 04:50:02,326 INFO:   Saved diffusion samples for epoch 90
+2026-03-07 04:50:03,585 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0090.pt
+2026-03-07 04:58:14,840 INFO: Epoch 91/200 [Train] loss: 0.163627, lr: 0.000058, gnorm: 0.197440
+2026-03-07 04:59:20,832 INFO: Epoch 91/200 [Val]   loss: 0.174259
+2026-03-07 05:00:19,551 INFO:   Saved diffusion samples for epoch 91
+2026-03-07 05:08:23,146 INFO: Epoch 92/200 [Train] loss: 0.167193, lr: 0.000057, gnorm: 0.204196
+2026-03-07 05:09:30,110 INFO: Epoch 92/200 [Val]   loss: 0.120255
+2026-03-07 05:09:31,489 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0092.pt
+2026-03-07 05:09:36,865 INFO:   New best val loss: 0.120255
+2026-03-07 05:10:35,309 INFO:   Saved diffusion samples for epoch 92
+2026-03-07 05:18:32,029 INFO: Epoch 93/200 [Train] loss: 0.163029, lr: 0.000057, gnorm: 0.198885
+2026-03-07 05:19:39,128 INFO: Epoch 93/200 [Val]   loss: 0.204180
+2026-03-07 05:20:38,465 INFO:   Saved diffusion samples for epoch 93
+2026-03-07 05:29:06,606 INFO: Epoch 94/200 [Train] loss: 0.161372, lr: 0.000056, gnorm: 0.196041
+2026-03-07 05:30:14,155 INFO: Epoch 94/200 [Val]   loss: 0.156205
+2026-03-07 05:31:12,846 INFO:   Saved diffusion samples for epoch 94
+2026-03-07 05:39:39,800 INFO: Epoch 95/200 [Train] loss: 0.159131, lr: 0.000055, gnorm: 0.197270
+2026-03-07 05:40:48,230 INFO: Epoch 95/200 [Val]   loss: 0.175560
+2026-03-07 05:41:46,866 INFO:   Saved diffusion samples for epoch 95
+2026-03-07 05:50:00,683 INFO: Epoch 96/200 [Train] loss: 0.165469, lr: 0.000054, gnorm: 0.190690
+2026-03-07 05:51:07,146 INFO: Epoch 96/200 [Val]   loss: 0.161306
+2026-03-07 05:52:05,730 INFO:   Saved diffusion samples for epoch 96
+2026-03-07 06:00:49,979 INFO: Epoch 97/200 [Train] loss: 0.160314, lr: 0.000054, gnorm: 0.198842
+2026-03-07 06:01:56,683 INFO: Epoch 97/200 [Val]   loss: 0.175323
+2026-03-07 06:02:55,431 INFO:   Saved diffusion samples for epoch 97
+2026-03-07 06:11:42,994 INFO: Epoch 98/200 [Train] loss: 0.163600, lr: 0.000053, gnorm: 0.199240
+2026-03-07 06:12:51,029 INFO: Epoch 98/200 [Val]   loss: 0.236372
+2026-03-07 06:13:49,807 INFO:   Saved diffusion samples for epoch 98
+2026-03-07 06:21:51,706 INFO: Epoch 99/200 [Train] loss: 0.166250, lr: 0.000052, gnorm: 0.197603
+2026-03-07 06:22:58,606 INFO: Epoch 99/200 [Val]   loss: 0.136629
+2026-03-07 06:23:57,575 INFO:   Saved diffusion samples for epoch 99
+2026-03-07 06:32:43,936 INFO: Epoch 100/200 [Train] loss: 0.167390, lr: 0.000051, gnorm: 0.194020
+2026-03-07 06:33:50,485 INFO: Epoch 100/200 [Val]   loss: 0.183980
+2026-03-07 06:34:49,732 INFO:   Saved diffusion samples for epoch 100
+2026-03-07 06:34:50,966 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0100.pt
+2026-03-07 06:42:59,647 INFO: Epoch 101/200 [Train] loss: 0.165251, lr: 0.000050, gnorm: 0.196578
+2026-03-07 06:44:06,199 INFO: Epoch 101/200 [Val]   loss: 0.177149
+2026-03-07 06:45:05,122 INFO:   Saved diffusion samples for epoch 101
+2026-03-07 06:53:41,039 INFO: Epoch 102/200 [Train] loss: 0.156195, lr: 0.000050, gnorm: 0.195317
+2026-03-07 06:54:48,001 INFO: Epoch 102/200 [Val]   loss: 0.182581
+2026-03-07 06:55:46,879 INFO:   Saved diffusion samples for epoch 102
+2026-03-07 07:03:55,596 INFO: Epoch 103/200 [Train] loss: 0.163007, lr: 0.000049, gnorm: 0.188989
+2026-03-07 07:05:01,929 INFO: Epoch 103/200 [Val]   loss: 0.196986
+2026-03-07 07:06:00,833 INFO:   Saved diffusion samples for epoch 103
+2026-03-07 07:14:26,688 INFO: Epoch 104/200 [Train] loss: 0.161230, lr: 0.000048, gnorm: 0.191136
+2026-03-07 07:15:33,609 INFO: Epoch 104/200 [Val]   loss: 0.163873
+2026-03-07 07:16:33,212 INFO:   Saved diffusion samples for epoch 104
+2026-03-07 07:25:29,064 INFO: Epoch 105/200 [Train] loss: 0.170230, lr: 0.000047, gnorm: 0.199238
+2026-03-07 07:26:36,803 INFO: Epoch 105/200 [Val]   loss: 0.187546
+2026-03-07 07:27:35,531 INFO:   Saved diffusion samples for epoch 105
+2026-03-07 07:36:29,642 INFO: Epoch 106/200 [Train] loss: 0.152945, lr: 0.000046, gnorm: 0.188079
+2026-03-07 07:37:36,148 INFO: Epoch 106/200 [Val]   loss: 0.216920
+2026-03-07 07:38:35,068 INFO:   Saved diffusion samples for epoch 106
+2026-03-07 07:46:48,968 INFO: Epoch 107/200 [Train] loss: 0.160305, lr: 0.000046, gnorm: 0.194639
+2026-03-07 07:47:56,851 INFO: Epoch 107/200 [Val]   loss: 0.177031
+2026-03-07 07:48:55,605 INFO:   Saved diffusion samples for epoch 107
+2026-03-07 07:57:04,797 INFO: Epoch 108/200 [Train] loss: 0.159271, lr: 0.000045, gnorm: 0.186119
+2026-03-07 07:58:11,614 INFO: Epoch 108/200 [Val]   loss: 0.180772
+2026-03-07 07:59:10,149 INFO:   Saved diffusion samples for epoch 108
+2026-03-07 08:07:54,057 INFO: Epoch 109/200 [Train] loss: 0.166450, lr: 0.000044, gnorm: 0.184363
+2026-03-07 08:09:00,539 INFO: Epoch 109/200 [Val]   loss: 0.208949
+2026-03-07 08:09:59,436 INFO:   Saved diffusion samples for epoch 109
+2026-03-07 08:18:33,634 INFO: Epoch 110/200 [Train] loss: 0.160392, lr: 0.000043, gnorm: 0.191900
+2026-03-07 08:19:39,646 INFO: Epoch 110/200 [Val]   loss: 0.168322
+2026-03-07 08:20:38,133 INFO:   Saved diffusion samples for epoch 110
+2026-03-07 08:20:39,399 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0110.pt
+2026-03-07 08:29:00,892 INFO: Epoch 111/200 [Train] loss: 0.158294, lr: 0.000042, gnorm: 0.186899
+2026-03-07 08:30:07,000 INFO: Epoch 111/200 [Val]   loss: 0.186727
+2026-03-07 08:31:05,583 INFO:   Saved diffusion samples for epoch 111
+2026-03-07 08:39:53,121 INFO: Epoch 112/200 [Train] loss: 0.158850, lr: 0.000042, gnorm: 0.190658
+2026-03-07 08:40:59,600 INFO: Epoch 112/200 [Val]   loss: 0.203329
+2026-03-07 08:41:58,951 INFO:   Saved diffusion samples for epoch 112
+2026-03-07 08:50:30,118 INFO: Epoch 113/200 [Train] loss: 0.161634, lr: 0.000041, gnorm: 0.190309
+2026-03-07 08:51:36,131 INFO: Epoch 113/200 [Val]   loss: 0.169041
+2026-03-07 08:52:35,024 INFO:   Saved diffusion samples for epoch 113
+2026-03-07 09:00:41,860 INFO: Epoch 114/200 [Train] loss: 0.159926, lr: 0.000040, gnorm: 0.187614
+2026-03-07 09:01:48,412 INFO: Epoch 114/200 [Val]   loss: 0.206574
+2026-03-07 09:02:47,267 INFO:   Saved diffusion samples for epoch 114
+2026-03-07 09:11:21,624 INFO: Epoch 115/200 [Train] loss: 0.164343, lr: 0.000039, gnorm: 0.197037
+2026-03-07 09:12:27,608 INFO: Epoch 115/200 [Val]   loss: 0.186629
+2026-03-07 09:13:26,155 INFO:   Saved diffusion samples for epoch 115
+2026-03-07 09:21:33,643 INFO: Epoch 116/200 [Train] loss: 0.157870, lr: 0.000039, gnorm: 0.187034
+2026-03-07 09:22:39,744 INFO: Epoch 116/200 [Val]   loss: 0.179837
+2026-03-07 09:23:38,605 INFO:   Saved diffusion samples for epoch 116
+2026-03-07 09:31:40,161 INFO: Epoch 117/200 [Train] loss: 0.168256, lr: 0.000038, gnorm: 0.190493
+2026-03-07 09:32:46,462 INFO: Epoch 117/200 [Val]   loss: 0.140353
+2026-03-07 09:33:45,844 INFO:   Saved diffusion samples for epoch 117
+2026-03-07 09:42:16,747 INFO: Epoch 118/200 [Train] loss: 0.152377, lr: 0.000037, gnorm: 0.183902
+2026-03-07 09:43:22,514 INFO: Epoch 118/200 [Val]   loss: 0.204162
+2026-03-07 09:44:21,514 INFO:   Saved diffusion samples for epoch 118
+2026-03-07 09:52:44,852 INFO: Epoch 119/200 [Train] loss: 0.163533, lr: 0.000036, gnorm: 0.190206
+2026-03-07 09:53:50,798 INFO: Epoch 119/200 [Val]   loss: 0.185519
+2026-03-07 09:54:50,583 INFO:   Saved diffusion samples for epoch 119
+2026-03-07 10:03:26,881 INFO: Epoch 120/200 [Train] loss: 0.165858, lr: 0.000036, gnorm: 0.189213
+2026-03-07 10:04:32,916 INFO: Epoch 120/200 [Val]   loss: 0.160124
+2026-03-07 10:05:31,326 INFO:   Saved diffusion samples for epoch 120
+2026-03-07 10:05:32,668 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0120.pt
+2026-03-07 10:13:53,257 INFO: Epoch 121/200 [Train] loss: 0.160070, lr: 0.000035, gnorm: 0.184799
+2026-03-07 10:14:59,202 INFO: Epoch 121/200 [Val]   loss: 0.178586
+2026-03-07 10:15:57,817 INFO:   Saved diffusion samples for epoch 121
+2026-03-07 10:24:21,816 INFO: Epoch 122/200 [Train] loss: 0.159391, lr: 0.000034, gnorm: 0.182527
+2026-03-07 10:25:28,431 INFO: Epoch 122/200 [Val]   loss: 0.206067
+2026-03-07 10:26:27,702 INFO:   Saved diffusion samples for epoch 122
+2026-03-07 10:34:35,004 INFO: Epoch 123/200 [Train] loss: 0.158463, lr: 0.000033, gnorm: 0.181496
+2026-03-07 10:35:42,369 INFO: Epoch 123/200 [Val]   loss: 0.181016
+2026-03-07 10:36:41,195 INFO:   Saved diffusion samples for epoch 123
+2026-03-07 10:45:01,855 INFO: Epoch 124/200 [Train] loss: 0.157433, lr: 0.000033, gnorm: 0.177450
+2026-03-07 10:46:07,752 INFO: Epoch 124/200 [Val]   loss: 0.220192
+2026-03-07 10:47:06,620 INFO:   Saved diffusion samples for epoch 124
+2026-03-07 10:55:30,465 INFO: Epoch 125/200 [Train] loss: 0.154716, lr: 0.000032, gnorm: 0.193705
+2026-03-07 10:56:36,343 INFO: Epoch 125/200 [Val]   loss: 0.147233
+2026-03-07 10:57:35,082 INFO:   Saved diffusion samples for epoch 125
+2026-03-07 11:05:29,362 INFO: Epoch 126/200 [Train] loss: 0.161003, lr: 0.000031, gnorm: 0.188075
+2026-03-07 11:06:35,704 INFO: Epoch 126/200 [Val]   loss: 0.192938
+2026-03-07 11:07:34,547 INFO:   Saved diffusion samples for epoch 126
+2026-03-07 11:15:50,538 INFO: Epoch 127/200 [Train] loss: 0.158022, lr: 0.000030, gnorm: 0.187645
+2026-03-07 11:16:56,980 INFO: Epoch 127/200 [Val]   loss: 0.225872
+2026-03-07 11:17:56,125 INFO:   Saved diffusion samples for epoch 127
+2026-03-07 11:26:04,791 INFO: Epoch 128/200 [Train] loss: 0.165108, lr: 0.000030, gnorm: 0.187956
+2026-03-07 11:27:10,893 INFO: Epoch 128/200 [Val]   loss: 0.178629
+2026-03-07 11:28:09,494 INFO:   Saved diffusion samples for epoch 128
+2026-03-07 11:36:55,125 INFO: Epoch 129/200 [Train] loss: 0.154722, lr: 0.000029, gnorm: 0.180507
+2026-03-07 11:38:02,301 INFO: Epoch 129/200 [Val]   loss: 0.176134
+2026-03-07 11:39:00,700 INFO:   Saved diffusion samples for epoch 129
+2026-03-07 11:47:35,745 INFO: Epoch 130/200 [Train] loss: 0.154865, lr: 0.000028, gnorm: 0.177530
+2026-03-07 11:48:42,013 INFO: Epoch 130/200 [Val]   loss: 0.164879
+2026-03-07 11:49:40,710 INFO:   Saved diffusion samples for epoch 130
+2026-03-07 11:49:41,976 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0130.pt
+2026-03-07 11:57:59,991 INFO: Epoch 131/200 [Train] loss: 0.161162, lr: 0.000027, gnorm: 0.182899
+2026-03-07 11:59:06,329 INFO: Epoch 131/200 [Val]   loss: 0.178673
+2026-03-07 12:00:05,219 INFO:   Saved diffusion samples for epoch 131
+2026-03-07 12:08:27,176 INFO: Epoch 132/200 [Train] loss: 0.153636, lr: 0.000027, gnorm: 0.179162
+2026-03-07 12:09:33,226 INFO: Epoch 132/200 [Val]   loss: 0.162307
+2026-03-07 12:10:32,068 INFO:   Saved diffusion samples for epoch 132
+2026-03-07 12:19:24,423 INFO: Epoch 133/200 [Train] loss: 0.153070, lr: 0.000026, gnorm: 0.179885
+2026-03-07 12:20:30,626 INFO: Epoch 133/200 [Val]   loss: 0.179246
+2026-03-07 12:21:29,647 INFO:   Saved diffusion samples for epoch 133
+2026-03-07 12:30:19,089 INFO: Epoch 134/200 [Train] loss: 0.156164, lr: 0.000025, gnorm: 0.179915
+2026-03-07 12:31:25,445 INFO: Epoch 134/200 [Val]   loss: 0.187855
+2026-03-07 12:32:25,090 INFO:   Saved diffusion samples for epoch 134
+2026-03-07 12:40:49,391 INFO: Epoch 135/200 [Train] loss: 0.158473, lr: 0.000025, gnorm: 0.180894
+2026-03-07 12:41:55,823 INFO: Epoch 135/200 [Val]   loss: 0.187341
+2026-03-07 12:42:55,087 INFO:   Saved diffusion samples for epoch 135
+2026-03-07 12:51:23,204 INFO: Epoch 136/200 [Train] loss: 0.163163, lr: 0.000024, gnorm: 0.185777
+2026-03-07 12:52:29,463 INFO: Epoch 136/200 [Val]   loss: 0.139900
+2026-03-07 12:53:28,260 INFO:   Saved diffusion samples for epoch 136
+2026-03-07 13:01:42,637 INFO: Epoch 137/200 [Train] loss: 0.155548, lr: 0.000023, gnorm: 0.178664
+2026-03-07 13:02:48,916 INFO: Epoch 137/200 [Val]   loss: 0.168598
+2026-03-07 13:03:48,112 INFO:   Saved diffusion samples for epoch 137
+2026-03-07 13:12:05,661 INFO: Epoch 138/200 [Train] loss: 0.156226, lr: 0.000023, gnorm: 0.181676
+2026-03-07 13:13:11,587 INFO: Epoch 138/200 [Val]   loss: 0.155704
+2026-03-07 13:14:10,226 INFO:   Saved diffusion samples for epoch 138
+2026-03-07 13:22:16,833 INFO: Epoch 139/200 [Train] loss: 0.161626, lr: 0.000022, gnorm: 0.186336
+2026-03-07 13:23:23,191 INFO: Epoch 139/200 [Val]   loss: 0.164774
+2026-03-07 13:24:22,248 INFO:   Saved diffusion samples for epoch 139
+2026-03-07 13:32:59,130 INFO: Epoch 140/200 [Train] loss: 0.160263, lr: 0.000021, gnorm: 0.185496
+2026-03-07 13:34:05,108 INFO: Epoch 140/200 [Val]   loss: 0.178908
+2026-03-07 13:35:03,651 INFO:   Saved diffusion samples for epoch 140
+2026-03-07 13:35:05,001 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0140.pt
+2026-03-07 13:43:22,847 INFO: Epoch 141/200 [Train] loss: 0.155314, lr: 0.000021, gnorm: 0.177312
+2026-03-07 13:44:29,177 INFO: Epoch 141/200 [Val]   loss: 0.186580
+2026-03-07 13:45:28,093 INFO:   Saved diffusion samples for epoch 141
+2026-03-07 13:54:03,337 INFO: Epoch 142/200 [Train] loss: 0.157552, lr: 0.000020, gnorm: 0.182335
+2026-03-07 13:55:09,699 INFO: Epoch 142/200 [Val]   loss: 0.171268
+2026-03-07 13:56:08,943 INFO:   Saved diffusion samples for epoch 142
+2026-03-07 14:04:35,357 INFO: Epoch 143/200 [Train] loss: 0.154094, lr: 0.000019, gnorm: 0.175628
+2026-03-07 14:05:42,058 INFO: Epoch 143/200 [Val]   loss: 0.180656
+2026-03-07 14:06:41,349 INFO:   Saved diffusion samples for epoch 143
+2026-03-07 14:14:57,389 INFO: Epoch 144/200 [Train] loss: 0.154841, lr: 0.000019, gnorm: 0.176184
+2026-03-07 14:16:05,088 INFO: Epoch 144/200 [Val]   loss: 0.181530
+2026-03-07 14:17:04,255 INFO:   Saved diffusion samples for epoch 144
+2026-03-07 14:25:31,471 INFO: Epoch 145/200 [Train] loss: 0.152234, lr: 0.000018, gnorm: 0.173893
+2026-03-07 14:26:37,237 INFO: Epoch 145/200 [Val]   loss: 0.186632
+2026-03-07 14:27:36,572 INFO:   Saved diffusion samples for epoch 145
+2026-03-07 14:35:58,492 INFO: Epoch 146/200 [Train] loss: 0.154780, lr: 0.000018, gnorm: 0.175927
+2026-03-07 14:37:05,250 INFO: Epoch 146/200 [Val]   loss: 0.194588
+2026-03-07 14:38:04,617 INFO:   Saved diffusion samples for epoch 146
+2026-03-07 14:46:42,257 INFO: Epoch 147/200 [Train] loss: 0.151923, lr: 0.000017, gnorm: 0.178696
+2026-03-07 14:47:50,431 INFO: Epoch 147/200 [Val]   loss: 0.148101
+2026-03-07 14:48:49,855 INFO:   Saved diffusion samples for epoch 147
+2026-03-07 14:57:13,841 INFO: Epoch 148/200 [Train] loss: 0.159417, lr: 0.000016, gnorm: 0.176045
+2026-03-07 14:58:20,356 INFO: Epoch 148/200 [Val]   loss: 0.190708
+2026-03-07 14:59:19,257 INFO:   Saved diffusion samples for epoch 148
+2026-03-07 15:07:51,061 INFO: Epoch 149/200 [Train] loss: 0.158562, lr: 0.000016, gnorm: 0.177471
+2026-03-07 15:08:56,780 INFO: Epoch 149/200 [Val]   loss: 0.163952
+2026-03-07 15:09:55,708 INFO:   Saved diffusion samples for epoch 149
+2026-03-07 15:18:27,503 INFO: Epoch 150/200 [Train] loss: 0.156752, lr: 0.000015, gnorm: 0.176561
+2026-03-07 15:19:34,829 INFO: Epoch 150/200 [Val]   loss: 0.156720
+2026-03-07 15:20:33,721 INFO:   Saved diffusion samples for epoch 150
+2026-03-07 15:20:35,104 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0150.pt
+2026-03-07 15:29:16,846 INFO: Epoch 151/200 [Train] loss: 0.156858, lr: 0.000015, gnorm: 0.178515
+2026-03-07 15:30:22,932 INFO: Epoch 151/200 [Val]   loss: 0.189838
+2026-03-07 15:31:21,296 INFO:   Saved diffusion samples for epoch 151
+2026-03-07 15:39:55,321 INFO: Epoch 152/200 [Train] loss: 0.152347, lr: 0.000014, gnorm: 0.172533
+2026-03-07 15:41:01,797 INFO: Epoch 152/200 [Val]   loss: 0.196081
+2026-03-07 15:42:00,687 INFO:   Saved diffusion samples for epoch 152
+2026-03-07 15:50:17,261 INFO: Epoch 153/200 [Train] loss: 0.161022, lr: 0.000014, gnorm: 0.176699
+2026-03-07 15:51:24,485 INFO: Epoch 153/200 [Val]   loss: 0.192761
+2026-03-07 15:52:23,713 INFO:   Saved diffusion samples for epoch 153
+2026-03-07 16:00:46,821 INFO: Epoch 154/200 [Train] loss: 0.150052, lr: 0.000013, gnorm: 0.172367
+2026-03-07 16:01:53,523 INFO: Epoch 154/200 [Val]   loss: 0.151975
+2026-03-07 16:02:52,356 INFO:   Saved diffusion samples for epoch 154
+2026-03-07 16:11:30,763 INFO: Epoch 155/200 [Train] loss: 0.164892, lr: 0.000012, gnorm: 0.181099
+2026-03-07 16:12:36,946 INFO: Epoch 155/200 [Val]   loss: 0.156411
+2026-03-07 16:13:36,307 INFO:   Saved diffusion samples for epoch 155
+2026-03-07 16:22:00,885 INFO: Epoch 156/200 [Train] loss: 0.160135, lr: 0.000012, gnorm: 0.175706
+2026-03-07 16:23:07,073 INFO: Epoch 156/200 [Val]   loss: 0.177352
+2026-03-07 16:24:05,958 INFO:   Saved diffusion samples for epoch 156
+2026-03-07 16:32:36,788 INFO: Epoch 157/200 [Train] loss: 0.161223, lr: 0.000011, gnorm: 0.175610
+2026-03-07 16:33:43,116 INFO: Epoch 157/200 [Val]   loss: 0.188467
+2026-03-07 16:34:41,789 INFO:   Saved diffusion samples for epoch 157
+2026-03-07 16:43:17,907 INFO: Epoch 158/200 [Train] loss: 0.150728, lr: 0.000011, gnorm: 0.169811
+2026-03-07 16:44:24,157 INFO: Epoch 158/200 [Val]   loss: 0.180005
+2026-03-07 16:45:23,019 INFO:   Saved diffusion samples for epoch 158
+2026-03-07 16:53:38,753 INFO: Epoch 159/200 [Train] loss: 0.161050, lr: 0.000010, gnorm: 0.175512
+2026-03-07 16:54:45,660 INFO: Epoch 159/200 [Val]   loss: 0.215698
+2026-03-07 16:55:44,391 INFO:   Saved diffusion samples for epoch 159
+2026-03-07 17:03:51,814 INFO: Epoch 160/200 [Train] loss: 0.143107, lr: 0.000010, gnorm: 0.165416
+2026-03-07 17:04:58,646 INFO: Epoch 160/200 [Val]   loss: 0.168428
+2026-03-07 17:05:57,205 INFO:   Saved diffusion samples for epoch 160
+2026-03-07 17:05:58,607 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0160.pt
+2026-03-07 17:14:25,790 INFO: Epoch 161/200 [Train] loss: 0.153942, lr: 0.000009, gnorm: 0.176923
+2026-03-07 17:15:31,926 INFO: Epoch 161/200 [Val]   loss: 0.190018
+2026-03-07 17:16:30,838 INFO:   Saved diffusion samples for epoch 161
+2026-03-07 17:24:39,980 INFO: Epoch 162/200 [Train] loss: 0.164485, lr: 0.000009, gnorm: 0.173329
+2026-03-07 17:25:46,142 INFO: Epoch 162/200 [Val]   loss: 0.196499
+2026-03-07 17:26:45,340 INFO:   Saved diffusion samples for epoch 162
+2026-03-07 17:35:06,113 INFO: Epoch 163/200 [Train] loss: 0.157261, lr: 0.000009, gnorm: 0.173120
+2026-03-07 17:36:11,995 INFO: Epoch 163/200 [Val]   loss: 0.159202
+2026-03-07 17:37:10,810 INFO:   Saved diffusion samples for epoch 163
+2026-03-07 17:45:15,399 INFO: Epoch 164/200 [Train] loss: 0.159166, lr: 0.000008, gnorm: 0.172534
+2026-03-07 17:46:21,743 INFO: Epoch 164/200 [Val]   loss: 0.188122
+2026-03-07 17:47:20,523 INFO:   Saved diffusion samples for epoch 164
+2026-03-07 17:55:52,157 INFO: Epoch 165/200 [Train] loss: 0.159381, lr: 0.000008, gnorm: 0.174937
+2026-03-07 17:56:58,371 INFO: Epoch 165/200 [Val]   loss: 0.152775
+2026-03-07 17:57:57,845 INFO:   Saved diffusion samples for epoch 165
+2026-03-07 18:06:17,595 INFO: Epoch 166/200 [Train] loss: 0.158178, lr: 0.000007, gnorm: 0.176031
+2026-03-07 18:07:23,788 INFO: Epoch 166/200 [Val]   loss: 0.195845
+2026-03-07 18:08:23,561 INFO:   Saved diffusion samples for epoch 166
+2026-03-07 18:16:41,519 INFO: Epoch 167/200 [Train] loss: 0.160137, lr: 0.000007, gnorm: 0.174120
+2026-03-07 18:17:47,630 INFO: Epoch 167/200 [Val]   loss: 0.174893
+2026-03-07 18:18:46,180 INFO:   Saved diffusion samples for epoch 167
+2026-03-07 18:26:53,198 INFO: Epoch 168/200 [Train] loss: 0.161967, lr: 0.000006, gnorm: 0.176061
+2026-03-07 18:27:59,433 INFO: Epoch 168/200 [Val]   loss: 0.151161
+2026-03-07 18:28:58,129 INFO:   Saved diffusion samples for epoch 168
+2026-03-07 18:37:24,278 INFO: Epoch 169/200 [Train] loss: 0.158389, lr: 0.000006, gnorm: 0.173587
+2026-03-07 18:38:30,291 INFO: Epoch 169/200 [Val]   loss: 0.194876
+2026-03-07 18:39:28,829 INFO:   Saved diffusion samples for epoch 169
+2026-03-07 18:47:40,139 INFO: Epoch 170/200 [Train] loss: 0.156914, lr: 0.000006, gnorm: 0.172603
+2026-03-07 18:48:46,386 INFO: Epoch 170/200 [Val]   loss: 0.164337
+2026-03-07 18:49:45,309 INFO:   Saved diffusion samples for epoch 170
+2026-03-07 18:49:46,770 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0170.pt
+2026-03-07 18:57:48,518 INFO: Epoch 171/200 [Train] loss: 0.145709, lr: 0.000005, gnorm: 0.163892
+2026-03-07 18:58:56,280 INFO: Epoch 171/200 [Val]   loss: 0.236631
+2026-03-07 18:59:55,096 INFO:   Saved diffusion samples for epoch 171
+2026-03-07 19:08:27,298 INFO: Epoch 172/200 [Train] loss: 0.156884, lr: 0.000005, gnorm: 0.168957
+2026-03-07 19:09:33,415 INFO: Epoch 172/200 [Val]   loss: 0.197607
+2026-03-07 19:10:32,568 INFO:   Saved diffusion samples for epoch 172
+2026-03-07 19:18:49,460 INFO: Epoch 173/200 [Train] loss: 0.148601, lr: 0.000005, gnorm: 0.167813
+2026-03-07 19:19:55,750 INFO: Epoch 173/200 [Val]   loss: 0.183547
+2026-03-07 19:20:54,873 INFO:   Saved diffusion samples for epoch 173
+2026-03-07 19:29:40,505 INFO: Epoch 174/200 [Train] loss: 0.159022, lr: 0.000004, gnorm: 0.172103
+2026-03-07 19:30:46,863 INFO: Epoch 174/200 [Val]   loss: 0.191331
+2026-03-07 19:31:46,281 INFO:   Saved diffusion samples for epoch 174
+2026-03-07 19:40:15,513 INFO: Epoch 175/200 [Train] loss: 0.152663, lr: 0.000004, gnorm: 0.167641
+2026-03-07 19:41:22,680 INFO: Epoch 175/200 [Val]   loss: 0.184404
+2026-03-07 19:42:21,305 INFO:   Saved diffusion samples for epoch 175
+2026-03-07 19:50:52,916 INFO: Epoch 176/200 [Train] loss: 0.150506, lr: 0.000004, gnorm: 0.166511
+2026-03-07 19:51:59,000 INFO: Epoch 176/200 [Val]   loss: 0.155422
+2026-03-07 19:52:57,989 INFO:   Saved diffusion samples for epoch 176
+2026-03-07 20:01:19,394 INFO: Epoch 177/200 [Train] loss: 0.154142, lr: 0.000003, gnorm: 0.169547
+2026-03-07 20:02:25,231 INFO: Epoch 177/200 [Val]   loss: 0.180484
+2026-03-07 20:03:23,928 INFO:   Saved diffusion samples for epoch 177
+2026-03-07 20:11:31,919 INFO: Epoch 178/200 [Train] loss: 0.163927, lr: 0.000003, gnorm: 0.172317
+2026-03-07 20:12:38,312 INFO: Epoch 178/200 [Val]   loss: 0.168094
+2026-03-07 20:13:37,317 INFO:   Saved diffusion samples for epoch 178
+2026-03-07 20:22:21,684 INFO: Epoch 179/200 [Train] loss: 0.153858, lr: 0.000003, gnorm: 0.169044
+2026-03-07 20:23:27,745 INFO: Epoch 179/200 [Val]   loss: 0.186355
+2026-03-07 20:24:28,586 INFO:   Saved diffusion samples for epoch 179
+2026-03-07 20:32:37,120 INFO: Epoch 180/200 [Train] loss: 0.152916, lr: 0.000003, gnorm: 0.167635
+2026-03-07 20:33:43,792 INFO: Epoch 180/200 [Val]   loss: 0.202546
+2026-03-07 20:34:43,285 INFO:   Saved diffusion samples for epoch 180
+2026-03-07 20:34:44,515 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0180.pt
+2026-03-07 20:43:10,944 INFO: Epoch 181/200 [Train] loss: 0.150712, lr: 0.000002, gnorm: 0.164937
+2026-03-07 20:44:17,476 INFO: Epoch 181/200 [Val]   loss: 0.188440
+2026-03-07 20:45:16,422 INFO:   Saved diffusion samples for epoch 181
+2026-03-07 20:53:45,239 INFO: Epoch 182/200 [Train] loss: 0.160154, lr: 0.000002, gnorm: 0.170089
+2026-03-07 20:54:51,553 INFO: Epoch 182/200 [Val]   loss: 0.200892
+2026-03-07 20:55:49,775 INFO:   Saved diffusion samples for epoch 182
+2026-03-07 21:03:52,467 INFO: Epoch 183/200 [Train] loss: 0.151659, lr: 0.000002, gnorm: 0.168813
+2026-03-07 21:04:58,886 INFO: Epoch 183/200 [Val]   loss: 0.162777
+2026-03-07 21:05:57,260 INFO:   Saved diffusion samples for epoch 183
+2026-03-07 21:14:31,069 INFO: Epoch 184/200 [Train] loss: 0.151474, lr: 0.000002, gnorm: 0.165099
+2026-03-07 21:15:37,469 INFO: Epoch 184/200 [Val]   loss: 0.183326
+2026-03-07 21:16:35,895 INFO:   Saved diffusion samples for epoch 184
+2026-03-07 21:25:22,947 INFO: Epoch 185/200 [Train] loss: 0.159986, lr: 0.000002, gnorm: 0.168618
+2026-03-07 21:26:28,651 INFO: Epoch 185/200 [Val]   loss: 0.160613
+2026-03-07 21:27:27,183 INFO:   Saved diffusion samples for epoch 185
+2026-03-07 21:35:45,356 INFO: Epoch 186/200 [Train] loss: 0.151409, lr: 0.000001, gnorm: 0.164758
+2026-03-07 21:36:51,522 INFO: Epoch 186/200 [Val]   loss: 0.175215
+2026-03-07 21:37:49,957 INFO:   Saved diffusion samples for epoch 186
+2026-03-07 21:46:30,757 INFO: Epoch 187/200 [Train] loss: 0.153155, lr: 0.000001, gnorm: 0.166217
+2026-03-07 21:47:36,554 INFO: Epoch 187/200 [Val]   loss: 0.162518
+2026-03-07 21:48:35,012 INFO:   Saved diffusion samples for epoch 187
+2026-03-07 21:57:18,416 INFO: Epoch 188/200 [Train] loss: 0.154280, lr: 0.000001, gnorm: 0.163772
+2026-03-07 21:58:24,754 INFO: Epoch 188/200 [Val]   loss: 0.171481
+2026-03-07 21:59:23,151 INFO:   Saved diffusion samples for epoch 188
+2026-03-07 22:07:52,964 INFO: Epoch 189/200 [Train] loss: 0.160340, lr: 0.000001, gnorm: 0.167240
+2026-03-07 22:08:58,976 INFO: Epoch 189/200 [Val]   loss: 0.171747
+2026-03-07 22:09:57,542 INFO:   Saved diffusion samples for epoch 189
+2026-03-07 22:17:57,505 INFO: Epoch 190/200 [Train] loss: 0.162970, lr: 0.000001, gnorm: 0.172528
+2026-03-07 22:19:03,154 INFO: Epoch 190/200 [Val]   loss: 0.182093
+2026-03-07 22:20:01,494 INFO:   Saved diffusion samples for epoch 190
+2026-03-07 22:20:02,815 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0190.pt
+2026-03-07 22:28:06,817 INFO: Epoch 191/200 [Train] loss: 0.152820, lr: 0.000001, gnorm: 0.163589
+2026-03-07 22:29:12,593 INFO: Epoch 191/200 [Val]   loss: 0.177097
+2026-03-07 22:30:11,123 INFO:   Saved diffusion samples for epoch 191
+2026-03-07 22:38:31,842 INFO: Epoch 192/200 [Train] loss: 0.156417, lr: 0.000000, gnorm: 0.168457
+2026-03-07 22:39:37,709 INFO: Epoch 192/200 [Val]   loss: 0.128791
+2026-03-07 22:40:36,308 INFO:   Saved diffusion samples for epoch 192
+2026-03-07 22:48:28,570 INFO: Epoch 193/200 [Train] loss: 0.155382, lr: 0.000000, gnorm: 0.165483
+2026-03-07 22:49:34,539 INFO: Epoch 193/200 [Val]   loss: 0.131447
+2026-03-07 22:50:33,141 INFO:   Saved diffusion samples for epoch 193
+2026-03-07 22:58:58,337 INFO: Epoch 194/200 [Train] loss: 0.152518, lr: 0.000000, gnorm: 0.167215
+2026-03-07 23:00:04,715 INFO: Epoch 194/200 [Val]   loss: 0.170816
+2026-03-07 23:01:03,064 INFO:   Saved diffusion samples for epoch 194
+2026-03-07 23:09:46,926 INFO: Epoch 195/200 [Train] loss: 0.153235, lr: 0.000000, gnorm: 0.164693
+2026-03-07 23:10:52,808 INFO: Epoch 195/200 [Val]   loss: 0.195592
+2026-03-07 23:11:51,163 INFO:   Saved diffusion samples for epoch 195
+2026-03-07 23:19:59,560 INFO: Epoch 196/200 [Train] loss: 0.153558, lr: 0.000000, gnorm: 0.163566
+2026-03-07 23:21:06,288 INFO: Epoch 196/200 [Val]   loss: 0.192712
+2026-03-07 23:22:04,888 INFO:   Saved diffusion samples for epoch 196
+2026-03-07 23:30:12,990 INFO: Epoch 197/200 [Train] loss: 0.160068, lr: 0.000000, gnorm: 0.169198
+2026-03-07 23:31:19,440 INFO: Epoch 197/200 [Val]   loss: 0.151371
+2026-03-07 23:32:18,081 INFO:   Saved diffusion samples for epoch 197
+2026-03-07 23:40:15,885 INFO: Epoch 198/200 [Train] loss: 0.158049, lr: 0.000000, gnorm: 0.166325
+2026-03-07 23:41:22,051 INFO: Epoch 198/200 [Val]   loss: 0.141018
+2026-03-07 23:42:20,439 INFO:   Saved diffusion samples for epoch 198
+2026-03-07 23:50:34,261 INFO: Epoch 199/200 [Train] loss: 0.155614, lr: 0.000000, gnorm: 0.165178
+2026-03-07 23:51:40,228 INFO: Epoch 199/200 [Val]   loss: 0.208696
+2026-03-07 23:52:38,539 INFO:   Saved diffusion samples for epoch 199
+2026-03-08 00:00:56,980 INFO: Epoch 200/200 [Train] loss: 0.160295, lr: 0.000000, gnorm: 0.168595
+2026-03-08 00:02:02,784 INFO: Epoch 200/200 [Val]   loss: 0.190838
+2026-03-08 00:03:01,298 INFO:   Saved diffusion samples for epoch 200
+2026-03-08 00:03:02,588 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_epoch0200.pt
+2026-03-08 00:03:03,757 INFO:   Saved diffusion checkpoint: outputs_diffusion/checkpoint_final.pt
+2026-03-08 00:03:03,758 INFO: Diffusion training complete.

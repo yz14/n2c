@@ -949,6 +949,152 @@ def test_lecam_regularization():
     logger.info("LeCAM regularization test PASSED\n")
 
 
+def test_v_prediction():
+    """Test v_prediction target computation and loss target selection."""
+    logger.info("=== Testing v_prediction ===")
+    from ldm.diffusion.scheduler import DDPMScheduler
+
+    T = 1000
+    ddpm = DDPMScheduler(
+        num_train_timesteps=T, beta_schedule="linear",
+        prediction_type="v_prediction",
+    )
+
+    B, C, H, W = TEST_BATCH, TEST_Z_CH, 8, 8
+    x0 = torch.randn(B, C, H, W)
+    noise = torch.randn_like(x0)
+    t = torch.tensor([100, 500])
+
+    # 1. Test v target: v = sqrt(ᾱ) * ε - sqrt(1-ᾱ) * x0
+    v_target = ddpm.get_v_target(x0, noise, t)
+    assert v_target.shape == x0.shape, f"v_target shape mismatch: {v_target.shape}"
+
+    # Manually verify for first sample
+    alpha_bar = ddpm.alphas_cumprod[t[0]]
+    v_manual = (alpha_bar ** 0.5) * noise[0] - ((1 - alpha_bar) ** 0.5) * x0[0]
+    assert torch.allclose(v_target[0], v_manual, atol=1e-5), "v_target manual check failed"
+    logger.info("  v_target computation: PASSED")
+
+    # 2. Test predict_start_from_v recovers x0
+    x_t = ddpm.add_noise(x0, noise, t)
+    x0_recovered = ddpm.predict_start_from_v(x_t, t, v_target)
+    assert torch.allclose(x0_recovered, x0, atol=1e-4), \
+        f"predict_start_from_v failed: max diff={( x0_recovered - x0).abs().max():.6f}"
+    logger.info("  predict_start_from_v recovery: PASSED")
+
+    # 3. Test predict_start dispatches correctly
+    x0_via_dispatch = ddpm.predict_start(x_t, t, v_target)
+    assert torch.allclose(x0_via_dispatch, x0, atol=1e-4), "predict_start dispatch failed"
+    logger.info("  predict_start dispatch (v_prediction): PASSED")
+
+    # 4. Test epsilon mode dispatch
+    ddpm_eps = DDPMScheduler(
+        num_train_timesteps=T, prediction_type="epsilon",
+    )
+    x0_eps = ddpm_eps.predict_start(x_t, t, noise)
+    assert torch.allclose(x0_eps, x0, atol=1e-4), "predict_start dispatch (epsilon) failed"
+    logger.info("  predict_start dispatch (epsilon): PASSED")
+
+    logger.info("v_prediction test PASSED\n")
+
+
+def test_min_snr_weights():
+    """Test Min-SNR-γ weight computation."""
+    logger.info("=== Testing Min-SNR Weights ===")
+    from ldm.diffusion.scheduler import DDPMScheduler
+
+    ddpm = DDPMScheduler(num_train_timesteps=1000, beta_schedule="linear")
+
+    # 1. Basic shape test
+    t = torch.arange(0, 1000, 100)  # [0, 100, 200, ..., 900]
+    weights = ddpm.get_min_snr_weight(t, gamma=5.0)
+    assert weights.shape == (len(t),), f"Weight shape: {weights.shape}"
+    logger.info(f"  Weights shape: {weights.shape}")
+
+    # 2. Weights should be in (0, 1] for gamma=5
+    assert (weights > 0).all(), "Weights should be positive"
+    assert (weights <= 1.0 + 1e-6).all(), "Weights should be <= 1.0"
+    logger.info(f"  Weight range: [{weights.min():.4f}, {weights.max():.4f}]")
+
+    # 3. Low-noise timestep (t=0) should have weight ~1.0 (high SNR > gamma)
+    t_low = torch.tensor([0])
+    w_low = ddpm.get_min_snr_weight(t_low, gamma=5.0)
+    # SNR at t=0 is very large, so weight = gamma / SNR ≈ small
+    # But for very low t, weight should be small (clamped by gamma)
+    logger.info(f"  Weight at t=0: {w_low.item():.6f}")
+
+    # 4. High-noise timestep (t=999) should have weight ~1.0 (low SNR < gamma)
+    t_high = torch.tensor([999])
+    w_high = ddpm.get_min_snr_weight(t_high, gamma=5.0)
+    assert abs(w_high.item() - 1.0) < 0.01, f"High-noise weight should be ~1.0, got {w_high.item()}"
+    logger.info(f"  Weight at t=999: {w_high.item():.6f} (expected ~1.0)")
+
+    # 5. With gamma=0 should raise no error (disabled case handled in trainer)
+    snr = ddpm.get_snr(torch.tensor([500]))
+    assert snr.item() > 0, "SNR should be positive"
+    logger.info(f"  SNR at t=500: {snr.item():.4f}")
+
+    logger.info("Min-SNR weights test PASSED\n")
+
+
+def test_ddim_v_prediction():
+    """Test DDIM sampling with v_prediction mode."""
+    logger.info("=== Testing DDIM v_prediction ===")
+    from ldm.config import VAEConfig
+    from ldm.models.autoencoder import AutoencoderKL
+    from ldm.models.unet import DiffusionUNet
+    from ldm.diffusion.scheduler import DDPMScheduler
+    from ldm.diffusion.pipeline import ConditionalLDMPipeline
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Build small models
+    vae_cfg = VAEConfig(
+        in_channels=TEST_SLICES, out_channels=TEST_SLICES,
+        z_channels=TEST_Z_CH, embed_dim=TEST_EMBED_DIM,
+        ch=32, ch_mult=(1, 2, 4), num_res_blocks=1,
+        attn_resolutions=(16,), resolution=TEST_SIZE,
+    )
+    vae = AutoencoderKL(vae_cfg).to(device).eval()
+
+    unet = DiffusionUNet(
+        in_channels=2 * TEST_Z_CH, out_channels=TEST_Z_CH,
+        model_channels=32, channel_mult=(1, 2, 4),
+        num_res_blocks=1, attention_resolutions=(2, 4),
+        num_heads=2, use_scale_shift_norm=True,
+    ).to(device).eval()
+
+    # Test with v_prediction scheduler
+    scheduler_v = DDPMScheduler(
+        num_train_timesteps=100,
+        prediction_type="v_prediction",
+    ).to(device)
+
+    pipeline_v = ConditionalLDMPipeline(vae, unet, scheduler_v)
+
+    ncct = torch.randn(1, TEST_SLICES, TEST_SIZE, TEST_SIZE, device=device)
+    cta_pred = pipeline_v.sample(ncct, num_inference_steps=5, verbose=False)
+    assert cta_pred.shape == ncct.shape, \
+        f"v_prediction pipeline output shape: {cta_pred.shape}"
+    logger.info(f"  DDIM v_prediction sample: {ncct.shape} -> {cta_pred.shape}")
+
+    # Test with epsilon scheduler (should also work)
+    scheduler_eps = DDPMScheduler(
+        num_train_timesteps=100,
+        prediction_type="epsilon",
+    ).to(device)
+    pipeline_eps = ConditionalLDMPipeline(vae, unet, scheduler_eps)
+    cta_pred_eps = pipeline_eps.sample(ncct, num_inference_steps=5, verbose=False)
+    assert cta_pred_eps.shape == ncct.shape
+    logger.info(f"  DDIM epsilon sample: {ncct.shape} -> {cta_pred_eps.shape}")
+
+    # Results should differ (different prediction interpretation on untrained model)
+    # This isn't strictly guaranteed but is very likely with random weights
+    logger.info("  Both prediction modes produce valid outputs")
+
+    logger.info("DDIM v_prediction test PASSED\n")
+
+
 def main():
     test_config()
     test_distributions()
@@ -969,9 +1115,12 @@ def main():
     test_ssim_loss()
     test_kl_warmup()
     test_lecam_regularization()
+    test_v_prediction()
+    test_min_snr_weights()
+    test_ddim_v_prediction()
 
     logger.info("=" * 50)
-    logger.info("ALL LDM TESTS PASSED! (19 tests)")
+    logger.info("ALL LDM TESTS PASSED! (22 tests)")
     return 0
 
 

@@ -121,6 +121,9 @@ class SchedulerConfig:
     # Normalizes latent std to ~1.0 for proper noise schedule matching.
     # 0.0 = auto-compute from training data; otherwise use the specified value.
     latent_scale_factor: float = 0.0
+    # Min-SNR-γ loss weighting (ICCV 2023: Efficient Diffusion Training)
+    # 0.0 = disabled (standard uniform weighting); 5.0 = recommended γ value.
+    snr_gamma: float = 5.0
 
 
 @dataclass
