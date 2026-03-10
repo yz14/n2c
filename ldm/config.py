@@ -124,6 +124,14 @@ class SchedulerConfig:
     # Min-SNR-γ loss weighting (ICCV 2023: Efficient Diffusion Training)
     # 0.0 = disabled (standard uniform weighting); 5.0 = recommended γ value.
     snr_gamma: float = 5.0
+    # Classifier-Free Guidance scale at inference.
+    # 1.0 = no guidance (disabled). >1.0 amplifies condition adherence.
+    # Typical range: 1.5~7.5. Requires training with cfg_drop_rate > 0.
+    cfg_scale: float = 3.0
+    # Dynamic thresholding for pred_x0 during DDIM sampling (Imagen paper).
+    # Clips pred_x0 at the given percentile to prevent extreme outlier values.
+    # 0.0 = disabled. 0.995 = recommended (clips at 99.5th percentile).
+    dynamic_threshold_percentile: float = 0.995
 
 
 @dataclass
@@ -144,6 +152,11 @@ class DiffusionTrainConfig:
     resume_checkpoint: str = ""
     pretrained_vae: str = ""       # path to pretrained VAE checkpoint (required)
     seed: int = 42
+    # Classifier-Free Guidance: probability of dropping condition during training.
+    # The UNet learns both conditional and unconditional generation.
+    # At inference, the two predictions are combined via cfg_scale.
+    # 0.0 = disabled (no CFG). 0.1~0.2 = recommended.
+    cfg_drop_rate: float = 0.1
 
 
 @dataclass

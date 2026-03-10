@@ -35,6 +35,11 @@ class ConditionalLDMPipeline:
         vae: trained AutoencoderKL.
         unet: trained conditional DiffusionUNet.
         scheduler: DDPMScheduler with the noise schedule used during training.
+        latent_scale_factor: scaling factor for latent normalization.
+        cfg_scale: Classifier-Free Guidance scale. 1.0 = disabled.
+            Requires the UNet to have been trained with condition dropping.
+        dynamic_threshold_percentile: percentile for dynamic thresholding
+            of pred_x0 during DDIM sampling. 0.0 = disabled.
     """
 
     def __init__(
@@ -43,11 +48,15 @@ class ConditionalLDMPipeline:
         unet: DiffusionUNet,
         scheduler: DDPMScheduler,
         latent_scale_factor: float = 1.0,
+        cfg_scale: float = 1.0,
+        dynamic_threshold_percentile: float = 0.0,
     ):
         self.vae = vae
         self.unet = unet
         self.scheduler = scheduler
         self.latent_scale_factor = latent_scale_factor
+        self.cfg_scale = cfg_scale
+        self.dynamic_threshold_percentile = dynamic_threshold_percentile
 
     @property
     def device(self) -> torch.device:
@@ -62,6 +71,21 @@ class ConditionalLDMPipeline:
         posterior = self.vae.encode(ncct)
         return posterior.mode() * self.latent_scale_factor
 
+    @staticmethod
+    def _dynamic_threshold(pred_x0: torch.Tensor, percentile: float) -> torch.Tensor:
+        """Apply dynamic thresholding to pred_x0 (Imagen paper, Saharia et al. 2022).
+
+        Clips pred_x0 at the given percentile of absolute values per sample,
+        then rescales to stay within the clipped range. This prevents extreme
+        outlier values from accumulating errors during DDIM sampling.
+        """
+        B = pred_x0.shape[0]
+        flat = pred_x0.reshape(B, -1).abs()
+        s = torch.quantile(flat, percentile, dim=1)  # (B,)
+        s = torch.clamp(s, min=1.0)  # never shrink below 1.0
+        s = s.reshape(B, 1, 1, 1)
+        return pred_x0.clamp(-s, s) / s
+
     @torch.no_grad()
     def sample(
         self,
@@ -71,6 +95,7 @@ class ConditionalLDMPipeline:
         generator: Optional[torch.Generator] = None,
         return_intermediates: bool = False,
         verbose: bool = True,
+        cfg_scale: Optional[float] = None,
     ) -> torch.Tensor:
         """
         Generate CTA prediction from NCCT input via DDIM sampling.
@@ -82,12 +107,15 @@ class ConditionalLDMPipeline:
             generator: optional random generator for reproducibility.
             return_intermediates: if True, return list of intermediate predictions.
             verbose: show progress bar.
+            cfg_scale: override self.cfg_scale if provided. 1.0 = no guidance.
 
         Returns:
             (B, C, H, W) predicted CTA image (in normalized space).
             If return_intermediates, returns (final, list_of_intermediates).
         """
         device = self.device
+        w = cfg_scale if cfg_scale is not None else self.cfg_scale
+        use_cfg = w > 1.0
 
         # 1. Encode condition
         z_ncct = self.encode_condition(ncct)
@@ -109,15 +137,42 @@ class ConditionalLDMPipeline:
             iterator = tqdm(iterator, desc="DDIM Sampling", leave=False)
 
         # 4. Iterative denoising
+        dtp = self.dynamic_threshold_percentile
         for i in iterator:
             t_val = ddim.timesteps[i]
-            t = torch.full((z_noisy.shape[0],), t_val, device=device, dtype=torch.long)
 
-            # Concat condition: [noisy_z_cta, z_ncct]
-            model_input = torch.cat([z_noisy, z_ncct], dim=1)
-            noise_pred = self.unet(model_input, t)
+            if use_cfg:
+                # Classifier-Free Guidance: batched conditional + unconditional
+                z_doubled = torch.cat([z_noisy, z_noisy], dim=0)
+                z_cond = torch.cat([z_ncct, torch.zeros_like(z_ncct)], dim=0)
+                t = torch.full((z_doubled.shape[0],), t_val, device=device, dtype=torch.long)
+                model_input = torch.cat([z_doubled, z_cond], dim=1)
+                noise_pred_both = self.unet(model_input, t)
+                noise_pred_cond, noise_pred_uncond = noise_pred_both.chunk(2, dim=0)
+                noise_pred = noise_pred_uncond + w * (noise_pred_cond - noise_pred_uncond)
+            else:
+                t = torch.full((z_noisy.shape[0],), t_val, device=device, dtype=torch.long)
+                model_input = torch.cat([z_noisy, z_ncct], dim=1)
+                noise_pred = self.unet(model_input, t)
 
-            z_noisy, pred_x0 = ddim.step(noise_pred, i, z_noisy, generator=generator)
+            # Save z_noisy before step for dynamic thresholding recomputation
+            z_before = z_noisy
+
+            z_noisy, pred_x0 = ddim.step(noise_pred, i, z_before, generator=generator)
+
+            # Dynamic thresholding on pred_x0 (reduces artifacts from extreme values)
+            if dtp > 0:
+                pred_x0 = self._dynamic_threshold(pred_x0, dtp)
+                # Re-derive epsilon from thresholded pred_x0
+                alpha_t = float(ddim.ddim_alphas[i])
+                alpha_prev = float(ddim.ddim_alphas_prev[i])
+                sigma_t = float(ddim.ddim_sigmas[i])
+                sqrt_alpha_t = alpha_t ** 0.5
+                sqrt_1m_alpha_t = max((1.0 - alpha_t) ** 0.5, 1e-8)
+                pred_eps = (z_before - sqrt_alpha_t * pred_x0) / sqrt_1m_alpha_t
+                # Recompute x_prev from thresholded pred_x0 and corrected epsilon
+                dir_xt = ((1.0 - alpha_prev - sigma_t ** 2) ** 0.5) * pred_eps
+                z_noisy = (alpha_prev ** 0.5) * pred_x0 + dir_xt
 
             if return_intermediates:
                 intermediates.append(pred_x0.clone())
@@ -135,6 +190,7 @@ class ConditionalLDMPipeline:
         ncct: torch.Tensor,
         generator: Optional[torch.Generator] = None,
         verbose: bool = True,
+        cfg_scale: Optional[float] = None,
     ) -> torch.Tensor:
         """
         Generate CTA prediction using full DDPM sampling (slow, T steps).
@@ -142,6 +198,8 @@ class ConditionalLDMPipeline:
         Mainly useful for debugging or quality comparison with DDIM.
         """
         device = self.device
+        w = cfg_scale if cfg_scale is not None else self.cfg_scale
+        use_cfg = w > 1.0
 
         z_ncct = self.encode_condition(ncct)
         z_noisy = torch.randn(
@@ -154,9 +212,19 @@ class ConditionalLDMPipeline:
             iterator = tqdm(iterator, desc="DDPM Sampling", total=T, leave=False)
 
         for t_val in iterator:
-            t = torch.full((z_noisy.shape[0],), t_val, device=device, dtype=torch.long)
-            model_input = torch.cat([z_noisy, z_ncct], dim=1)
-            noise_pred = self.unet(model_input, t)
+            if use_cfg:
+                z_doubled = torch.cat([z_noisy, z_noisy], dim=0)
+                z_cond = torch.cat([z_ncct, torch.zeros_like(z_ncct)], dim=0)
+                t = torch.full((z_doubled.shape[0],), t_val, device=device, dtype=torch.long)
+                model_input = torch.cat([z_doubled, z_cond], dim=1)
+                noise_pred_both = self.unet(model_input, t)
+                noise_pred_cond, noise_pred_uncond = noise_pred_both.chunk(2, dim=0)
+                noise_pred = noise_pred_uncond + w * (noise_pred_cond - noise_pred_uncond)
+            else:
+                t = torch.full((z_noisy.shape[0],), t_val, device=device, dtype=torch.long)
+                model_input = torch.cat([z_noisy, z_ncct], dim=1)
+                noise_pred = self.unet(model_input, t)
+
             z_noisy = self.scheduler.ddpm_step(noise_pred, t_val, z_noisy, generator=generator)
 
         return self.vae.decode(z_noisy / self.latent_scale_factor)

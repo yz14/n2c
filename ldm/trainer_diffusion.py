@@ -106,6 +106,9 @@ class DiffusionTrainer:
         # Prediction type for loss target selection
         self.prediction_type = config.scheduler.prediction_type
 
+        # Classifier-Free Guidance: condition drop rate during training
+        self.cfg_drop_rate = config.diffusion_train.cfg_drop_rate
+
         tcfg = config.diffusion_train
 
         # Optimizer
@@ -155,6 +158,7 @@ class DiffusionTrainer:
         logger.info(f"  Latent scale:     {self.latent_scale_factor:.6f}")
         logger.info(f"  Prediction type:  {self.prediction_type}")
         logger.info(f"  Min-SNR γ:        {self.snr_gamma} ({'enabled' if self.snr_gamma > 0 else 'disabled'})")
+        logger.info(f"  CFG drop rate:    {self.cfg_drop_rate} ({'enabled' if self.cfg_drop_rate > 0 else 'disabled'})")
         logger.info(f"  LR:               {tcfg.lr}")
         logger.info(f"  Grad clip norm:   {self.grad_clip_norm}")
         logger.info(f"  EMA rate:         {self.ema_rate}")
@@ -276,6 +280,12 @@ class DiffusionTrainer:
             # Encode to latent space (frozen VAE, no grad)
             z_ncct = self._encode_to_latent(ncct)
             z_cta = self._encode_to_latent(cta)
+
+            # Classifier-Free Guidance: randomly drop condition
+            if self.cfg_drop_rate > 0:
+                drop_mask = (torch.rand(z_ncct.shape[0], 1, 1, 1,
+                                        device=self.device) < self.cfg_drop_rate)
+                z_ncct = z_ncct * (~drop_mask).float()
 
             # Sample noise and timesteps
             noise = torch.randn_like(z_cta)
@@ -424,6 +434,8 @@ class DiffusionTrainer:
             self._pipeline = ConditionalLDMPipeline(
                 self.vae, self.unet, self.scheduler,
                 latent_scale_factor=self.latent_scale_factor,
+                cfg_scale=self.config.scheduler.cfg_scale,
+                dynamic_threshold_percentile=self.config.scheduler.dynamic_threshold_percentile,
             )
 
         # Get a validation batch

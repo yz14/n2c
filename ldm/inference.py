@@ -288,6 +288,12 @@ def main():
                         help="Batch size for sliding window inference")
     parser.add_argument("--eta", type=float, default=0.0,
                         help="DDIM eta (0=deterministic, >0=stochastic)")
+    parser.add_argument("--cfg_scale", type=float, default=None,
+                        help="Classifier-Free Guidance scale (overrides config). "
+                             "1.0=disabled, 3.0=recommended")
+    parser.add_argument("--dynamic_threshold", type=float, default=None,
+                        help="Dynamic thresholding percentile (overrides config). "
+                             "0.0=disabled, 0.995=recommended")
     args = parser.parse_args()
 
     # Setup
@@ -315,8 +321,16 @@ def main():
         prediction_type=cfg.scheduler.prediction_type,
     ).to(device)
 
+    # CFG and dynamic thresholding: CLI overrides > config values
+    cfg_scale = args.cfg_scale if args.cfg_scale is not None else getattr(cfg.scheduler, 'cfg_scale', 1.0)
+    dtp = args.dynamic_threshold if args.dynamic_threshold is not None else getattr(cfg.scheduler, 'dynamic_threshold_percentile', 0.0)
+    logger.info(f"CFG scale: {cfg_scale}, Dynamic threshold: {dtp}")
+
     pipeline = ConditionalLDMPipeline(
-        vae, unet, scheduler, latent_scale_factor=latent_scale_factor,
+        vae, unet, scheduler,
+        latent_scale_factor=latent_scale_factor,
+        cfg_scale=cfg_scale,
+        dynamic_threshold_percentile=dtp,
     )
 
     # Load input volume

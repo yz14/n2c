@@ -137,6 +137,14 @@ scheduler:
                                #   0.0 = 禁用 (标准均匀加权)
                                #   5.0 = 推荐值, 消除 timestep 间梯度冲突
                                #   效果: 约 3.4x 更快收敛, 更低的 FID
+  cfg_scale: 3.0                # Classifier-Free Guidance 引导尺度 (推理时)
+                               #   1.0 = 禁用 (无引导, 与旧行为一致)
+                               #   >1.0 = 放大条件遵循度, 典型范围 1.5~7.5
+                               #   必须配合 cfg_drop_rate > 0 训练才有效
+                               #   原理: ε_guided = ε_uncond + w*(ε_cond - ε_uncond)
+  dynamic_threshold_percentile: 0.995  # 动态阈值 (Imagen, Saharia et al. 2022)
+                               #   裁剪 pred_x0 极端异常值, 减少采样伪影
+                               #   0.0 = 禁用, 0.995 = 推荐 (99.5 百分位裁剪)
 
 # ---------------------------------------------------------------------------
 # Diffusion UNet 训练配置 — Stage 2
@@ -157,3 +165,8 @@ diffusion_train:
   resume_checkpoint: ''        # 恢复训练路径
   pretrained_vae: ''           # 预训练 VAE checkpoint (Stage 2 必须提供)
   seed: 42                     # 随机种子
+  cfg_drop_rate: 0.1           # Classifier-Free Guidance: 训练时随机丢弃条件的概率
+                               #   0.0 = 禁用 CFG (旧行为)
+                               #   0.1~0.2 = 推荐范围
+                               #   丢弃时 z_ncct 被置零, UNet 学习无条件生成
+                               #   配合 cfg_scale > 1.0 推理时放大条件遵循度
