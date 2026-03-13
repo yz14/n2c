@@ -73,18 +73,20 @@ class ConditionalLDMPipeline:
 
     @staticmethod
     def _dynamic_threshold(pred_x0: torch.Tensor, percentile: float) -> torch.Tensor:
-        """Apply dynamic thresholding to pred_x0 (Imagen paper, Saharia et al. 2022).
+        """Apply dynamic thresholding to pred_x0 (adapted for latent space).
 
-        Clips pred_x0 at the given percentile of absolute values per sample,
-        then rescales to stay within the clipped range. This prevents extreme
-        outlier values from accumulating errors during DDIM sampling.
+        Clips pred_x0 at the given percentile of absolute values per sample.
+        Unlike Imagen's pixel-space version, we do NOT rescale by /s because
+        latent values have a natural scale (std ≈ 1.0 after latent_scale_factor)
+        that the VAE decoder expects. Rescaling would shrink the latent and
+        produce washed-out / distorted images.
         """
         B = pred_x0.shape[0]
         flat = pred_x0.reshape(B, -1).abs()
         s = torch.quantile(flat, percentile, dim=1)  # (B,)
         s = torch.clamp(s, min=1.0)  # never shrink below 1.0
         s = s.reshape(B, 1, 1, 1)
-        return pred_x0.clamp(-s, s) / s
+        return pred_x0.clamp(-s, s)
 
     @torch.no_grad()
     def sample(

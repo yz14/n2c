@@ -142,9 +142,10 @@ scheduler:
                                #   >1.0 = 放大条件遵循度, 典型范围 1.5~7.5
                                #   必须配合 cfg_drop_rate > 0 训练才有效
                                #   原理: ε_guided = ε_uncond + w*(ε_cond - ε_uncond)
-  dynamic_threshold_percentile: 0.995  # 动态阈值 (Imagen, Saharia et al. 2022)
-                               #   裁剪 pred_x0 极端异常值, 减少采样伪影
-                               #   0.0 = 禁用, 0.995 = 推荐 (99.5 百分位裁剪)
+  dynamic_threshold_percentile: 0.0    # 动态阈值 (改编自 Imagen, 适配 latent space)
+                               #   裁剪 pred_x0 极端异常值 (仅裁剪, 不缩放)
+                               #   注意: latent diffusion (如 SD) 通常不使用此功能
+                               #   0.0 = 禁用 (推荐默认), 0.995 = 可选安全裁剪
 
 # ---------------------------------------------------------------------------
 # Diffusion UNet 训练配置 — Stage 2

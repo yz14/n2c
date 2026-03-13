@@ -128,10 +128,12 @@ class SchedulerConfig:
     # 1.0 = no guidance (disabled). >1.0 amplifies condition adherence.
     # Typical range: 1.5~7.5. Requires training with cfg_drop_rate > 0.
     cfg_scale: float = 3.0
-    # Dynamic thresholding for pred_x0 during DDIM sampling (Imagen paper).
+    # Dynamic thresholding for pred_x0 during DDIM sampling (adapted from Imagen).
     # Clips pred_x0 at the given percentile to prevent extreme outlier values.
-    # 0.0 = disabled. 0.995 = recommended (clips at 99.5th percentile).
-    dynamic_threshold_percentile: float = 0.995
+    # NOTE: Non-standard for latent diffusion (Stable Diffusion does NOT use it).
+    # Only enables outlier clipping without rescaling (latent-safe).
+    # 0.0 = disabled (recommended default). 0.995 = optional safety clamp.
+    dynamic_threshold_percentile: float = 0.0
 
 
 @dataclass

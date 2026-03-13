@@ -430,12 +430,15 @@ class DiffusionTrainer:
         self.unet.eval()
 
         # Build pipeline if needed
+        # NOTE: Visualization uses cfg_scale=1.0 (no guidance) to show true
+        # model quality. CFG is an inference-time adjustment that should only
+        # be applied during final inference, not during training monitoring.
         if self._pipeline is None:
             self._pipeline = ConditionalLDMPipeline(
                 self.vae, self.unet, self.scheduler,
                 latent_scale_factor=self.latent_scale_factor,
-                cfg_scale=self.config.scheduler.cfg_scale,
-                dynamic_threshold_percentile=self.config.scheduler.dynamic_threshold_percentile,
+                cfg_scale=1.0,
+                dynamic_threshold_percentile=0.0,
             )
 
         # Get a validation batch
@@ -446,8 +449,8 @@ class DiffusionTrainer:
 
         ncct, cta, _ = self.augmentor(ncct_3c, cta_3c, mask_3c, training=False)
 
-        # Generate
-        ddim_steps = min(20, self.config.scheduler.num_inference_steps)
+        # Generate (use full inference steps for accurate quality assessment)
+        ddim_steps = self.config.scheduler.num_inference_steps
         cta_pred = self._pipeline.sample(
             ncct, num_inference_steps=ddim_steps, verbose=False,
         )

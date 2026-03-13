@@ -96,7 +96,7 @@ class TestConfigCFGFields:
     def test_scheduler_config_has_dynamic_threshold(self):
         cfg = SchedulerConfig()
         assert hasattr(cfg, 'dynamic_threshold_percentile')
-        assert cfg.dynamic_threshold_percentile == 0.995
+        assert cfg.dynamic_threshold_percentile == 0.0  # disabled by default for latent space
 
     def test_diffusion_train_config_has_cfg_drop_rate(self):
         cfg = DiffusionTrainConfig()
@@ -128,20 +128,24 @@ class TestDynamicThresholding:
         """Values within normal range should not be affected."""
         pred_x0 = torch.randn(2, 4, 8, 8) * 0.5  # small values
         result = ConditionalLDMPipeline._dynamic_threshold(pred_x0, 0.995)
-        # s should be clamped to min=1.0, so /s is just /1.0 = no change
-        # (since all abs values < 1.0 with high probability)
-        # Actually with std=0.5 some might exceed 1.0, so check shape
+        # s = max(percentile, 1.0) = 1.0 for small values
+        # Clamp to [-1, 1] only affects values > 1 — most values unchanged
         assert result.shape == pred_x0.shape
+        # Values < 1.0 in absolute should be exactly preserved
+        mask = pred_x0.abs() < 1.0
+        assert torch.allclose(result[mask], pred_x0[mask])
 
     def test_clips_extreme_values(self):
-        """Extreme outlier values should be clipped."""
+        """Extreme outlier values should be clipped (without rescaling)."""
         pred_x0 = torch.zeros(1, 4, 8, 8)
         pred_x0[0, 0, 0, 0] = 100.0  # extreme outlier
         result = ConditionalLDMPipeline._dynamic_threshold(pred_x0, 0.995)
-        # The 99.5th percentile of abs values should be much < 100
-        # After clipping and rescaling, max should be <= s/s = 1.0 ... 
-        # Actually it clips to [-s, s] then divides by s, so max = 1.0
-        assert result.abs().max() <= 1.0 + 1e-6
+        # 99.5th percentile of abs values: most are 0, one is 100
+        # s = max(quantile, 1.0). For mostly-zero tensor, s ≈ 1.0
+        # After clamping to [-s, s], max should be s (NOT 1.0 via /s)
+        # The outlier is clipped but non-outlier values are preserved
+        assert result.abs().max() < 100.0  # outlier was clipped
+        assert result[0, 0, 0, 0] > 0  # still positive (clamped, not zeroed)
 
     def test_per_sample_thresholding(self):
         """Each sample in the batch should be thresholded independently."""
@@ -149,17 +153,31 @@ class TestDynamicThresholding:
         pred_x0[0] = 0.5  # small
         pred_x0[1] = 10.0  # large
         result = ConditionalLDMPipeline._dynamic_threshold(pred_x0, 0.995)
-        # Sample 0: s = max(0.5_percentile, 1.0) = 1.0, result ≈ 0.5
-        # Sample 1: s = max(10.0, 1.0) = 10.0, result ≈ 1.0
-        assert torch.allclose(result[0], pred_x0[0] / 1.0, atol=0.01)
-        assert result[1].abs().max() <= 1.0 + 1e-6
+        # Sample 0: s = max(0.5_percentile, 1.0) = 1.0
+        #   → clamp to [-1, 1], but all values are 0.5 → unchanged
+        assert torch.allclose(result[0], pred_x0[0], atol=0.01)
+        # Sample 1: s = max(10.0, 1.0) = 10.0
+        #   → clamp to [-10, 10], all values are 10.0 → unchanged
+        #   (no /s rescaling, so values stay at 10.0)
+        assert torch.allclose(result[1], pred_x0[1], atol=0.01)
 
     def test_min_clamp_prevents_shrinking(self):
-        """s is clamped to min=1.0, so small-norm samples aren't amplified."""
+        """s is clamped to min=1.0, so small values are preserved exactly."""
         pred_x0 = torch.ones(1, 4, 4, 4) * 0.1
         result = ConditionalLDMPipeline._dynamic_threshold(pred_x0, 0.995)
-        # s = max(0.1, 1.0) = 1.0, so result = pred_x0 / 1.0 = pred_x0
+        # s = max(0.1, 1.0) = 1.0, clamp to [-1, 1] → 0.1 unchanged
         assert torch.allclose(result, pred_x0, atol=1e-6)
+
+    def test_no_rescaling_preserves_latent_scale(self):
+        """Latent-space thresholding must NOT rescale values (unlike Imagen pixel-space)."""
+        pred_x0 = torch.randn(2, 4, 8, 8) * 2.0  # typical latent range
+        result = ConditionalLDMPipeline._dynamic_threshold(pred_x0, 0.995)
+        # Values within [-s, s] should be exactly preserved (no /s division)
+        s = torch.quantile(pred_x0.reshape(2, -1).abs(), 0.995, dim=1)
+        s = torch.clamp(s, min=1.0).reshape(2, 1, 1, 1)
+        mask = pred_x0.abs() <= s
+        assert torch.allclose(result[mask], pred_x0[mask], atol=1e-6), \
+            "Values within threshold should be exactly preserved (no rescaling)"
 
 
 # ---------------------------------------------------------------------------
@@ -381,8 +399,8 @@ class TestBackwardCompatibility:
         cfg = LDMConfig()
         # CFG scale should be > 1 by default (recommended)
         assert cfg.scheduler.cfg_scale == 3.0
-        # Dynamic threshold should be enabled by default (recommended)
-        assert cfg.scheduler.dynamic_threshold_percentile == 0.995
+        # Dynamic threshold disabled by default (non-standard for latent diffusion)
+        assert cfg.scheduler.dynamic_threshold_percentile == 0.0
         # Drop rate should be > 0 by default (needed for CFG training)
         assert cfg.diffusion_train.cfg_drop_rate == 0.1
 
