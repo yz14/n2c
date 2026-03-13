@@ -1,11 +1,17 @@
 """
 Conditional Latent Diffusion Pipeline for NCCT→CTA translation.
 
-Orchestrates the full inference process:
-  1. Encode NCCT input with the VAE encoder → z_ncct (condition latent)
-  2. Start from random noise in latent space
-  3. Iteratively denoise using the diffusion UNet conditioned on z_ncct
-  4. Decode the denoised latent with the VAE decoder → predicted CTA
+Supports two sampling modes:
+  (A) txt2img (strength=1.0): Start from pure noise, full generation.
+  (B) img2img / SDEdit (strength<1.0): Start from noisy NCCT latent,
+      preserving structure while allowing vessel enhancement.
+      Based on "SDEdit: Guided Image Synthesis and Editing with
+      Stochastic Differential Equations" (Meng et al., 2021).
+
+The img2img mode is critical for NCCT→CTA because the task requires
+strict structural preservation (anatomy unchanged, only vessels enhanced),
+similar to image colorization. Starting from a noisy version of the input
+rather than pure noise naturally preserves structure.
 
 Supports both DDPM (slow, T steps) and DDIM (fast, configurable steps) sampling.
 """
@@ -94,6 +100,7 @@ class ConditionalLDMPipeline:
         ncct: torch.Tensor,
         num_inference_steps: int = 50,
         eta: float = 0.0,
+        strength: float = 1.0,
         generator: Optional[torch.Generator] = None,
         return_intermediates: bool = False,
         verbose: bool = True,
@@ -102,10 +109,18 @@ class ConditionalLDMPipeline:
         """
         Generate CTA prediction from NCCT input via DDIM sampling.
 
+        Supports two modes controlled by `strength`:
+          - strength=1.0: Full generation from pure noise (standard LDM).
+          - strength<1.0: img2img / SDEdit mode — start from a noisy version
+            of the NCCT latent, preserving structure while allowing changes.
+            Lower strength = more structure preservation, less change.
+            Recommended range for NCCT→CTA: 0.3~0.6.
+
         Args:
             ncct: (B, C, H, W) NCCT input on device.
             num_inference_steps: number of DDIM denoising steps.
             eta: DDIM stochasticity (0 = deterministic).
+            strength: denoising strength (0.0 = no change, 1.0 = from noise).
             generator: optional random generator for reproducibility.
             return_intermediates: if True, return list of intermediate predictions.
             verbose: show progress bar.
@@ -118,27 +133,55 @@ class ConditionalLDMPipeline:
         device = self.device
         w = cfg_scale if cfg_scale is not None else self.cfg_scale
         use_cfg = w > 1.0
+        strength = max(0.0, min(1.0, strength))  # clamp to [0, 1]
 
         # 1. Encode condition
         z_ncct = self.encode_condition(ncct)
-
-        # 2. Initialize from random noise
         z_shape = z_ncct.shape  # (B, z_ch, H_lat, W_lat)
-        z_noisy = torch.randn(
-            z_shape, generator=generator, device=device, dtype=z_ncct.dtype,
-        )
 
-        # 3. Setup DDIM scheduler
+        # 2. Setup DDIM scheduler (full schedule first)
         ddim = DDIMScheduler(
             self.scheduler, num_inference_steps=num_inference_steps, eta=eta,
         )
+        total_steps = len(ddim.timesteps)
 
+        # 3. Determine starting point based on strength (SDEdit / img2img)
+        if strength >= 1.0:
+            # Standard: start from pure noise, denoise all steps
+            z_noisy = torch.randn(
+                z_shape, generator=generator, device=device, dtype=z_ncct.dtype,
+            )
+            start_step = 0
+        else:
+            # SDEdit: start from noisy NCCT at an intermediate timestep
+            # Number of denoising steps = strength * total_steps
+            num_denoise_steps = max(int(total_steps * strength), 1)
+            start_step = total_steps - num_denoise_steps
+            start_t_val = ddim.timesteps[start_step]
+
+            # Add noise to NCCT latent at the starting noise level
+            noise = torch.randn(
+                z_shape, generator=generator, device=device, dtype=z_ncct.dtype,
+            )
+            t_tensor = torch.full(
+                (z_shape[0],), start_t_val, device=device, dtype=torch.long,
+            )
+            z_noisy = self.scheduler.add_noise(z_ncct, noise, t_tensor)
+
+            if verbose:
+                logger.info(
+                    f"  SDEdit: strength={strength:.2f}, "
+                    f"start_t={start_t_val}, "
+                    f"denoise_steps={num_denoise_steps}/{total_steps}"
+                )
+
+        # 4. Iterative denoising (from start_step to end)
         intermediates = []
-        iterator = range(len(ddim.timesteps))
+        iterator = range(start_step, total_steps)
         if verbose:
-            iterator = tqdm(iterator, desc="DDIM Sampling", leave=False)
+            desc = "DDIM Sampling" if strength >= 1.0 else f"SDEdit (s={strength:.2f})"
+            iterator = tqdm(iterator, desc=desc, leave=False)
 
-        # 4. Iterative denoising
         dtp = self.dynamic_threshold_percentile
         for i in iterator:
             t_val = ddim.timesteps[i]

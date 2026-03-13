@@ -461,6 +461,139 @@ class TestDDIMStepWithThresholding:
 
 
 # ---------------------------------------------------------------------------
+# Test 9: SDEdit / img2img strength parameter
+# ---------------------------------------------------------------------------
+
+class TestSDEdit:
+    @pytest.fixture
+    def setup(self):
+        z_ch = 4
+        vae = MockVAE(z_ch)
+        unet = MockUNet(in_ch=z_ch * 2, out_ch=z_ch)
+        scheduler = DDPMScheduler(
+            num_train_timesteps=1000,
+            beta_schedule="linear",
+            prediction_type="epsilon",
+        )
+        scheduler.to(torch.device("cpu"))
+        pipeline = ConditionalLDMPipeline(
+            vae, unet, scheduler,
+            latent_scale_factor=1.0,
+            cfg_scale=1.0,
+        )
+        return pipeline, z_ch
+
+    def test_strength_1_uses_pure_noise(self, setup):
+        """strength=1.0 should start from pure noise (original behavior)."""
+        pipeline, z_ch = setup
+        ncct = torch.randn(1, z_ch, 8, 8)
+        gen = torch.Generator().manual_seed(42)
+        out = pipeline.sample(ncct, num_inference_steps=5, strength=1.0,
+                              verbose=False, generator=gen)
+        assert out.shape == (1, z_ch, 8, 8)
+        assert torch.isfinite(out).all()
+
+    def test_strength_0_returns_near_input(self, setup):
+        """strength≈0 should return something very close to the NCCT input."""
+        pipeline, z_ch = setup
+        ncct = torch.randn(1, z_ch, 8, 8) * 0.5
+        # strength=0.01 means only 1 denoising step from very low noise
+        out = pipeline.sample(ncct, num_inference_steps=50, strength=0.01,
+                              verbose=False)
+        assert out.shape == ncct.shape
+        # Output should be somewhat close to input (very little denoising)
+        assert torch.isfinite(out).all()
+
+    def test_strength_05_fewer_steps(self, setup):
+        """strength=0.5 should use ~half the denoising steps."""
+        pipeline, z_ch = setup
+        pipeline.unet.call_log.clear()
+        ncct = torch.randn(1, z_ch, 8, 8)
+        pipeline.sample(ncct, num_inference_steps=10, strength=0.5,
+                        verbose=False)
+        # With 10 steps and strength=0.5, should do ~5 denoising steps
+        num_calls = len(pipeline.unet.call_log)
+        assert num_calls == 5, f"Expected 5 UNet calls, got {num_calls}"
+
+    def test_strength_1_all_steps(self, setup):
+        """strength=1.0 should use all denoising steps."""
+        pipeline, z_ch = setup
+        pipeline.unet.call_log.clear()
+        ncct = torch.randn(1, z_ch, 8, 8)
+        pipeline.sample(ncct, num_inference_steps=10, strength=1.0,
+                        verbose=False)
+        num_calls = len(pipeline.unet.call_log)
+        assert num_calls == 10, f"Expected 10 UNet calls, got {num_calls}"
+
+    def test_strength_clamped(self, setup):
+        """strength values outside [0,1] should be clamped."""
+        pipeline, z_ch = setup
+        ncct = torch.randn(1, z_ch, 8, 8)
+        # Should not crash with out-of-range values
+        out_neg = pipeline.sample(ncct, num_inference_steps=5, strength=-0.5,
+                                  verbose=False)
+        out_high = pipeline.sample(ncct, num_inference_steps=5, strength=2.0,
+                                   verbose=False)
+        assert torch.isfinite(out_neg).all()
+        assert torch.isfinite(out_high).all()
+
+    def test_sdedit_uses_add_noise(self, setup):
+        """SDEdit should initialize z_noisy via scheduler.add_noise, not pure noise."""
+        pipeline, z_ch = setup
+        ncct = torch.randn(1, z_ch, 8, 8)
+        gen1 = torch.Generator().manual_seed(42)
+        gen2 = torch.Generator().manual_seed(42)
+        # Same seed should give same results for same strength
+        out1 = pipeline.sample(ncct, num_inference_steps=5, strength=0.5,
+                               verbose=False, generator=gen1)
+        out2 = pipeline.sample(ncct, num_inference_steps=5, strength=0.5,
+                               verbose=False, generator=gen2)
+        assert torch.allclose(out1, out2, atol=1e-5), \
+            "Same seed + same strength should produce identical results"
+
+    def test_different_strengths_different_outputs(self, setup):
+        """Different strength values should produce different outputs."""
+        pipeline, z_ch = setup
+        ncct = torch.randn(1, z_ch, 8, 8)
+        gen1 = torch.Generator().manual_seed(42)
+        gen2 = torch.Generator().manual_seed(42)
+        out_05 = pipeline.sample(ncct, num_inference_steps=10, strength=0.5,
+                                 verbose=False, generator=gen1)
+        out_10 = pipeline.sample(ncct, num_inference_steps=10, strength=1.0,
+                                 verbose=False, generator=gen2)
+        # Different starting points should give different results
+        assert not torch.allclose(out_05, out_10, atol=1e-3), \
+            "strength=0.5 and strength=1.0 should produce different outputs"
+
+    def test_sdedit_with_cfg(self, setup):
+        """SDEdit should work correctly combined with CFG."""
+        pipeline, z_ch = setup
+        pipeline.cfg_scale = 2.0
+        # Need a UNet that handles doubled batch
+        pipeline.unet = MockUNet(in_ch=z_ch * 2, out_ch=z_ch)
+        ncct = torch.randn(1, z_ch, 8, 8)
+        out = pipeline.sample(ncct, num_inference_steps=5, strength=0.5,
+                              verbose=False)
+        assert out.shape == (1, z_ch, 8, 8)
+        assert torch.isfinite(out).all()
+
+    def test_config_has_strength(self):
+        """Config should have the strength field with default 0.5."""
+        cfg = SchedulerConfig()
+        assert hasattr(cfg, 'strength')
+        assert cfg.strength == 0.5
+
+    def test_config_strength_yaml_roundtrip(self, tmp_path):
+        """Strength parameter should survive YAML save/load."""
+        cfg = LDMConfig()
+        cfg.scheduler.strength = 0.35
+        path = str(tmp_path / "test_strength.yaml")
+        cfg.save(path)
+        loaded = LDMConfig.load(path)
+        assert abs(loaded.scheduler.strength - 0.35) < 1e-6
+
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 

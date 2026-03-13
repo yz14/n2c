@@ -451,8 +451,10 @@ class DiffusionTrainer:
 
         # Generate (use full inference steps for accurate quality assessment)
         ddim_steps = self.config.scheduler.num_inference_steps
+        strength = getattr(self.config.scheduler, 'strength', 1.0)
         cta_pred = self._pipeline.sample(
-            ncct, num_inference_steps=ddim_steps, verbose=False,
+            ncct, num_inference_steps=ddim_steps, strength=strength,
+            verbose=False,
         )
 
         # Save visualization

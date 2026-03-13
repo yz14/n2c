@@ -134,6 +134,13 @@ class SchedulerConfig:
     # Only enables outlier clipping without rescaling (latent-safe).
     # 0.0 = disabled (recommended default). 0.995 = optional safety clamp.
     dynamic_threshold_percentile: float = 0.0
+    # SDEdit / img2img strength for structure-preserving generation.
+    # Controls how much of the NCCT structure is preserved vs. generated.
+    # 1.0 = full generation from pure noise (standard LDM, no structure preservation).
+    # <1.0 = start from noisy NCCT latent, preserving anatomy.
+    # Recommended for NCCT→CTA: 0.3~0.6 (similar to colorization).
+    # Based on SDEdit (Meng et al., 2021) / Stable Diffusion img2img.
+    strength: float = 0.5
 
 
 @dataclass

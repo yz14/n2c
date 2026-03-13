@@ -71,6 +71,7 @@ class VolumeInference:
         hu_max: float = 3071.0,
         ddim_steps: int = 50,
         ddim_eta: float = 0.0,
+        strength: float = 1.0,
         batch_size: int = 4,
     ):
         self.pipeline = pipeline
@@ -80,6 +81,7 @@ class VolumeInference:
         self.hu_max = hu_max
         self.ddim_steps = ddim_steps
         self.ddim_eta = ddim_eta
+        self.strength = strength
         self.batch_size = batch_size
 
     @property
@@ -161,6 +163,7 @@ class VolumeInference:
                     batch_input,
                     num_inference_steps=self.ddim_steps,
                     eta=self.ddim_eta,
+                    strength=self.strength,
                     verbose=False,
                 )  # (B, C, H, W)
 
@@ -294,6 +297,9 @@ def main():
     parser.add_argument("--dynamic_threshold", type=float, default=None,
                         help="Dynamic thresholding percentile (overrides config). "
                              "0.0=disabled, 0.995=recommended")
+    parser.add_argument("--strength", type=float, default=None,
+                        help="SDEdit/img2img strength (overrides config). "
+                             "1.0=from noise, 0.3~0.6=structure preserving")
     args = parser.parse_args()
 
     # Setup
@@ -321,10 +327,11 @@ def main():
         prediction_type=cfg.scheduler.prediction_type,
     ).to(device)
 
-    # CFG and dynamic thresholding: CLI overrides > config values
+    # Inference params: CLI overrides > config values
     cfg_scale = args.cfg_scale if args.cfg_scale is not None else getattr(cfg.scheduler, 'cfg_scale', 1.0)
     dtp = args.dynamic_threshold if args.dynamic_threshold is not None else getattr(cfg.scheduler, 'dynamic_threshold_percentile', 0.0)
-    logger.info(f"CFG scale: {cfg_scale}, Dynamic threshold: {dtp}")
+    strength = args.strength if args.strength is not None else getattr(cfg.scheduler, 'strength', 1.0)
+    logger.info(f"CFG scale: {cfg_scale}, Dynamic threshold: {dtp}, Strength: {strength}")
 
     pipeline = ConditionalLDMPipeline(
         vae, unet, scheduler,
@@ -348,6 +355,7 @@ def main():
         hu_max=cfg.data.hu_max,
         ddim_steps=args.ddim_steps,
         ddim_eta=args.eta,
+        strength=strength,
         batch_size=args.batch_size,
     )
 
