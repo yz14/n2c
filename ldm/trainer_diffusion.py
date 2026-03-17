@@ -109,6 +109,9 @@ class DiffusionTrainer:
         # Classifier-Free Guidance: condition drop rate during training
         self.cfg_drop_rate = config.diffusion_train.cfg_drop_rate
 
+        # Residual Diffusion: predict (z_cta - z_ncct) instead of z_cta
+        self.residual_prediction = getattr(config.scheduler, 'residual_prediction', False)
+
         tcfg = config.diffusion_train
 
         # Optimizer
@@ -159,6 +162,7 @@ class DiffusionTrainer:
         logger.info(f"  Prediction type:  {self.prediction_type}")
         logger.info(f"  Min-SNR γ:        {self.snr_gamma} ({'enabled' if self.snr_gamma > 0 else 'disabled'})")
         logger.info(f"  CFG drop rate:    {self.cfg_drop_rate} ({'enabled' if self.cfg_drop_rate > 0 else 'disabled'})")
+        logger.info(f"  Residual pred:    {self.residual_prediction} ({'residual z_cta-z_ncct' if self.residual_prediction else 'standard z_cta'})")
         logger.info(f"  LR:               {tcfg.lr}")
         logger.info(f"  Grad clip norm:   {self.grad_clip_norm}")
         logger.info(f"  EMA rate:         {self.ema_rate}")
@@ -287,12 +291,19 @@ class DiffusionTrainer:
                                         device=self.device) < self.cfg_drop_rate)
                 z_ncct = z_ncct * (~drop_mask).float()
 
-            # Sample noise and timesteps
-            noise = torch.randn_like(z_cta)
-            t = torch.randint(0, T, (z_cta.shape[0],), device=self.device, dtype=torch.long)
+            # Residual Diffusion: diffuse on (z_cta - z_ncct) instead of z_cta
+            # The model learns the "enhancement" signal, not the full image.
+            if self.residual_prediction:
+                z_target = z_cta - z_ncct  # residual: vessel enhancement in latent space
+            else:
+                z_target = z_cta  # standard: full CTA latent
 
-            # Forward diffusion: add noise to CTA latent
-            z_noisy = self.scheduler.add_noise(z_cta, noise, t)
+            # Sample noise and timesteps
+            noise = torch.randn_like(z_target)
+            t = torch.randint(0, T, (z_target.shape[0],), device=self.device, dtype=torch.long)
+
+            # Forward diffusion: add noise to target latent
+            z_noisy = self.scheduler.add_noise(z_target, noise, t)
 
             # UNet prediction from concat(z_noisy, z_ncct)
             model_input = torch.cat([z_noisy, z_ncct], dim=1)
@@ -300,7 +311,7 @@ class DiffusionTrainer:
 
             # Select loss target based on prediction_type
             if self.prediction_type == "v_prediction":
-                target = self.scheduler.get_v_target(z_cta, noise, t)
+                target = self.scheduler.get_v_target(z_target, noise, t)
             else:  # epsilon
                 target = noise
 
@@ -386,16 +397,22 @@ class DiffusionTrainer:
             z_ncct = self._encode_to_latent(ncct)
             z_cta = self._encode_to_latent(cta)
 
-            noise = torch.randn_like(z_cta)
-            t = torch.randint(0, T, (z_cta.shape[0],), device=self.device, dtype=torch.long)
-            z_noisy = self.scheduler.add_noise(z_cta, noise, t)
+            # Residual Diffusion: same target as training
+            if self.residual_prediction:
+                z_target = z_cta - z_ncct
+            else:
+                z_target = z_cta
+
+            noise = torch.randn_like(z_target)
+            t = torch.randint(0, T, (z_target.shape[0],), device=self.device, dtype=torch.long)
+            z_noisy = self.scheduler.add_noise(z_target, noise, t)
 
             model_input = torch.cat([z_noisy, z_ncct], dim=1)
             model_output = self.unet(model_input, t)
 
             # Same target selection as training
             if self.prediction_type == "v_prediction":
-                target = self.scheduler.get_v_target(z_cta, noise, t)
+                target = self.scheduler.get_v_target(z_target, noise, t)
             else:
                 target = noise
 
@@ -439,6 +456,7 @@ class DiffusionTrainer:
                 latent_scale_factor=self.latent_scale_factor,
                 cfg_scale=1.0,
                 dynamic_threshold_percentile=0.0,
+                residual_prediction=self.residual_prediction,
             )
 
         # Get a validation batch

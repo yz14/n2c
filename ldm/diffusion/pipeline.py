@@ -46,6 +46,11 @@ class ConditionalLDMPipeline:
             Requires the UNet to have been trained with condition dropping.
         dynamic_threshold_percentile: percentile for dynamic thresholding
             of pred_x0 during DDIM sampling. 0.0 = disabled.
+        residual_prediction: if True, the model predicts (z_cta - z_ncct)
+            and the output is reconstructed as z_ncct + z_residual.
+        residual_scale: scaling factor for the predicted residual.
+            Only used when residual_prediction=True.
+            1.0 = normal, >1.0 = amplified enhancement, 0.0 = no change.
     """
 
     def __init__(
@@ -56,6 +61,8 @@ class ConditionalLDMPipeline:
         latent_scale_factor: float = 1.0,
         cfg_scale: float = 1.0,
         dynamic_threshold_percentile: float = 0.0,
+        residual_prediction: bool = False,
+        residual_scale: float = 1.0,
     ):
         self.vae = vae
         self.unet = unet
@@ -63,6 +70,8 @@ class ConditionalLDMPipeline:
         self.latent_scale_factor = latent_scale_factor
         self.cfg_scale = cfg_scale
         self.dynamic_threshold_percentile = dynamic_threshold_percentile
+        self.residual_prediction = residual_prediction
+        self.residual_scale = residual_scale
 
     @property
     def device(self) -> torch.device:
@@ -222,8 +231,17 @@ class ConditionalLDMPipeline:
             if return_intermediates:
                 intermediates.append(pred_x0.clone())
 
-        # 5. Decode latent to image space (undo scaling before decode)
-        cta_pred = self.vae.decode(z_noisy / self.latent_scale_factor)
+        # 5. Reconstruct output latent
+        if self.residual_prediction:
+            # Residual mode: z_noisy is the predicted residual (z_cta - z_ncct).
+            # Reconstruct: z_output = z_ncct + residual_scale * z_residual
+            z_output = z_ncct + self.residual_scale * z_noisy
+        else:
+            # Standard mode: z_noisy is the predicted z_cta directly
+            z_output = z_noisy
+
+        # 6. Decode latent to image space (undo scaling before decode)
+        cta_pred = self.vae.decode(z_output / self.latent_scale_factor)
 
         if return_intermediates:
             return cta_pred, intermediates
@@ -272,4 +290,10 @@ class ConditionalLDMPipeline:
 
             z_noisy = self.scheduler.ddpm_step(noise_pred, t_val, z_noisy, generator=generator)
 
-        return self.vae.decode(z_noisy / self.latent_scale_factor)
+        # Reconstruct output latent (same logic as DDIM sample)
+        if self.residual_prediction:
+            z_output = z_ncct + self.residual_scale * z_noisy
+        else:
+            z_output = z_noisy
+
+        return self.vae.decode(z_output / self.latent_scale_factor)

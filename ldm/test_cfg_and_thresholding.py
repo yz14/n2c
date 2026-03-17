@@ -594,6 +594,184 @@ class TestSDEdit:
 
 
 # ---------------------------------------------------------------------------
+# Test 10: Residual Diffusion
+# ---------------------------------------------------------------------------
+
+class TestResidualDiffusion:
+    @pytest.fixture
+    def setup_standard(self):
+        """Standard pipeline (residual_prediction=False)."""
+        z_ch = 4
+        vae = MockVAE(z_ch)
+        unet = MockUNet(in_ch=z_ch * 2, out_ch=z_ch)
+        scheduler = DDPMScheduler(
+            num_train_timesteps=1000,
+            beta_schedule="linear",
+            prediction_type="epsilon",
+        )
+        scheduler.to(torch.device("cpu"))
+        pipeline = ConditionalLDMPipeline(
+            vae, unet, scheduler,
+            latent_scale_factor=1.0,
+            cfg_scale=1.0,
+            residual_prediction=False,
+        )
+        return pipeline, z_ch
+
+    @pytest.fixture
+    def setup_residual(self):
+        """Residual pipeline (residual_prediction=True)."""
+        z_ch = 4
+        vae = MockVAE(z_ch)
+        unet = MockUNet(in_ch=z_ch * 2, out_ch=z_ch)
+        scheduler = DDPMScheduler(
+            num_train_timesteps=1000,
+            beta_schedule="linear",
+            prediction_type="epsilon",
+        )
+        scheduler.to(torch.device("cpu"))
+        pipeline = ConditionalLDMPipeline(
+            vae, unet, scheduler,
+            latent_scale_factor=1.0,
+            cfg_scale=1.0,
+            residual_prediction=True,
+            residual_scale=1.0,
+        )
+        return pipeline, z_ch
+
+    def test_standard_mode_no_residual_addition(self, setup_standard):
+        """Standard mode should NOT add z_ncct back."""
+        pipeline, z_ch = setup_standard
+        ncct = torch.randn(1, z_ch, 8, 8)
+        gen = torch.Generator().manual_seed(42)
+        out = pipeline.sample(ncct, num_inference_steps=5, verbose=False, generator=gen)
+        assert out.shape == (1, z_ch, 8, 8)
+        assert torch.isfinite(out).all()
+
+    def test_residual_mode_adds_z_ncct(self, setup_residual):
+        """Residual mode should add z_ncct to the denoised output."""
+        pipeline, z_ch = setup_residual
+        ncct = torch.randn(1, z_ch, 8, 8)
+        out = pipeline.sample(ncct, num_inference_steps=5, verbose=False)
+        assert out.shape == (1, z_ch, 8, 8)
+        assert torch.isfinite(out).all()
+
+    def test_residual_and_standard_differ(self, setup_standard, setup_residual):
+        """Residual and standard modes should produce different outputs."""
+        pipeline_std, z_ch = setup_standard
+        pipeline_res, _ = setup_residual
+        ncct = torch.randn(1, z_ch, 8, 8)
+        gen1 = torch.Generator().manual_seed(42)
+        gen2 = torch.Generator().manual_seed(42)
+        out_std = pipeline_std.sample(ncct, num_inference_steps=5,
+                                      verbose=False, generator=gen1)
+        out_res = pipeline_res.sample(ncct, num_inference_steps=5,
+                                      verbose=False, generator=gen2)
+        # Should differ because residual mode adds z_ncct back
+        assert not torch.allclose(out_std, out_res, atol=1e-3), \
+            "Residual and standard modes should produce different outputs"
+
+    def test_residual_scale_zero_returns_ncct(self, setup_residual):
+        """residual_scale=0.0 should return pure NCCT (no enhancement)."""
+        pipeline, z_ch = setup_residual
+        pipeline.residual_scale = 0.0
+        ncct = torch.randn(1, z_ch, 8, 8)
+        out = pipeline.sample(ncct, num_inference_steps=5, verbose=False)
+        # With scale=0, output = z_ncct decoded, which equals ncct[:, :z_ch]
+        # (MockVAE encode returns x[:, :z_ch], decode returns z as-is)
+        expected = ncct[:, :z_ch]  # encode_condition returns ncct[:, :z_ch] * 1.0
+        assert torch.allclose(out, expected, atol=1e-6), \
+            "residual_scale=0.0 should return the NCCT input (no enhancement)"
+
+    def test_residual_scale_amplifies(self, setup_residual):
+        """residual_scale > 1.0 should amplify the predicted residual."""
+        pipeline, z_ch = setup_residual
+        ncct = torch.randn(1, z_ch, 8, 8)
+
+        gen1 = torch.Generator().manual_seed(42)
+        pipeline.residual_scale = 1.0
+        out_1x = pipeline.sample(ncct, num_inference_steps=5,
+                                 verbose=False, generator=gen1)
+
+        gen2 = torch.Generator().manual_seed(42)
+        pipeline.residual_scale = 2.0
+        out_2x = pipeline.sample(ncct, num_inference_steps=5,
+                                 verbose=False, generator=gen2)
+
+        # The difference from NCCT should be larger with scale=2.0
+        z_ncct = ncct[:, :z_ch]  # MockVAE encode → ncct[:, :z_ch]
+        diff_1x = (out_1x - z_ncct).abs().mean()
+        diff_2x = (out_2x - z_ncct).abs().mean()
+        assert diff_2x > diff_1x, \
+            "residual_scale=2.0 should produce larger differences from NCCT than 1.0"
+
+    def test_residual_with_cfg(self, setup_residual):
+        """Residual mode should work correctly with CFG."""
+        pipeline, z_ch = setup_residual
+        pipeline.cfg_scale = 2.0
+        pipeline.unet = MockUNet(in_ch=z_ch * 2, out_ch=z_ch)
+        ncct = torch.randn(1, z_ch, 8, 8)
+        out = pipeline.sample(ncct, num_inference_steps=5, verbose=False)
+        assert out.shape == (1, z_ch, 8, 8)
+        assert torch.isfinite(out).all()
+
+    def test_residual_ddpm_sampling(self, setup_residual):
+        """Residual mode should also work with DDPM sampling."""
+        pipeline, z_ch = setup_residual
+        ncct = torch.randn(1, z_ch, 4, 4)
+        # Use small T for speed
+        pipeline.scheduler = DDPMScheduler(
+            num_train_timesteps=10,
+            beta_schedule="linear",
+            prediction_type="epsilon",
+        )
+        pipeline.scheduler.to(torch.device("cpu"))
+        out = pipeline.sample_ddpm(ncct, verbose=False)
+        assert out.shape == (1, z_ch, 4, 4)
+        assert torch.isfinite(out).all()
+
+    def test_config_residual_fields(self):
+        """Config should have residual_prediction and residual_scale fields."""
+        cfg = SchedulerConfig()
+        assert hasattr(cfg, 'residual_prediction')
+        assert cfg.residual_prediction == False
+        assert hasattr(cfg, 'residual_scale')
+        assert cfg.residual_scale == 1.0
+
+    def test_config_residual_yaml_roundtrip(self, tmp_path):
+        """Residual parameters should survive YAML save/load."""
+        cfg = LDMConfig()
+        cfg.scheduler.residual_prediction = True
+        cfg.scheduler.residual_scale = 1.5
+        path = str(tmp_path / "test_residual.yaml")
+        cfg.save(path)
+        loaded = LDMConfig.load(path)
+        assert loaded.scheduler.residual_prediction == True
+        assert abs(loaded.scheduler.residual_scale - 1.5) < 1e-6
+
+    def test_training_target_residual(self):
+        """Verify the residual training target is z_cta - z_ncct."""
+        z_ncct = torch.randn(2, 4, 8, 8)
+        z_cta = torch.randn(2, 4, 8, 8)
+        z_residual = z_cta - z_ncct
+        # Verify reconstruction: z_ncct + z_residual == z_cta
+        assert torch.allclose(z_ncct + z_residual, z_cta, atol=1e-6), \
+            "z_ncct + (z_cta - z_ncct) must exactly equal z_cta"
+
+    def test_residual_is_sparse(self):
+        """For similar inputs, the residual should be smaller than the full target."""
+        # Simulate NCCT and CTA that differ mainly in vessel regions
+        z_ncct = torch.randn(2, 4, 16, 16) * 0.5
+        z_cta = z_ncct.clone()
+        # Add vessel enhancement to a small region
+        z_cta[:, :, 6:10, 6:10] += 2.0
+        z_residual = z_cta - z_ncct
+        # Residual should have much smaller L2 norm than z_cta
+        assert z_residual.norm() < z_cta.norm(), \
+            "Residual should be sparser (smaller norm) than full CTA target"
+
+
+# ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 

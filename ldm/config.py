@@ -140,7 +140,23 @@ class SchedulerConfig:
     # <1.0 = start from noisy NCCT latent, preserving anatomy.
     # Recommended for NCCT→CTA: 0.3~0.6 (similar to colorization).
     # Based on SDEdit (Meng et al., 2021) / Stable Diffusion img2img.
+    # NOTE: Only effective when residual_prediction=False. With residual mode,
+    # structure is mathematically preserved regardless of strength.
     strength: float = 0.5
+    # Residual Diffusion: predict (z_cta - z_ncct) instead of z_cta directly.
+    # Inspired by RDDM (Residual Denoising Diffusion Models, 2023).
+    # When enabled:
+    #   Training: diffusion operates on z_residual = z_cta - z_ncct
+    #   Inference: output = z_ncct + predicted_z_residual
+    # This forces the model to learn ONLY the differences (vessel enhancement),
+    # while structure (anatomy) is mathematically preserved via the z_ncct addition.
+    # False = standard mode (predict z_cta). True = residual mode (predict z_cta - z_ncct).
+    residual_prediction: bool = False
+    # Residual scale at inference: controls enhancement intensity.
+    # Only effective when residual_prediction=True.
+    # output = z_ncct + residual_scale * z_residual
+    # 0.0 = pure NCCT (no change). 1.0 = normal CTA. >1.0 = amplified enhancement.
+    residual_scale: float = 1.0
 
 
 @dataclass

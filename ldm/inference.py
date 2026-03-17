@@ -300,6 +300,9 @@ def main():
     parser.add_argument("--strength", type=float, default=None,
                         help="SDEdit/img2img strength (overrides config). "
                              "1.0=from noise, 0.3~0.6=structure preserving")
+    parser.add_argument("--residual_scale", type=float, default=None,
+                        help="Residual enhancement scale (overrides config). "
+                             "Only with residual_prediction. 1.0=normal, >1.0=amplified")
     args = parser.parse_args()
 
     # Setup
@@ -331,13 +334,18 @@ def main():
     cfg_scale = args.cfg_scale if args.cfg_scale is not None else getattr(cfg.scheduler, 'cfg_scale', 1.0)
     dtp = args.dynamic_threshold if args.dynamic_threshold is not None else getattr(cfg.scheduler, 'dynamic_threshold_percentile', 0.0)
     strength = args.strength if args.strength is not None else getattr(cfg.scheduler, 'strength', 1.0)
+    residual_prediction = getattr(cfg.scheduler, 'residual_prediction', False)
+    residual_scale = args.residual_scale if args.residual_scale is not None else getattr(cfg.scheduler, 'residual_scale', 1.0)
     logger.info(f"CFG scale: {cfg_scale}, Dynamic threshold: {dtp}, Strength: {strength}")
+    logger.info(f"Residual prediction: {residual_prediction}, Residual scale: {residual_scale}")
 
     pipeline = ConditionalLDMPipeline(
         vae, unet, scheduler,
         latent_scale_factor=latent_scale_factor,
         cfg_scale=cfg_scale,
         dynamic_threshold_percentile=dtp,
+        residual_prediction=residual_prediction,
+        residual_scale=residual_scale,
     )
 
     # Load input volume

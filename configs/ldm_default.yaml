@@ -146,15 +146,24 @@ scheduler:
                                #   裁剪 pred_x0 极端异常值 (仅裁剪, 不缩放)
                                #   注意: latent diffusion (如 SD) 通常不使用此功能
                                #   0.0 = 禁用 (推荐默认), 0.995 = 可选安全裁剪
-  strength: 0.5                # SDEdit / img2img 强度 (基于 SDEdit, Meng et al. 2021)
-                               #   控制 NCCT 结构保留程度 vs 生成自由度
-                               #   1.0 = 从纯噪声生成 (标准 LDM, 不保留结构)
+  strength: 1.0                # SDEdit / img2img 强度 (基于 SDEdit, Meng et al. 2021)
+                               #   仅在 residual_prediction=false 时有效
+                               #   1.0 = 从纯噪声生成 (标准 LDM)
                                #   <1.0 = 从含噪 NCCT latent 开始, 保留解剖结构
-                               #   原理: 对 NCCT latent 添加噪声到 t_start, 然后去噪
-                               #         噪声越少 (strength 越小), 结构保留越好
-                               #   0.3~0.4 = 保守 (强结构保留, 轻微增强)
-                               #   0.5 = 推荐 (平衡结构保留与血管增强)
-                               #   0.6~0.7 = 激进 (更多生成自由度, 可能改变结构)
+                               #   注意: 残差模式下结构保留是数学保证的, 不需要 SDEdit
+  residual_prediction: true    # 残差扩散 (基于 RDDM, 2023)
+                               #   true = 模型预测 z_cta - z_ncct (增强残差)
+                               #     训练: 对残差加噪并预测噪声
+                               #     推理: 去噪得到残差, 输出 = z_ncct + 残差
+                               #     优势: 模型只学习血管增强的差异, 结构数学保证不变
+                               #   false = 标准模式, 模型直接预测 z_cta
+                               #   ⚠️ 切换此选项需要重新训练!
+  residual_scale: 1.0          # 残差缩放因子 (仅 residual_prediction=true 时有效)
+                               #   控制增强强度: output = z_ncct + scale * z_residual
+                               #   0.0 = 纯 NCCT (无增强)
+                               #   1.0 = 正常 CTA 增强
+                               #   1.5 = 放大增强 (更明显的血管)
+                               #   >1.0 可能引入伪影, 需要实验确定最佳值
 
 # ---------------------------------------------------------------------------
 # Diffusion UNet 训练配置 — Stage 2
